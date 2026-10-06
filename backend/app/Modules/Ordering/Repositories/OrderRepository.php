@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\Repositories;
 
+use App\Modules\Catalog\Contracts\ProductOrderHistory;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
+use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,9 +16,11 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as BaseCollection;
 
 /**
+ * Also answers the catalog's ProductOrderHistory contract (bound in OrderingServiceProvider).
+ *
  * @extends BaseRepository<Order>
  */
-class OrderRepository extends BaseRepository
+class OrderRepository extends BaseRepository implements ProductOrderHistory
 {
     protected function model(): string
     {
@@ -70,6 +74,15 @@ class OrderRepository extends BaseRepository
             ->pluck('total', 'user_id')
             ->map(fn ($total) => (int) $total)
             ->all();
+    }
+
+    /**
+     * Whether the product appears in any order. Items keep a snapshot of the product, but the
+     * catalog must not delete a product that order history still points to.
+     */
+    public function hasBeenOrdered(int $productId): bool
+    {
+        return OrderItem::query()->where('product_id', $productId)->exists();
     }
 
     /**

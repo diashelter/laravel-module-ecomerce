@@ -50,6 +50,15 @@ it('counts the orders of a customer', function () {
     expect($this->repository->countForCustomer($user->id))->toBe(3);
 });
 
+it('tells the catalog whether a product was ever ordered', function () {
+    $sold = productWithStock(1);
+    $unsold = productWithStock(1);
+    OrderItem::factory()->forProduct($sold, 1)->create();
+
+    expect($this->repository->hasBeenOrdered($sold->id))->toBeTrue()
+        ->and($this->repository->hasBeenOrdered($unsold->id))->toBeFalse();
+});
+
 it('creates an order with its items', function () {
     $user = customer();
     $product = productWithStock(5, ['name' => 'Fone', 'price' => '50.00']);

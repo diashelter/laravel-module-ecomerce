@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Catalog\Contracts\ProductOrderHistory;
 use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Repositories\StockRepository;
@@ -25,6 +26,14 @@ foreach (array_diff(MODULES, ['Inventory', 'Backoffice']) as $module) {
 arch('the inventory contracts are interfaces')
     ->expect('App\Modules\Inventory\Contracts')
     ->toBeInterfaces();
+
+// Catalog: it does not read order data; it asks through its own ProductOrderHistory contract,
+// implemented by the ordering module.
+foreach (['Models', 'Repositories'] as $layer) {
+    arch("the catalog does not use the ordering {$layer}")
+        ->expect('App\Modules\Catalog')
+        ->not->toUse("App\\Modules\\Ordering\\{$layer}");
+}
 
 // Identity: the account does not know about orders.
 arch('identity does not depend on ordering')
@@ -53,6 +62,10 @@ foreach (array_diff(MODULES, ['Shared']) as $module) {
         ->expect('App\Modules\Shared')
         ->not->toUse("App\\Modules\\{$module}");
 }
+
+it('resolves the catalog order history to the order repository', function () {
+    expect(app(ProductOrderHistory::class))->toBeInstanceOf(OrderRepository::class);
+});
 
 it('resolves the inventory contracts to the stock repository', function (string $contract) {
     expect(app($contract))->toBeInstanceOf(StockRepository::class);

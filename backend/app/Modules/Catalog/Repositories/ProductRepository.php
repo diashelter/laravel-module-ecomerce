@@ -57,11 +57,6 @@ class ProductRepository extends BaseRepository
         $product->categories()->sync($categoryIds);
     }
 
-    public function hasOrderItems(Product $product): bool
-    {
-        return $product->orderItems()->exists();
-    }
-
     /**
      * @param  list<int>  $ids
      * @return Collection<int, Product>

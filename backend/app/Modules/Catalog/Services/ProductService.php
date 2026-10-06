@@ -21,9 +21,9 @@ class ProductService
      *
      * @throws BusinessRuleException
      */
-    public function ensureCanBeDeleted(bool $hasOrderItems): void
+    public function ensureCanBeDeleted(bool $hasBeenOrdered): void
     {
-        if ($hasOrderItems) {
+        if ($hasBeenOrdered) {
             throw new BusinessRuleException('Este produto possui pedidos e não pode ser excluído. Desative-o em vez disso.');
         }
     }
