@@ -9,7 +9,7 @@ import { ApiError } from '@/services/api'
 import { orderService } from '@/services/orderService'
 import { useNotificationStore } from '@/stores/notifications'
 import type { Order } from '@/types'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const props = defineProps<{ orderId: number }>()
 
@@ -76,7 +76,7 @@ onMounted(async () => {
           </div>
           <div class="text-right">
             <p class="text-sm text-slate-500">Valor</p>
-            <p class="text-2xl font-bold text-indigo-700">{{ formatMoney(order.total) }}</p>
+            <p class="text-2xl font-bold text-indigo-700">{{ formatCents(order.total_cents) }}</p>
           </div>
         </div>
         <div class="flex items-center gap-2 text-sm">
@@ -85,7 +85,7 @@ onMounted(async () => {
       </div>
 
       <div class="card">
-        <OrderItemsTable :items="order.items ?? []" :total="order.total" />
+        <OrderItemsTable :items="order.items ?? []" :total-cents="order.total_cents" />
       </div>
 
       <div class="card space-y-4 p-6 text-center">

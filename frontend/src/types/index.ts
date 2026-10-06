@@ -23,7 +23,7 @@ export interface Category {
 export interface Product {
   id: number
   name: string
-  price: string
+  price_cents: number
   description: string
   image_url: string | null
   status: ProductStatus
@@ -54,9 +54,9 @@ export interface OrderItem {
   id: number
   product_id: number
   product_name: string
-  unit_price: string
+  unit_price_cents: number
   quantity: number
-  subtotal: string
+  subtotal_cents: number
 }
 
 export interface TimelineStep {
@@ -68,7 +68,7 @@ export interface TimelineStep {
 
 export interface Order {
   id: number
-  total: string
+  total_cents: number
   status: OrderStatus
   status_label: string
   status_step: number
@@ -103,9 +103,9 @@ export interface CartValidationLine {
   product_id: number
   name: string | null
   image_url: string | null
-  unit_price: string | null
+  unit_price_cents: number | null
   quantity: number
-  subtotal: string | null
+  subtotal_cents: number | null
   available_quantity: number
   is_available: boolean
   problem: string | null
@@ -113,7 +113,7 @@ export interface CartValidationLine {
 
 export interface CartValidation {
   items: CartValidationLine[]
-  total: string
+  total_cents: number
   is_valid: boolean
 }
 

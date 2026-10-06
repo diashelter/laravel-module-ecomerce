@@ -5,7 +5,7 @@ import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
 import { adminUserService } from '@/services/admin/userService'
 import type { User } from '@/types'
 import { formatDate, formatDateTime } from '@/utils/date'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const props = defineProps<{ id: number }>()
 const user = ref<User | null>(null)
@@ -45,7 +45,7 @@ onMounted(async () => {
             <tr v-for="order in user.orders" :key="order.id">
               <td><RouterLink :to="{ name: 'admin.orders.show', params: { id: order.id } }" class="font-medium text-indigo-600 hover:underline">#{{ order.id }}</RouterLink></td>
               <td>{{ formatDateTime(order.created_at) }}</td>
-              <td class="text-right">{{ formatMoney(order.total) }}</td>
+              <td class="text-right">{{ formatCents(order.total_cents) }}</td>
               <td><OrderStatusBadge :status="order.status" :label="order.status_label" /></td>
             </tr>
           </tbody>

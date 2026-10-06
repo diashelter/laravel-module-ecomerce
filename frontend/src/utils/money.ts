@@ -1,19 +1,26 @@
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
+/** Message shown under the price field when the typed text is not a valid amount. */
+export const INVALID_PRICE_MESSAGE = 'Informe um preço válido, por exemplo 199,90.'
+
+/** Formats integer cents as BRL (129990 -> "R$ 1.299,90"). Renders a dash when there is no value. */
+export function formatCents(cents: number | null | undefined): string {
+  return cents == null ? '—' : currency.format(cents / 100)
+}
+
 /**
- * Converts a decimal string from the API ("19.90") into integer cents (1990),
- * so the cart can add values without floating point errors.
+ * Reads the price the admin types, in reais ("199,90", "199.90", "199,9" or "199"), into integer cents.
+ * Returns null for anything else: empty, more than 2 decimals, thousands separators, signs or letters.
  */
-export function toCents(value: string): number {
-  const [integer = '0', decimals = ''] = value.split('.')
-  return Number(integer) * 100 + Number(decimals.padEnd(2, '0').slice(0, 2))
+export function parseReaisInput(text: string): number | null {
+  const match = /^(\d+)(?:[.,](\d{1,2}))?$/.exec(text.trim())
+  if (match === null) return null
+
+  const [, reais = '0', decimals = ''] = match
+  return Number(reais) * 100 + Number(decimals.padEnd(2, '0'))
 }
 
-export function formatCents(cents: number): string {
-  return currency.format(cents / 100)
-}
-
-/** Formats a decimal string coming from the API ("1299.90" -> "R$ 1.299,90"). */
-export function formatMoney(value: string | null | undefined): string {
-  return value == null ? '—' : formatCents(toCents(value))
+/** Renders integer cents as the text of the price field (19990 -> "199,90"). */
+export function centsToReaisInput(cents: number): string {
+  return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')}`
 }

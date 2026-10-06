@@ -9,7 +9,7 @@ import { orderService } from '@/services/orderService'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notifications'
 import type { CartValidation } from '@/types'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const cart = useCartStore()
 const notifications = useNotificationStore()
@@ -88,14 +88,14 @@ onMounted(validate)
                 <p v-if="line.problem" class="text-xs font-semibold text-red-600">{{ line.problem }}</p>
               </td>
               <td class="text-right">{{ line.quantity }}</td>
-              <td class="text-right">{{ formatMoney(line.unit_price) }}</td>
-              <td class="text-right">{{ formatMoney(line.subtotal) }}</td>
+              <td class="text-right">{{ formatCents(line.unit_price_cents) }}</td>
+              <td class="text-right">{{ formatCents(line.subtotal_cents) }}</td>
             </tr>
           </tbody>
           <tfoot>
             <tr class="border-t-2 border-slate-200">
               <td colspan="3" class="px-4 py-3 text-right font-semibold">Total</td>
-              <td class="px-4 py-3 text-right text-lg font-bold">{{ formatMoney(validation.total) }}</td>
+              <td class="px-4 py-3 text-right text-lg font-bold">{{ formatCents(validation.total_cents) }}</td>
             </tr>
           </tfoot>
         </table>

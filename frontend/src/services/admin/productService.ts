@@ -3,7 +3,7 @@ import { api } from '../api'
 
 export interface ProductPayload {
   name: string
-  price: string
+  price_cents: number
   description: string
   image_url: string | null
   status: ProductStatus

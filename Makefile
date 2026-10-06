@@ -18,7 +18,7 @@ DB_USERNAME ?= ecommerce
 	shell artisan migrate migrate-fresh seed fresh optimize clear \
 	db-shell db-reset db-dump db-restore \
 	queue queue-restart queue-failed queue-retry \
-	test test-filter npm-install frontend-shell setup env-files wait-api
+	test test-filter test-frontend npm-install frontend-shell setup env-files wait-api
 
 help: ## Lista os comandos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -117,6 +117,9 @@ test-filter: ## Executa testes filtrados: make test-filter FILTER=CheckoutTest
 	$(EXEC_API) ./vendor/bin/pest --filter="$(FILTER)"
 
 ## ---------- Frontend ----------
+
+test-frontend: ## Executa os testes do frontend (Vitest)
+	$(EXEC_NODE) npm test
 
 npm-install: ## Instala as dependências do frontend
 	$(DC) run --rm --no-deps frontend npm install

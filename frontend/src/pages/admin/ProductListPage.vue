@@ -6,7 +6,7 @@ import { ApiError } from '@/services/api'
 import { adminProductService } from '@/services/admin/productService'
 import { useNotificationStore } from '@/stores/notifications'
 import type { Paginated, Product } from '@/types'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const notifications = useNotificationStore()
 const result = ref<Paginated<Product> | null>(null)
@@ -60,7 +60,7 @@ onMounted(() => load())
                 <span class="font-medium">{{ product.name }}</span>
               </div>
             </td>
-            <td class="text-right whitespace-nowrap">{{ formatMoney(product.price) }}</td>
+            <td class="text-right whitespace-nowrap">{{ formatCents(product.price_cents) }}</td>
             <td :class="['text-right', product.available_quantity === 0 && 'font-semibold text-red-600']">{{ product.available_quantity }}</td>
             <td>
               <span :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-600']">

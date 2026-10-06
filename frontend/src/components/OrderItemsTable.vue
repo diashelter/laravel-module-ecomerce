@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { OrderItem } from '@/types'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
-defineProps<{ items: OrderItem[]; total: string }>()
+defineProps<{ items: OrderItem[]; totalCents: number }>()
 </script>
 
 <template>
@@ -20,14 +20,14 @@ defineProps<{ items: OrderItem[]; total: string }>()
         <tr v-for="item in items" :key="item.id">
           <td class="font-medium">{{ item.product_name }}</td>
           <td class="text-right">{{ item.quantity }}</td>
-          <td class="text-right">{{ formatMoney(item.unit_price) }}</td>
-          <td class="text-right">{{ formatMoney(item.subtotal) }}</td>
+          <td class="text-right">{{ formatCents(item.unit_price_cents) }}</td>
+          <td class="text-right">{{ formatCents(item.subtotal_cents) }}</td>
         </tr>
       </tbody>
       <tfoot>
         <tr class="border-t-2 border-slate-200">
           <td colspan="3" class="px-4 py-3 text-right font-semibold">Total</td>
-          <td class="px-4 py-3 text-right text-lg font-bold">{{ formatMoney(total) }}</td>
+          <td class="px-4 py-3 text-right text-lg font-bold">{{ formatCents(totalCents) }}</td>
         </tr>
       </tfoot>
     </table>

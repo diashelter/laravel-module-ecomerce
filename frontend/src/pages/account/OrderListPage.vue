@@ -7,7 +7,7 @@ import PaginationNav from '@/components/PaginationNav.vue'
 import { orderService } from '@/services/orderService'
 import type { Order, Paginated } from '@/types'
 import { formatDateTime } from '@/utils/date'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const result = ref<Paginated<Order> | null>(null)
 
@@ -36,7 +36,7 @@ onMounted(() => load())
             <td><RouterLink :to="{ name: 'account.order', params: { id: order.id } }" class="font-medium text-indigo-600 hover:underline">#{{ order.id }}</RouterLink></td>
             <td>{{ formatDateTime(order.created_at) }}</td>
             <td class="text-right">{{ order.items_count }}</td>
-            <td class="text-right">{{ formatMoney(order.total) }}</td>
+            <td class="text-right">{{ formatCents(order.total_cents) }}</td>
             <td><OrderStatusBadge :status="order.status" :label="order.status_label" /></td>
           </tr>
         </tbody>

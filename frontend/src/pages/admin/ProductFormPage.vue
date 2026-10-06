@@ -9,6 +9,7 @@ import { adminProductService } from '@/services/admin/productService'
 import { adminStockService, type StockOperation } from '@/services/admin/stockService'
 import { useNotificationStore } from '@/stores/notifications'
 import type { Category, Product, ProductStatus } from '@/types'
+import { centsToReaisInput, INVALID_PRICE_MESSAGE, parseReaisInput } from '@/utils/money'
 
 const props = defineProps<{ id?: number }>()
 
@@ -22,6 +23,7 @@ const categories = ref<Category[]>([])
 const product = ref<Product | null>(null)
 const loading = ref(true)
 const saving = ref(false)
+const priceError = ref<string | null>(null)
 
 const form = reactive({
   name: '',
@@ -41,7 +43,7 @@ onMounted(async () => {
     product.value = await adminProductService.find(props.id)
     Object.assign(form, {
       name: product.value.name,
-      price: product.value.price,
+      price: centsToReaisInput(product.value.price_cents),
       description: product.value.description,
       image_url: product.value.image_url ?? '',
       status: product.value.status,
@@ -52,11 +54,18 @@ onMounted(async () => {
 })
 
 async function submit(): Promise<void> {
-  saving.value = true
   reset()
+  priceError.value = null
+  const priceCents = parseReaisInput(form.price)
+  if (priceCents === null) {
+    priceError.value = INVALID_PRICE_MESSAGE
+    return
+  }
+
+  saving.value = true
   const payload = {
     name: form.name,
-    price: String(form.price).replace(',', '.'),
+    price_cents: priceCents,
     description: form.description,
     image_url: form.image_url || null,
     status: form.status,
@@ -111,8 +120,8 @@ async function adjustStock(operation: StockOperation): Promise<void> {
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label for="price" class="label">Preço (R$)</label>
-          <input id="price" v-model="form.price" inputmode="decimal" placeholder="199.90" class="input" />
-          <FieldError :message="first('price')" />
+          <input id="price" v-model="form.price" inputmode="decimal" placeholder="199,90" class="input" />
+          <FieldError :message="priceError ?? first('price_cents')" />
         </div>
         <div>
           <label for="status" class="label">Status</label>

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notifications'
 import type { Product } from '@/types'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const props = defineProps<{ product: Product }>()
 
@@ -48,7 +48,7 @@ function addToCart(): void {
         {{ product.name }}
       </component>
       <div class="mt-auto flex items-center justify-between gap-2 pt-2">
-        <span class="text-lg font-bold text-slate-900">{{ formatMoney(product.price) }}</span>
+        <span class="text-lg font-bold text-slate-900">{{ formatCents(product.price_cents) }}</span>
         <button type="button" class="btn btn-primary btn-sm" :disabled="!product.is_available" @click="addToCart">
           Adicionar
         </button>
