@@ -3,7 +3,6 @@
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
-use App\Modules\Ordering\Models\OrderItem;
 
 beforeEach(fn () => $this->repository = app(ProductRepository::class));
 
@@ -74,15 +73,6 @@ it('syncs the product categories', function () {
 
     expect($product->categories()->pluck('categories.id')->sort()->values()->all())
         ->toBe(collect([$kept->id, $new->id])->sort()->values()->all());
-});
-
-it('tells whether a product appears in orders', function () {
-    $sold = productWithStock(1);
-    $unsold = productWithStock(1);
-    OrderItem::factory()->forProduct($sold, 1)->create();
-
-    expect($this->repository->hasOrderItems($sold))->toBeTrue()
-        ->and($this->repository->hasOrderItems($unsold))->toBeFalse();
 });
 
 it('finds many products keyed by id', function () {

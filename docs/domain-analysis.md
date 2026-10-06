@@ -153,7 +153,7 @@ Score = (
 - Use cases: `CreateProductUseCase`, `UpdateProductUseCase`, `DeleteProductUseCase`, `ChangeProductStatusUseCase`, `CreateCategoryUseCase`, `UpdateCategoryUseCase`, `DeleteCategoryUseCase`.
 - `ProductController` (catálogo público), `Admin\ProductController`, `Admin\CategoryController`.
 
-**Coesão:** 9/10 ✅. Subiu de 7/10 em dois passos: a regra de disponibilidade saiu do `Product` (problema 1) e a criação do estoque passou pelo contrato `StockInitializer` (problema 4). O que ainda pesa é a leitura do estoque pela relação `Product::stock()` e o bloqueio de exclusão que consulta pedidos (problema 7).
+**Coesão:** 9/10 ✅. Subiu de 7/10 em dois passos: a regra de disponibilidade saiu do `Product` (problema 1) e a criação do estoque passou pelo contrato `StockInitializer` (problema 4). O que ainda pesa é a leitura do estoque pela relação `Product::stock()` e o uso do `PurchaseAvailabilityService` do Ordering na vitrine (ver as [pendências](#pendências-depois-do-plano)).
 
 **Contexto sugerido:** `CatalogContext`
 
@@ -280,7 +280,7 @@ Score = (
 | Ordering | Payment | Baixo | ✅ O Payment só publica `PaymentApproved`; o Ordering muda o status | Evoluir para um modelo `Payment` próprio quando houver gateway |
 | Payment | Fulfillment | Nenhum | ✅ Não se conhecem: o Fulfillment reage a `OrderPaid`, publicado pelo Ordering | Manter a integração por eventos |
 | Identity | Ordering | Baixo | ✅ O Ordering referencia o cliente só por id e lê nome e e-mail pelo `Customer` | Conformist: manter o `Customer` somente leitura |
-| Catalog | Ordering | Baixo | ⚠️ `hasOrderItems()` para bloquear a exclusão | Consulta por uma interface do Ordering |
+| Catalog | Ordering | Baixo | ✅ A exclusão pergunta pelo contrato `ProductOrderHistory`, definido pelo Catalog e implementado pelo Ordering | Manter a inversão de dependência |
 
 ---
 
@@ -367,10 +367,15 @@ Score = (
 
 ### Prioridade baixa
 
-#### 7. Catalog conhece pedidos para bloquear a exclusão
+#### 7. ✅ Resolvido: Catalog conhecia pedidos para bloquear a exclusão
 
-- **Onde:** [`ProductRepository::hasOrderItems()`](../backend/app/Modules/Catalog/Repositories/ProductRepository.php#L60).
-- **Recomendação:** usar uma interface de consulta (`ProductUsageChecker`) implementada pelo Ordering.
+- **Onde estava:** `ProductRepository::hasOrderItems()` e a relação `Product::orderItems()`, que faziam o model do Catalog importar o `OrderItem` do Ordering.
+- **Solução aplicada:** o [`DeleteProductUseCase`](../backend/app/Modules/Catalog/UseCases/DeleteProductUseCase.php) pergunta pelo contrato [`ProductOrderHistory::hasBeenOrdered()`](../backend/app/Modules/Catalog/Contracts/ProductOrderHistory.php).
+  - O contrato é **definido pelo Catalog** e **implementado pelo Ordering** ([`OrderRepository`](../backend/app/Modules/Ordering/Repositories/OrderRepository.php)), com a ligação feita no [`OrderingServiceProvider`](../backend/app/Modules/Ordering/OrderingServiceProvider.php).
+  - A relação `Product::orderItems()` foi removida.
+  - A chave estrangeira `order_items.product_id` com `restrictOnDelete` continua como última linha de defesa no banco.
+- **Desvio da recomendação original:** a análise sugeria uma interface "implementada pelo Ordering" sem dizer onde ela fica. Se ficasse no Ordering, o Catalog passaria a depender dele, e o Ordering já depende do Catalog (usa `Product` no checkout). Os dois módulos ficariam dependentes um do outro. Com o contrato no Catalog (inversão de dependência), a dependência continua só do Ordering para o Catalog.
+- **Fronteira verificada:** o `ModuleBoundariesTest` falha se o Catalog usar models ou repositories do Ordering. Isso foi conferido recolocando a relação `orderItems()` de propósito.
 
 #### 8. ✅ Resolvido: a estrutura do código não refletia os contextos
 
@@ -448,7 +453,7 @@ Os 5 passos organizaram o código e tornaram as fronteiras explícitas e verific
 |---|---|---|
 | Leituras do estoque pela relação `Product::stock()` | Catálogo, carrinho, `ProductResource` | São o read model da vitrine; trocar por consulta ao Inventory exigiria montar a vitrine em duas etapas |
 | Estoque excluído por `cascadeOnDelete` | FK `stocks.product_id` | É a regra 1:1 garantida pelo banco |
-| Catalog consulta pedidos para bloquear exclusão | [`ProductRepository::hasOrderItems()`](../backend/app/Modules/Catalog/Repositories/ProductRepository.php#L60) (problema 7) | Prioridade baixa; o caminho é uma interface de consulta do Ordering |
+| Catalog usa uma regra do Ordering na vitrine (achado ao resolver o problema 7) | `ProductResource` e `ProductController` usam o `PurchaseAvailabilityService` | Gera dependência do Catalog para o Ordering, que por sua vez depende do Catalog. A regra de disponibilidade foi para o Ordering no passo 1 |
 | Eventos carregam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered` | Padrão do projeto com `SerializesModels`; só faz diferença com persistência separada |
 | Dashboard lê os repositories de vários módulos | `GetAdminDashboardUseCase` | É um read model; a dependência é só de leitura |
 | Customers grava pelo `UserRepository` | `CreateCustomerUseCase`, `UpdateCustomerUseCase` | Não há dados próprios de cliente (endereço, preferências) que justifiquem um modelo separado |

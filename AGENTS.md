@@ -63,6 +63,7 @@ Atualize a documentação sempre que a mudança:
   - Fora do próprio estoque, use os contratos de `App\Modules\Inventory\Contracts` (`StockInitializer`, `StockReservation`), nunca o `StockRepository`.
   - Só a parte de pedidos altera o status do pedido. Pagamento e entrega apenas publicam eventos (`PaymentApproved`, `OrderDelivered`).
   - O `User` é identidade e não conhece pedidos. O lado de pedidos usa o `Customer`, que é somente leitura.
+  - O Catalog não usa models nem repositories do Ordering. Quando precisar de algo dos pedidos, use o contrato que ele mesmo define (`ProductOrderHistory`), implementado pelo Ordering.
   - O módulo `Shared` é só infraestrutura e não depende de nenhum módulo de negócio.
   - O teste de arquitetura `ModuleBoundariesTest` cobra essas regras. Ao criar uma regra nova, use **um namespace por expectativa**: com uma lista de namespaces, o `not->toUse` do Pest nunca falha. Confirme também que a regra falha com uma violação de propósito.
 - **Commits** em inglês, no formato `feat:`, `fix:`, `refactor:`, `test:`, `docs:`.

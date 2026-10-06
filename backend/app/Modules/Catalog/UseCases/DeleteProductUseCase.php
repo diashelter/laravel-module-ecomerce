@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\UseCases;
 
+use App\Modules\Catalog\Contracts\ProductOrderHistory;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Catalog\Services\ProductService;
@@ -16,6 +17,7 @@ final class DeleteProductUseCase
 {
     public function __construct(
         private readonly ProductRepository $products,
+        private readonly ProductOrderHistory $orderHistory,
         private readonly ProductService $productService,
     ) {}
 
@@ -24,7 +26,7 @@ final class DeleteProductUseCase
      */
     public function execute(Product $product): void
     {
-        $this->productService->ensureCanBeDeleted($this->products->hasOrderItems($product));
+        $this->productService->ensureCanBeDeleted($this->orderHistory->hasBeenOrdered($product->id));
 
         // Stock and category links are removed by the foreign key cascades.
         $this->products->delete($product);
