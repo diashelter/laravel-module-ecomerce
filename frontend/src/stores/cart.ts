@@ -1,22 +1,24 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { CartItemPayload, CartValidation, Product } from '@/types'
-import { toCents } from '@/utils/money'
 
 export interface CartItem {
   product_id: number
   name: string
   image_url: string | null
-  price: string
+  price_cents: number
   quantity: number
   /** Last known available stock, used only to limit the quantity buttons. */
   max_quantity: number
 }
 
-const STORAGE_KEY = 'cart'
+const STORAGE_KEY = 'cart-v2'
+const LEGACY_STORAGE_KEY = 'cart'
 
 function loadItems(): CartItem[] {
   try {
+    // The old cart stored prices as decimal strings and cannot be read as cents: drop it.
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
     const raw = localStorage.getItem(STORAGE_KEY)
     const parsed: unknown = raw ? JSON.parse(raw) : []
     return Array.isArray(parsed) ? (parsed as CartItem[]) : []
@@ -27,7 +29,7 @@ function loadItems(): CartItem[] {
 
 /**
  * Shopping cart state. Only cart data is persisted in localStorage.
- * Prices and totals shown here are for display: the backend recalculates everything.
+ * Prices and totals shown here are integer cents for display: the backend recalculates everything.
  */
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartItem[]>(loadItems())
@@ -52,7 +54,7 @@ export const useCartStore = defineStore('cart', () => {
   )
 
   function subtotalCents(item: CartItem): number {
-    return toCents(item.price) * item.quantity
+    return item.price_cents * item.quantity
   }
 
   function find(productId: number): CartItem | undefined {
@@ -66,7 +68,7 @@ export const useCartStore = defineStore('cart', () => {
     if (existing) {
       existing.quantity = Math.min(existing.quantity + quantity, product.available_quantity)
       existing.max_quantity = product.available_quantity
-      existing.price = product.price
+      existing.price_cents = product.price_cents
       return true
     }
 
@@ -74,7 +76,7 @@ export const useCartStore = defineStore('cart', () => {
       product_id: product.id,
       name: product.name,
       image_url: product.image_url,
-      price: product.price,
+      price_cents: product.price_cents,
       quantity: Math.min(quantity, product.available_quantity),
       max_quantity: product.available_quantity,
     })
@@ -105,11 +107,11 @@ export const useCartStore = defineStore('cart', () => {
   function syncFromValidation(validation: CartValidation): void {
     for (const line of validation.items) {
       const item = find(line.product_id)
-      if (!item || line.name === null || line.unit_price === null) continue
+      if (!item || line.name === null || line.unit_price_cents === null) continue
 
       item.name = line.name
       item.image_url = line.image_url
-      item.price = line.unit_price
+      item.price_cents = line.unit_price_cents
       item.max_quantity = line.available_quantity
     }
   }

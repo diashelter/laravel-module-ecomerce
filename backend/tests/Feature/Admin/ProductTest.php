@@ -1,28 +1,15 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Models\OrderItem;
 
 beforeEach(fn () => $this->actingAs(admin()));
 
-function productPayload(array $overrides = []): array
-{
-    return array_merge([
-        'name' => 'Monitor 27',
-        'price' => '1299.90',
-        'description' => 'Monitor IPS',
-        'image_url' => null,
-        'status' => 'active',
-        'category_ids' => Category::factory()->count(2)->create()->pluck('id')->all(),
-        'stock_quantity' => 7,
-    ], $overrides);
-}
-
-it('creates a product with categories and its stock', function () {
+it('creates a product with its price in cents', function () {
     $response = $this->postJson('/api/admin/products', productPayload())
         ->assertCreated()
-        ->assertJsonPath('data.price', '1299.90')
+        ->assertJsonPath('data.price_cents', 129990)
+        ->assertJsonMissingPath('data.price')
         ->assertJsonPath('data.stock.quantity', 7)
         ->assertJsonCount(2, 'data.categories');
 
@@ -32,11 +19,11 @@ it('creates a product with categories and its stock', function () {
 
 it('validates product data', function () {
     $this->postJson('/api/admin/products', productPayload([
-        'price' => '-1',
+        'price_cents' => -1,
         'status' => 'deleted',
         'category_ids' => [],
         'stock_quantity' => -5,
-    ]))->assertUnprocessable()->assertJsonValidationErrors(['price', 'status', 'category_ids', 'stock_quantity']);
+    ]))->assertUnprocessable()->assertJsonValidationErrors(['price_cents', 'status', 'category_ids', 'stock_quantity']);
 });
 
 it('updates a product without touching its stock', function () {

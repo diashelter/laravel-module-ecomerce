@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -15,11 +16,14 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             // Historical snapshot: later product changes must not affect past orders.
             $table->string('product_name');
-            $table->decimal('unit_price', 10, 2);
+            $table->bigInteger('unit_price_cents');
             $table->unsignedInteger('quantity');
-            $table->decimal('subtotal', 12, 2);
+            $table->bigInteger('subtotal_cents');
             $table->timestamps();
         });
+
+        DB::statement('ALTER TABLE order_items ADD CONSTRAINT order_items_unit_price_cents_non_negative CHECK (unit_price_cents >= 0)');
+        DB::statement('ALTER TABLE order_items ADD CONSTRAINT order_items_subtotal_cents_non_negative CHECK (subtotal_cents >= 0)');
     }
 
     public function down(): void

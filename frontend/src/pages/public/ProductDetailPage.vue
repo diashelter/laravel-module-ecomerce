@@ -6,7 +6,7 @@ import { productService } from '@/services/productService'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notifications'
 import type { Product } from '@/types'
-import { formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const props = defineProps<{ id: number }>()
 
@@ -55,7 +55,7 @@ function addToCart(): void {
         </span>
       </div>
       <h1 class="text-3xl font-bold text-slate-900">{{ product.name }}</h1>
-      <p class="text-3xl font-bold text-indigo-700">{{ formatMoney(product.price) }}</p>
+      <p class="text-3xl font-bold text-indigo-700">{{ formatCents(product.price_cents) }}</p>
       <p class="text-sm text-slate-500">{{ product.available_quantity }} unidade(s) disponível(is)</p>
       <p class="leading-relaxed whitespace-pre-line text-slate-600">{{ product.description }}</p>
 

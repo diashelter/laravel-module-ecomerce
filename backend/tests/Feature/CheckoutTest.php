@@ -15,23 +15,24 @@ function checkout(array $items)
     return test()->postJson('/api/orders', ['items' => $items]);
 }
 
-it('places an order, decrements stock and stores a snapshot of the items', function () {
+it('places an order with every value in cents, decrements stock and stores a snapshot of the items', function () {
     $user = customer();
-    $mouse = productWithStock(10, ['name' => 'Mouse', 'price' => '99.90']);
-    $keyboard = productWithStock(3, ['name' => 'Teclado', 'price' => '250.00']);
+    $mouse = productWithStock(10, ['name' => 'Mouse', 'price_cents' => 9990]);
+    $keyboard = productWithStock(3, ['name' => 'Teclado', 'price_cents' => 25000]);
 
     $response = $this->actingAs($user)->postJson('/api/orders', [
         'items' => [
             // Prices/totals sent by the client are ignored.
-            ['product_id' => $mouse->id, 'quantity' => 2, 'unit_price' => '0.01'],
+            ['product_id' => $mouse->id, 'quantity' => 2, 'unit_price' => 1, 'unit_price_cents' => 1],
             ['product_id' => $keyboard->id, 'quantity' => 3],
         ],
-        'total' => '1.00',
+        'total' => 100,
+        'total_cents' => 1,
     ]);
 
     $response->assertCreated()
         ->assertJsonPath('data.status', 'placed')
-        ->assertJsonPath('data.total', '949.80')
+        ->assertJsonPath('data.total_cents', 94980)
         ->assertJsonCount(2, 'data.items');
 
     expect($mouse->stock->fresh()->quantity)->toBe(8)
@@ -41,25 +42,28 @@ it('places an order, decrements stock and stores a snapshot of the items', funct
     expect($order->user_id)->toBe($user->id)
         ->and($order->items->firstWhere('product_id', $mouse->id))
         ->product_name->toBe('Mouse')
-        ->unit_price->toBe('99.90')
-        ->subtotal->toBe('199.80');
+        ->unit_price_cents->toBe(9990)
+        ->subtotal_cents->toBe(19980)
+        ->and($order->items->firstWhere('product_id', $keyboard->id))
+        ->unit_price_cents->toBe(25000)
+        ->subtotal_cents->toBe(75000);
 
     Event::assertDispatched(OrderPlaced::class, fn (OrderPlaced $event) => $event->order->is($order));
 });
 
 it('keeps the historical snapshot when the product changes later', function () {
-    $product = productWithStock(5, ['name' => 'Old name', 'price' => '10.00']);
+    $product = productWithStock(5, ['name' => 'Old name', 'price_cents' => 1000]);
     $this->actingAs(customer());
     checkout([['product_id' => $product->id, 'quantity' => 1]])->assertCreated();
 
-    $product->update(['name' => 'New name', 'price' => '99.00']);
+    $product->update(['name' => 'New name', 'price_cents' => 9900]);
 
     $item = Order::query()->sole()->items()->sole();
-    expect($item->product_name)->toBe('Old name')->and($item->unit_price)->toBe('10.00');
+    expect($item->product_name)->toBe('Old name')->and($item->unit_price_cents)->toBe(1000);
 });
 
 it('merges repeated products in the same cart', function () {
-    $product = productWithStock(5, ['price' => '10.00']);
+    $product = productWithStock(5, ['price_cents' => 1000]);
     $this->actingAs(customer());
 
     checkout([

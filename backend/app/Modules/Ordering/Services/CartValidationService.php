@@ -6,7 +6,6 @@ namespace App\Modules\Ordering\Services;
 
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\DTOs\CartDTO;
-use BcMath\Number;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -19,14 +18,14 @@ class CartValidationService
 
     /**
      * @param  Collection<int, Product>  $products  keyed by id, with the `stock` relation loaded
-     * @return array{items: list<array<string, mixed>>, total: string, is_valid: bool}
+     * @return array{items: list<array<string, mixed>>, total_cents: int, is_valid: bool}
      */
     public function validate(CartDTO $cart, Collection $products): array
     {
         $quantities = $cart->quantitiesByProduct();
 
         $lines = [];
-        $total = new Number('0.00');
+        $totalCents = 0;
         $isValid = true;
 
         foreach ($quantities as $productId => $quantity) {
@@ -38,9 +37,9 @@ class CartValidationService
                     'product_id' => $productId,
                     'name' => null,
                     'image_url' => null,
-                    'unit_price' => null,
+                    'unit_price_cents' => null,
                     'quantity' => $quantity,
-                    'subtotal' => null,
+                    'subtotal_cents' => null,
                     'available_quantity' => 0,
                     'is_available' => false,
                     'problem' => 'Produto não encontrado.',
@@ -50,10 +49,10 @@ class CartValidationService
             }
 
             $problem = $this->availability->purchaseProblem($product, $product->stock, $quantity);
-            $subtotal = new Number($product->price) * $quantity;
+            $subtotalCents = $product->price_cents * $quantity;
 
             if ($problem === null) {
-                $total = $total + $subtotal;
+                $totalCents += $subtotalCents;
             } else {
                 $isValid = false;
             }
@@ -62,9 +61,9 @@ class CartValidationService
                 'product_id' => $product->id,
                 'name' => $product->name,
                 'image_url' => $product->image_url,
-                'unit_price' => $product->price,
+                'unit_price_cents' => $product->price_cents,
                 'quantity' => $quantity,
-                'subtotal' => (string) $subtotal,
+                'subtotal_cents' => $subtotalCents,
                 'available_quantity' => $this->availability->availableQuantity($product->stock),
                 'is_available' => $this->availability->isAvailable($product, $product->stock),
                 'problem' => $problem,
@@ -73,7 +72,7 @@ class CartValidationService
 
         return [
             'items' => $lines,
-            'total' => (string) $total,
+            'total_cents' => $totalCents,
             'is_valid' => $isValid && $lines !== [],
         ];
     }

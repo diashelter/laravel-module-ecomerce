@@ -19,10 +19,10 @@ it('filters the catalog by category slug', function () {
 });
 
 it('sorts the catalog with id as tie breaker', function (string $sort, array $expectedNames) {
-    productWithStock(1, ['name' => 'B', 'price' => '20.00']);
-    productWithStock(1, ['name' => 'A', 'price' => '30.00']);
-    productWithStock(1, ['name' => 'C', 'price' => '10.00']);
-    productWithStock(1, ['name' => 'D', 'price' => '10.00']);
+    productWithStock(1, ['name' => 'B', 'price_cents' => 2000]);
+    productWithStock(1, ['name' => 'A', 'price_cents' => 3000]);
+    productWithStock(1, ['name' => 'C', 'price_cents' => 1000]);
+    productWithStock(1, ['name' => 'D', 'price_cents' => 1000]);
 
     $page = $this->repository->paginateCatalog(null, $sort, 12);
 

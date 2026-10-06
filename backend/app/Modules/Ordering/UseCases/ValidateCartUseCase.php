@@ -19,7 +19,7 @@ final class ValidateCartUseCase
     ) {}
 
     /**
-     * @return array{items: list<array<string, mixed>>, total: string, is_valid: bool}
+     * @return array{items: list<array<string, mixed>>, total_cents: int, is_valid: bool}
      */
     public function execute(CartDTO $cart): array
     {

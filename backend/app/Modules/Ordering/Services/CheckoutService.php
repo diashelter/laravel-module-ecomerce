@@ -6,7 +6,6 @@ namespace App\Modules\Ordering\Services;
 
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Exceptions\InsufficientStockException;
-use BcMath\Number;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -51,27 +50,27 @@ class CheckoutService
      *
      * @param  array<int, int>  $quantities  [product_id => quantity]
      * @param  Collection<int, Product>  $products  keyed by id
-     * @return array{total: string, lines: list<array<string, mixed>>}
+     * @return array{total_cents: int, lines: list<array<string, mixed>>}
      */
     public function buildOrderLines(array $quantities, Collection $products): array
     {
-        $total = new Number('0.00');
+        $totalCents = 0;
         $lines = [];
 
         foreach ($quantities as $productId => $quantity) {
             $product = $products->get($productId);
-            $subtotal = new Number($product->price) * $quantity;
-            $total = $total + $subtotal;
+            $subtotalCents = $product->price_cents * $quantity;
+            $totalCents += $subtotalCents;
 
             $lines[] = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
-                'unit_price' => $product->price,
+                'unit_price_cents' => $product->price_cents,
                 'quantity' => $quantity,
-                'subtotal' => (string) $subtotal,
+                'subtotal_cents' => $subtotalCents,
             ];
         }
 
-        return ['total' => (string) $total, 'lines' => $lines];
+        return ['total_cents' => $totalCents, 'lines' => $lines];
     }
 }

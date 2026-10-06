@@ -247,6 +247,7 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 | --- | --- |
 | `make test` | Executa todos os testes (Pest) |
 | `make test-filter FILTER="..."` | Executa testes filtrados. Ex.: `make test-filter FILTER=CheckoutTest` |
+| `make test-frontend` | Executa os testes do frontend (Vitest) no container `frontend` |
 
 ### Frontend
 
@@ -285,11 +286,11 @@ users ──1:N── orders ──1:N── order_items ──N:1── product
 | --- | --- |
 | `users` | `role` (`admin` / `customer`), indexado. Lida como `User` (identidade) e como `Customer` (comprador, somente leitura) |
 | `categories` | `slug` **único**, gerado automaticamente a partir do nome (`"Eletrônicos"` → `eletronicos`) |
-| `products` | `price decimal(10,2)` (nunca `float`), `status` (`active` / `inactive`). **Não** possui quantidade |
+| `products` | `price_cents bigint` (centavos inteiros, nunca `float`) com `CHECK (price_cents >= 0)`, `status` (`active` / `inactive`). **Não** possui quantidade |
 | `stocks` | `product_id` **único** (garante o 1:1), `quantity` inteiro com `CHECK (quantity >= 0)` |
 | `category_product` | pivot com chave primária composta |
-| `orders` | `total decimal(12,2)`, `status` (`placed`, `awaiting_payment`, `payment_approved`, `delivered`) |
-| `order_items` | **snapshot** de `product_name` e `unit_price`: mudar o produto não altera pedidos antigos |
+| `orders` | `total_cents bigint` (centavos) com `CHECK (total_cents >= 0)`, `status` (`placed`, `awaiting_payment`, `payment_approved`, `delivered`) |
+| `order_items` | **snapshot** de `product_name` e `unit_price_cents`; `subtotal_cents bigint` (`unit_price_cents × quantity`), os dois com `CHECK >= 0`. Mudar o produto não altera pedidos antigos |
 
 **Integridade:**
 
@@ -356,7 +357,7 @@ Após o seed você terá: 11 usuários, 8 categorias, 30 produtos (com produtos 
    3. **inicia a transação** (`DB::transaction()`);
    4. **bloqueia os registros de estoque** envolvidos (`lockForUpdate()`);
    5. verifica novamente status e estoque com os valores bloqueados;
-   6. **recalcula os preços** a partir do banco (com `BcMath\Number`, sem `float`);
+   6. **recalcula os preços** a partir do banco em centavos inteiros (`unit_price_cents × quantity`, soma em `int`), sem `float`;
    7. **reduz o estoque**;
    8. cria o pedido (`placed`) e os itens (snapshot de nome e preço);
    9. **confirma a transação**;
@@ -553,7 +554,10 @@ Para listar as rotas: `make artisan CMD="route:list --path=api"`.
 ```bash
 make test                              # todos os testes
 make test-filter FILTER=CheckoutTest   # apenas um arquivo/teste
+make test-frontend                     # testes do frontend (Vitest)
 ```
+
+O Vitest cobre a conversão de dinheiro (`utils/money`) e o carrinho. O CI roda só o backend; `make test-frontend` roda localmente.
 
 Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes.
 
@@ -627,7 +631,7 @@ Fora do escopo por definição: frete, cupons, descontos, endereços, gateway de
 
 Decisões relevantes:
 
-- **Dinheiro**: `decimal` no banco, strings na API e `BcMath\Number` nos cálculos do backend; no frontend os valores são convertidos para centavos inteiros apenas para exibição.
+- **Dinheiro**: centavos inteiros do banco à tela. As colunas são `bigint` (`price_cents`, `unit_price_cents`, `subtotal_cents`, `total_cents`) com `CHECK >= 0`, a API trafega inteiros com o sufixo `_cents` (sem alias para os nomes antigos) e o estado do frontend também guarda centavos. A conversão para reais existe só no frontend (`utils/money`): para exibir (`formatCents`) e para ler o preço que o admin digita (`parseReaisInput`, aceita `199,90`, `199.90`, `199,9` e `199`). O carrinho persiste em `localStorage` na chave `cart-v2`; a chave antiga `cart` é descartada. As migrations originais foram editadas no lugar: quem tem banco local roda `make fresh`, e dumps antigos de `storage-dumps/` deixam de ser compatíveis.
 - **Estoque separado do produto**: a edição de produto (`PUT /api/admin/products/{id}`) não altera estoque; ajustes passam por `/api/admin/stocks/{id}`.
 - **Administradores** são criados apenas pelo seeder; a tela de clientes só cria/edita clientes.
 - **Módulos** (`app/Modules/<Módulo>`): cada módulo repete a mesma estrutura interna, só com as pastas de que precisa:

@@ -30,9 +30,9 @@ it('filters products by category slug', function () {
 });
 
 it('sorts products', function (string $sort, array $expected) {
-    productWithStock(1, ['name' => 'Banana', 'price' => '20.00']);
-    productWithStock(1, ['name' => 'Abacaxi', 'price' => '30.00']);
-    productWithStock(1, ['name' => 'Caju', 'price' => '10.00']);
+    productWithStock(1, ['name' => 'Banana', 'price_cents' => 2000]);
+    productWithStock(1, ['name' => 'Abacaxi', 'price_cents' => 3000]);
+    productWithStock(1, ['name' => 'Caju', 'price_cents' => 1000]);
 
     $names = collect($this->getJson("/api/products?sort={$sort}")->assertOk()->json('data'))->pluck('name')->all();
 

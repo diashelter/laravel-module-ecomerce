@@ -37,7 +37,7 @@ return [
         'email' => 'e-mail',
         'password' => 'senha',
         'current_password' => 'senha atual',
-        'price' => 'preço',
+        'price_cents' => 'preço',
         'description' => 'descrição',
         'image_url' => 'URL da imagem',
         'status' => 'status',

@@ -7,7 +7,6 @@ namespace Database\Factories;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
-use BcMath\Number;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,9 +22,9 @@ class OrderItemFactory extends Factory
             'order_id' => Order::factory(),
             'product_id' => Product::factory(),
             'product_name' => fake()->words(3, true),
-            'unit_price' => '10.00',
+            'unit_price_cents' => 1000,
             'quantity' => 1,
-            'subtotal' => '10.00',
+            'subtotal_cents' => 1000,
         ];
     }
 
@@ -37,9 +36,9 @@ class OrderItemFactory extends Factory
         return $this->state(fn () => [
             'product_id' => $product->id,
             'product_name' => $product->name,
-            'unit_price' => $product->price,
+            'unit_price_cents' => $product->price_cents,
             'quantity' => $quantity,
-            'subtotal' => (string) (new Number($product->price) * $quantity),
+            'subtotal_cents' => $product->price_cents * $quantity,
         ]);
     }
 }

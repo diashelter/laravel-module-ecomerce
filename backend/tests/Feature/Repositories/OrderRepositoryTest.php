@@ -61,20 +61,20 @@ it('tells the catalog whether a product was ever ordered', function () {
 
 it('creates an order with its items', function () {
     $user = customer();
-    $product = productWithStock(5, ['name' => 'Fone', 'price' => '50.00']);
+    $product = productWithStock(5, ['name' => 'Fone', 'price_cents' => 5000]);
 
-    $order = $this->repository->createWithItems($user->id, ['total' => '100.00', 'status' => OrderStatus::Placed], [[
+    $order = $this->repository->createWithItems($user->id, ['total_cents' => 10000, 'status' => OrderStatus::Placed], [[
         'product_id' => $product->id,
         'product_name' => 'Fone',
-        'unit_price' => '50.00',
+        'unit_price_cents' => 5000,
         'quantity' => 2,
-        'subtotal' => '100.00',
+        'subtotal_cents' => 10000,
     ]]);
 
     expect($order->user_id)->toBe($user->id)
         ->and($order->status)->toBe(OrderStatus::Placed)
         ->and($order->items()->count())->toBe(1)
-        ->and($order->items()->first()->subtotal)->toBe('100.00');
+        ->and($order->items()->first()->subtotal_cents)->toBe(10000);
 });
 
 it('counts the orders of several customers in a single query', function () {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue'
 import { useCartStore } from '@/stores/cart'
-import { formatCents, formatMoney } from '@/utils/money'
+import { formatCents } from '@/utils/money'
 
 const cart = useCartStore()
 </script>
@@ -20,7 +20,7 @@ const cart = useCartStore()
           <img :src="item.image_url ?? ''" :alt="item.name" class="h-20 w-20 rounded-lg bg-slate-100 object-cover" />
           <div class="min-w-0 flex-1">
             <p class="font-semibold text-slate-900">{{ item.name }}</p>
-            <p class="text-sm text-slate-500">{{ formatMoney(item.price) }} cada</p>
+            <p class="text-sm text-slate-500">{{ formatCents(item.price_cents) }} cada</p>
           </div>
           <div class="flex items-center gap-2">
             <button type="button" class="btn btn-secondary btn-sm" aria-label="Diminuir" @click="cart.decrement(item.product_id)">−</button>

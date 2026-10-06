@@ -18,7 +18,7 @@ use Illuminate\Database\QueryException;
 beforeEach(function () {
     $this->product = fn (array $categoryIds, array $overrides = []) => new ProductDTO(...[
         'name' => 'Monitor 27',
-        'price' => '1299.90',
+        'priceCents' => 129990,
         'description' => 'Monitor IPS',
         'imageUrl' => null,
         'status' => ProductStatus::Active,

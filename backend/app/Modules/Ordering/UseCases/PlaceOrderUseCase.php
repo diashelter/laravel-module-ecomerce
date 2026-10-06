@@ -54,7 +54,7 @@ final class PlaceOrderUseCase
             $this->checkout->assertCanFulfil($quantities, $products);
 
             // 3. Prices come from the database.
-            ['total' => $total, 'lines' => $lines] = $this->checkout->buildOrderLines($quantities, $products);
+            ['total_cents' => $totalCents, 'lines' => $lines] = $this->checkout->buildOrderLines($quantities, $products);
 
             // 4. UPDATE stocks SET quantity = quantity - ? (safe: the rows are locked).
             foreach ($quantities as $productId => $quantity) {
@@ -63,7 +63,7 @@ final class PlaceOrderUseCase
 
             // 5. Create the order and its items (snapshot of name and price).
             return $this->orders->createWithItems($customerId, [
-                'total' => $total,
+                'total_cents' => $totalCents,
                 'status' => OrderStatus::Placed,
             ], $lines);
         });

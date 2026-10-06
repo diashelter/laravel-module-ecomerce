@@ -37,8 +37,8 @@ class ProductFactory extends Factory
 
         return [
             'name' => $name,
-            // Prices are generated as strings with 2 decimals: money never goes through float math.
-            'price' => sprintf('%d.%02d', fake()->numberBetween(19, 4999), fake()->randomElement([0, 49, 90, 99])),
+            // Prices are integer cents: money never goes through float math.
+            'price_cents' => fake()->numberBetween(19, 4999) * 100 + fake()->randomElement([0, 49, 90, 99]),
             'description' => fake()->paragraphs(2, true),
             'image_url' => 'https://picsum.photos/seed/'.Str::slug($name).'/600/600',
             'status' => ProductStatus::Active,

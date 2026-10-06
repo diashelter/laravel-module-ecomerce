@@ -11,7 +11,7 @@ it('lists all orders with their customers', function () {
     $this->getJson('/api/admin/orders')
         ->assertOk()
         ->assertJsonCount(3, 'data')
-        ->assertJsonStructure(['data' => [['id', 'total', 'status', 'status_label', 'customer' => ['name'], 'created_at']]]);
+        ->assertJsonStructure(['data' => [['id', 'total_cents', 'status', 'status_label', 'customer' => ['name'], 'created_at']]]);
 });
 
 it('shows an order with customer and items', function () {

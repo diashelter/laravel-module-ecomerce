@@ -66,7 +66,7 @@ onMounted(async () => {
 
     <section class="card">
       <h2 class="border-b border-slate-100 px-5 py-4 font-semibold">Produtos</h2>
-      <OrderItemsTable :items="order.items ?? []" :total="order.total" />
+      <OrderItemsTable :items="order.items ?? []" :total-cents="order.total_cents" />
     </section>
   </div>
 </template>

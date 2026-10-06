@@ -2,16 +2,17 @@
 
 use App\Modules\Catalog\Models\Product;
 
-it('recalculates the cart with database prices', function () {
-    $product = productWithStock(10, ['price' => '19.90']);
+it('recalculates the cart in cents from database prices', function () {
+    $product = productWithStock(10, ['price_cents' => 1990]);
 
     $this->postJson('/api/cart/validate', [
-        'items' => [['product_id' => $product->id, 'quantity' => 3, 'price' => '0.01']],
+        'items' => [['product_id' => $product->id, 'quantity' => 3, 'price' => '0.01', 'unit_price' => 1, 'total_cents' => 1]],
     ])
         ->assertOk()
         ->assertJsonPath('data.is_valid', true)
-        ->assertJsonPath('data.total', '59.70')
-        ->assertJsonPath('data.items.0.unit_price', '19.90')
+        ->assertJsonPath('data.total_cents', 5970)
+        ->assertJsonPath('data.items.0.unit_price_cents', 1990)
+        ->assertJsonPath('data.items.0.subtotal_cents', 5970)
         ->assertJsonPath('data.items.0.problem', null);
 });
 
