@@ -2,3 +2,6 @@
 .DS_Store
 /storage-dumps/*
 !/storage-dumps/.gitkeep
+
+# agent-skills CLI backup files
+.agents/*.backup

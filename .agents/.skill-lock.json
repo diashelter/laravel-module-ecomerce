@@ -1,0 +1,113 @@
+{
+  "version": 2,
+  "skills": {
+    "tlc-spec-lean": {
+      "name": "tlc-spec-lean",
+      "source": "local",
+      "contentHash": "28368cb86a9d441fce24426eb502a39a5e7f9ffe0ad5d682fead2ce76c5b085b",
+      "installedAt": "2026-10-06T12:47:56.250Z",
+      "updatedAt": "2026-10-06T12:47:56.250Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "the-judge": {
+      "name": "the-judge",
+      "source": "local",
+      "contentHash": "05526209052f6592ad98476e8f59e9ffa2a24e803e10a90ceac659476b509403",
+      "installedAt": "2026-10-06T12:48:12.631Z",
+      "updatedAt": "2026-10-06T12:48:12.631Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "domain-identification-grouping": {
+      "name": "domain-identification-grouping",
+      "source": "local",
+      "contentHash": "ac3c94d9910a75aa6a61f7866507d16a3c646ff17e86b79667d1a19c6fa6c659",
+      "installedAt": "2026-10-06T12:48:12.635Z",
+      "updatedAt": "2026-10-06T12:48:12.635Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "tactical-ddd": {
+      "name": "tactical-ddd",
+      "source": "local",
+      "contentHash": "c3dfaf45e8cb784f18d9c460c7f005c4ee9dbb430f21ee8af6913bbfea66a75b",
+      "installedAt": "2026-10-06T12:48:12.637Z",
+      "updatedAt": "2026-10-06T12:48:12.637Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "coupling-analysis": {
+      "name": "coupling-analysis",
+      "source": "local",
+      "contentHash": "a33a142a73ac2e6b8db300acb3d13dba5077e225cbfad7599b0ac431290ab5c7",
+      "installedAt": "2026-10-06T12:48:12.639Z",
+      "updatedAt": "2026-10-06T12:48:12.639Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "modular-design-principles": {
+      "name": "modular-design-principles",
+      "source": "local",
+      "contentHash": "d53fdca7ae18205376956c39a3a1729edfae843f63e5f2a6c5dd2c64ccd8a576",
+      "installedAt": "2026-10-06T12:48:12.642Z",
+      "updatedAt": "2026-10-06T12:48:12.642Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "create-adr": {
+      "name": "create-adr",
+      "source": "local",
+      "contentHash": "47ec663c849e8c1620c6f33a7be0055acdcf838c27ab7c16f44260244b80195a",
+      "installedAt": "2026-10-06T12:48:12.644Z",
+      "updatedAt": "2026-10-06T12:48:12.644Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "technical-design-doc-creator": {
+      "name": "technical-design-doc-creator",
+      "source": "local",
+      "contentHash": "d05974df076f695f96b4e4c263ad19f2aaffe8ee6248c1b07a634dd9ed0ea51e",
+      "installedAt": "2026-10-06T12:48:12.649Z",
+      "updatedAt": "2026-10-06T12:48:12.649Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "tlc-discover": {
+      "name": "tlc-discover",
+      "source": "local",
+      "contentHash": "518ab626fc8bac4ed1d0c5170b617d1adaec28a83634c1a462c7529d42170d3a",
+      "installedAt": "2026-10-06T12:48:27.158Z",
+      "updatedAt": "2026-10-06T12:48:27.158Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    }
+  }
+}
