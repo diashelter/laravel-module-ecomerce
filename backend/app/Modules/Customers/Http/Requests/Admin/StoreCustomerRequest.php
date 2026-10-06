@@ -5,17 +5,23 @@ declare(strict_types=1);
 namespace App\Modules\Customers\Http\Requests\Admin;
 
 use App\Modules\Identity\DTOs\CreateUserDTO;
+use App\Modules\Identity\Http\Requests\Concerns\NormalizesEmailInput;
+use App\Modules\Identity\Http\Rules\EmailRule;
+use App\Modules\Identity\Http\Rules\PasswordRule;
+use App\Modules\Identity\ValueObjects\Email;
+use App\Modules\Identity\ValueObjects\Password;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
-use Illuminate\Validation\Rules\Password;
 
 class StoreCustomerRequest extends ApiFormRequest
 {
+    use NormalizesEmailInput;
+
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'confirmed', Password::min(8)],
+            'email' => ['required', 'string', new EmailRule, 'unique:users,email'],
+            'password' => ['required', 'string', 'confirmed', new PasswordRule],
         ];
     }
 
@@ -23,8 +29,8 @@ class StoreCustomerRequest extends ApiFormRequest
     {
         return new CreateUserDTO(
             name: $this->validated('name'),
-            email: $this->validated('email'),
-            password: $this->validated('password'),
+            email: new Email($this->validated('email')),
+            password: new Password($this->validated('password')),
         );
     }
 }

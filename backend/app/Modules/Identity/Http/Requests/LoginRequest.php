@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace App\Modules\Identity\Http\Requests;
 
 use App\Modules\Identity\DTOs\LoginCredentialsDTO;
+use App\Modules\Identity\Http\Requests\Concerns\NormalizesEmailInput;
+use App\Modules\Identity\Http\Rules\EmailRule;
+use App\Modules\Identity\ValueObjects\Email;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
 
 class LoginRequest extends ApiFormRequest
 {
+    use NormalizesEmailInput;
+
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'email' => ['required', 'string', new EmailRule],
             'password' => ['required', 'string'],
         ];
     }
@@ -20,7 +25,7 @@ class LoginRequest extends ApiFormRequest
     public function toDto(): LoginCredentialsDTO
     {
         return new LoginCredentialsDTO(
-            email: $this->validated('email'),
+            email: new Email($this->validated('email')),
             password: $this->validated('password'),
         );
     }

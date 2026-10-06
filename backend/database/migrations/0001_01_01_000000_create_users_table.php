@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -21,6 +22,10 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamps();
         });
+
+        // Last line of defense: e-mails that differ only in case are the same account, so the
+        // database refuses anything that is not already in the canonical form of the Email value object.
+        DB::statement('ALTER TABLE users ADD CONSTRAINT users_email_normalized CHECK (email = lower(btrim(email)))');
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();

@@ -70,7 +70,7 @@ it('maps an empty password to null on profile updates', function () {
     ], $user)->toDto();
 
     expect($dto->name)->toBe('Novo Nome')
-        ->and($dto->email)->toBe('novo@example.com')
+        ->and($dto->email->value())->toBe('novo@example.com')
         ->and($dto->password)->toBeNull();
 });
 
