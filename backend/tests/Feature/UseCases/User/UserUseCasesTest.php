@@ -9,19 +9,21 @@ use App\Modules\Identity\DTOs\CreateUserDTO;
 use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\UseCases\RegisterCustomerUseCase;
+use App\Modules\Identity\ValueObjects\Email;
+use App\Modules\Identity\ValueObjects\Password;
 use App\Modules\Ordering\Models\Order;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
 
 it('registers users as customers', function () {
-    $user = app(RegisterCustomerUseCase::class)->execute(new CreateUserDTO('Maria', 'maria@example.com', 'secret-password'));
+    $user = app(RegisterCustomerUseCase::class)->execute(new CreateUserDTO('Maria', new Email('maria@example.com'), new Password('secret-password')));
 
     expect($user->fresh()->role)->toBe(UserRole::Customer)
         ->and(Hash::check('secret-password', $user->fresh()->password))->toBeTrue();
 });
 
 it('creates customers with an empty purchase history', function () {
-    $summary = app(CreateCustomerUseCase::class)->execute(new CreateUserDTO('João', 'joao@example.com', 'secret-password'));
+    $summary = app(CreateCustomerUseCase::class)->execute(new CreateUserDTO('João', new Email('joao@example.com'), new Password('secret-password')));
 
     expect($summary->account->fresh()->role)->toBe(UserRole::Customer)
         ->and($summary->ordersCount)->toBe(0);
@@ -30,7 +32,7 @@ it('creates customers with an empty purchase history', function () {
 it('updates the own profile keeping the password when none is sent', function () {
     $user = customer();
 
-    app(UpdateOwnProfileUseCase::class)->execute($user, new UpdateUserProfileDTO('Novo Nome', 'novo@example.com'));
+    app(UpdateOwnProfileUseCase::class)->execute($user, new UpdateUserProfileDTO('Novo Nome', new Email('novo@example.com')));
 
     $fresh = $user->fresh();
     expect($fresh->name)->toBe('Novo Nome')
@@ -43,7 +45,7 @@ it('changes the customer password when a new one is sent', function () {
 
     Order::factory()->count(2)->for($user, 'customer')->create();
 
-    $summary = app(UpdateCustomerUseCase::class)->execute($user, new UpdateUserProfileDTO($user->name, $user->email, 'new-secret-password'));
+    $summary = app(UpdateCustomerUseCase::class)->execute($user, new UpdateUserProfileDTO($user->name, new Email($user->email), new Password('new-secret-password')));
 
     expect(Hash::check('new-secret-password', $user->fresh()->password))->toBeTrue()
         ->and($summary->ordersCount)->toBe(2);

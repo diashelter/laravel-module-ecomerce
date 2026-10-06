@@ -15,10 +15,10 @@ class UserService
      */
     public function profileChanges(UpdateUserProfileDTO $data): array
     {
-        $changes = ['name' => $data->name, 'email' => $data->email];
+        $changes = ['name' => $data->name, 'email' => $data->email->value()];
 
-        if (filled($data->password)) {
-            $changes['password'] = $data->password;
+        if ($data->password !== null) {
+            $changes['password'] = $data->password->reveal();
         }
 
         return $changes;

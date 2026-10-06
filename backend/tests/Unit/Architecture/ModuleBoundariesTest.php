@@ -74,3 +74,21 @@ it('resolves the inventory contracts to the stock repository', function (string 
 it('keeps every module named by these rules', function (string $module) {
     expect(glob(app_path("Modules/{$module}/*")))->not->toBeEmpty();
 })->with(MODULES);
+
+// Value objects: immutable by construction, and the account rules live in them only.
+arch('identity value objects are final and readonly')
+    ->expect('App\Modules\Identity\ValueObjects')
+    ->toBeFinal()
+    ->toBeReadonly();
+
+foreach ([
+    'App\Modules\Identity\Http\Requests\RegisterRequest',
+    'App\Modules\Identity\Http\Requests\LoginRequest',
+    'App\Modules\Customers\Http\Requests\Admin\StoreCustomerRequest',
+    'App\Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest',
+    'App\Modules\Customers\Http\Requests\UpdateProfileRequest',
+] as $request) {
+    arch("{$request} does not write the password policy itself")
+        ->expect($request)
+        ->not->toUse('Illuminate\Validation\Rules\Password');
+}

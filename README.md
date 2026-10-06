@@ -80,6 +80,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
   - **Casos de uso** (`UseCases/`): cada um representa uma intenção do usuário ou do sistema (ex.: `PlaceOrderUseCase`) e orquestra o fluxo: transação, repositories, services, eventos e jobs.
   - **Services** (`Services/`): regras de negócio **puras**, sem acesso a banco, transação ou eventos.
   - **Repositories** (`Repositories/`): única camada que lê e grava no banco.
+  - **Value objects** (`ValueObjects/`): conceitos com invariante própria, `final readonly`, que lançam `InvalidArgumentException` se construídos com um valor inválido. Hoje existem no Identity: `Email` e `Password`. Os Form Requests os usam pelas regras `EmailRule` e `PasswordRule` (`Identity/Http/Rules`), e eles viram `string` só na gravação, nos casos de uso e no `UserService`.
 - **Fronteiras verificadas por teste**: o `ModuleBoundariesTest` (teste de arquitetura do Pest) falha se um módulo usar o que não devia de outro.
 - **Processamento assíncrono**: mudanças de status do pedido são feitas por listeners/jobs executados pelo container `queue-worker`.
 
@@ -97,7 +98,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 │   │   │   ├── Ordering/            carrinho, checkout, pedidos, Customer (comprador, somente leitura) — núcleo do negócio
 │   │   │   ├── Payment/             pagamento fake: só publica PaymentApproved
 │   │   │   ├── Fulfillment/         entrega fake: agenda o DeliverOrder e publica OrderDelivered
-│   │   │   ├── Identity/            User, papéis, login (Sanctum), EnsureUserIsAdmin, UserPolicy
+│   │   │   ├── Identity/            User, papéis, login (Sanctum), Email e Password (ValueObjects), EnsureUserIsAdmin, UserPolicy
 │   │   │   ├── Customers/           "Minha conta" e a tela Clientes do admin (CustomerSummaryDTO)
 │   │   │   ├── Backoffice/          dashboard do admin (read model que lê todos os módulos)
 │   │   │   └── Shared/              infraestrutura comum: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID
@@ -588,6 +589,9 @@ O frontend ainda não é verificado no CI.
 | `Account/AccountTest` | resumo e edição de perfil/senha |
 | `Models/CustomerTest` | comprador lido a partir da conta, projeção somente leitura |
 | `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Shared sem módulos de negócio |
+| `Auth/EmailAndPasswordTest` | e-mail como conta única (caixa, `CHECK` do banco, login, perfil, admin), política de senha só ao escolher uma |
+| `Unit/ValueObjects/*` | `Email` (normalização e recusas) e `Password` (política, sem vazar o texto em dumps, serialização e traces) |
+| `Requests/AccountRequestRulesTest` | os Form Requests de conta usam `EmailRule` e `PasswordRule` e não repetem as regras |
 | `SeederTest` | quantidades mínimas exigidas e determinismo dos seeders |
 
 ---
@@ -632,6 +636,7 @@ Fora do escopo por definição: frete, cupons, descontos, endereços, gateway de
 Decisões relevantes:
 
 - **Dinheiro**: centavos inteiros do banco à tela. As colunas são `bigint` (`price_cents`, `unit_price_cents`, `subtotal_cents`, `total_cents`) com `CHECK >= 0`, a API trafega inteiros com o sufixo `_cents` (sem alias para os nomes antigos) e o estado do frontend também guarda centavos. A conversão para reais existe só no frontend (`utils/money`): para exibir (`formatCents`) e para ler o preço que o admin digita (`parseReaisInput`, aceita `199,90`, `199.90`, `199,9` e `199`). O carrinho persiste em `localStorage` na chave `cart-v2`; a chave antiga `cart` é descartada. As migrations originais foram editadas no lugar: quem tem banco local roda `make fresh`, e dumps antigos de `storage-dumps/` deixam de ser compatíveis.
+- **E-mail e senha como value objects**: e-mails que só diferem na caixa são a mesma conta. O `Email` (`Identity/ValueObjects`) remove os espaços das pontas, coloca em minúsculas, valida o formato (RFC) e limita a 255 caracteres. Os Form Requests normalizam o `email` antes de validar (`NormalizesEmailInput`), então o `unique`, o login e a resposta (`data.email`) usam a forma canônica. A coluna `users.email` tem o `CHECK users_email_normalized (email = lower(btrim(email)))`, editado na migration original: quem tem banco local roda `make fresh`. O `Password` aplica a política (mínimo de 8 caracteres) só quando alguém escolhe uma senha (cadastro, admin e perfil); o login aceita senhas antigas. O texto da senha não aparece em `json_encode`, `serialize`, `var_export`, `print_r`, `var_dump` nem em stack traces, e só sai por `reveal()`.
 - **Estoque separado do produto**: a edição de produto (`PUT /api/admin/products/{id}`) não altera estoque; ajustes passam por `/api/admin/stocks/{id}`.
 - **Administradores** são criados apenas pelo seeder; a tela de clientes só cria/edita clientes.
 - **Módulos** (`app/Modules/<Módulo>`): cada módulo repete a mesma estrutura interna, só com as pastas de que precisa:
@@ -639,7 +644,7 @@ Decisões relevantes:
   ```
   Modules/Ordering/
     DTOs/  Enums/  Events/  Exceptions/  Listeners/  Models/  Policies/
-    Repositories/  Services/  UseCases/
+    Repositories/  Services/  UseCases/  ValueObjects/
     Http/Controllers/(Admin/)  Http/Requests/(Admin/)  Http/Resources/
   ```
 

@@ -232,7 +232,9 @@ Score = (
 - `AuthController` (Sanctum SPA), `LoginCredentialsDTO`, `RegisterCustomerUseCase`.
 - Middleware `EnsureUserIsAdmin`, `UserPolicy`.
 
-**Coesão:** 8/10 ✅. Subiu de 6/10 depois que o `User` deixou de conhecer pedidos (problema 3). Ele agora só trata de login, senha, papel e perfil.
+- `Email` e `Password` ([`ValueObjects`](../backend/app/Modules/Identity/ValueObjects/)): as regras de e-mail (canônico, em minúsculas, até 255 caracteres) e de senha (mínimo de 8) ficam escritas uma vez e chegam aos Form Requests por `EmailRule` e `PasswordRule`. O `users.email` tem o `CHECK users_email_normalized` como última defesa.
+
+**Coesão:** 8/10 ✅. Subiu de 6/10 depois que o `User` deixou de conhecer pedidos (problema 3). Ele agora só trata de login, senha, papel e perfil. As regras de e-mail e senha deixaram de ser copiadas nos Form Requests.
 
 **Contexto sugerido:** `IdentityContext`
 
@@ -406,7 +408,7 @@ backend/app/Modules/
   Payment/       PayOrder, PaymentApproved
   Fulfillment/   ScheduleDelivery, DeliverOrder, OrderDelivered
   Customers/     Account, Profile, admin customer management
-  Identity/      User, UserRole, Auth, EnsureUserIsAdmin
+  Identity/      User, UserRole, Auth, Email, Password, EnsureUserIsAdmin
   Backoffice/    Dashboard (read model)
   Shared/        ApiErrorCode, BusinessRuleException, BaseRepository...
 ```

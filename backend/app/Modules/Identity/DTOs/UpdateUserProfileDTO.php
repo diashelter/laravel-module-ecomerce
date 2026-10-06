@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\DTOs;
 
+use App\Modules\Identity\ValueObjects\Email;
+use App\Modules\Identity\ValueObjects\Password;
+
 final readonly class UpdateUserProfileDTO
 {
     /**
-     * @param  string|null  $password  null keeps the current password
+     * @param  Password|null  $password  null keeps the current password
      */
     public function __construct(
         public string $name,
-        public string $email,
-        public ?string $password = null,
+        public Email $email,
+        public ?Password $password = null,
     ) {}
 }
