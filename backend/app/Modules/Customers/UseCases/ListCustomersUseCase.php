@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Customers\UseCases;
+
+use App\Modules\Customers\DTOs\CustomerSummaryDTO;
+use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Repositories\UserRepository;
+use App\Modules\Ordering\Repositories\OrderRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+/**
+ * Admin: lists the accounts with their order count. Two queries per page (accounts, then the
+ * counts of that page grouped by customer), whatever the page size.
+ */
+final class ListCustomersUseCase
+{
+    public function __construct(
+        private readonly UserRepository $users,
+        private readonly OrderRepository $orders,
+    ) {}
+
+    /** @return LengthAwarePaginator<int, CustomerSummaryDTO> */
+    public function execute(int $perPage): LengthAwarePaginator
+    {
+        $page = $this->users->paginateNewestFirst($perPage);
+        $counts = $this->orders->countPerCustomer($page->getCollection()->modelKeys());
+
+        return $page->through(fn (User $account) => new CustomerSummaryDTO($account, $counts[$account->id] ?? 0));
+    }
+}

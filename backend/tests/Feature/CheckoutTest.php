@@ -1,0 +1,164 @@
+<?php
+
+use App\Modules\Catalog\Models\Product;
+use App\Modules\Ordering\Enums\OrderStatus;
+use App\Modules\Ordering\Events\OrderPlaced;
+use App\Modules\Ordering\Models\Order;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+
+beforeEach(fn () => Event::fake([OrderPlaced::class]));
+
+function checkout(array $items)
+{
+    return test()->postJson('/api/orders', ['items' => $items]);
+}
+
+it('places an order, decrements stock and stores a snapshot of the items', function () {
+    $user = customer();
+    $mouse = productWithStock(10, ['name' => 'Mouse', 'price' => '99.90']);
+    $keyboard = productWithStock(3, ['name' => 'Teclado', 'price' => '250.00']);
+
+    $response = $this->actingAs($user)->postJson('/api/orders', [
+        'items' => [
+            // Prices/totals sent by the client are ignored.
+            ['product_id' => $mouse->id, 'quantity' => 2, 'unit_price' => '0.01'],
+            ['product_id' => $keyboard->id, 'quantity' => 3],
+        ],
+        'total' => '1.00',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('data.status', 'placed')
+        ->assertJsonPath('data.total', '949.80')
+        ->assertJsonCount(2, 'data.items');
+
+    expect($mouse->stock->fresh()->quantity)->toBe(8)
+        ->and($keyboard->stock->fresh()->quantity)->toBe(0);
+
+    $order = Order::query()->with('items')->sole();
+    expect($order->user_id)->toBe($user->id)
+        ->and($order->items->firstWhere('product_id', $mouse->id))
+        ->product_name->toBe('Mouse')
+        ->unit_price->toBe('99.90')
+        ->subtotal->toBe('199.80');
+
+    Event::assertDispatched(OrderPlaced::class, fn (OrderPlaced $event) => $event->order->is($order));
+});
+
+it('keeps the historical snapshot when the product changes later', function () {
+    $product = productWithStock(5, ['name' => 'Old name', 'price' => '10.00']);
+    $this->actingAs(customer());
+    checkout([['product_id' => $product->id, 'quantity' => 1]])->assertCreated();
+
+    $product->update(['name' => 'New name', 'price' => '99.00']);
+
+    $item = Order::query()->sole()->items()->sole();
+    expect($item->product_name)->toBe('Old name')->and($item->unit_price)->toBe('10.00');
+});
+
+it('merges repeated products in the same cart', function () {
+    $product = productWithStock(5, ['price' => '10.00']);
+    $this->actingAs(customer());
+
+    checkout([
+        ['product_id' => $product->id, 'quantity' => 2],
+        ['product_id' => $product->id, 'quantity' => 2],
+    ])->assertCreated()->assertJsonPath('data.items.0.quantity', 4);
+
+    expect($product->stock->fresh()->quantity)->toBe(1);
+});
+
+it('returns 409 and changes nothing when stock is insufficient', function () {
+    $ok = productWithStock(10);
+    $low = productWithStock(2);
+    $this->actingAs(customer());
+
+    $response = checkout([
+        ['product_id' => $ok->id, 'quantity' => 1],
+        ['product_id' => $low->id, 'quantity' => 3],
+    ])
+        ->assertConflict()
+        ->assertJsonPath('message', 'Estoque insuficiente para um ou mais produtos.');
+
+    expect($response->json('errors'))->toBe(["items.{$low->id}" => ['Estoque insuficiente. Disponível: 2.']]);
+
+    // The whole transaction was rolled back: no order and no stock change.
+    expect(Order::query()->count())->toBe(0)
+        ->and($ok->stock->fresh()->quantity)->toBe(10)
+        ->and($low->stock->fresh()->quantity)->toBe(2);
+    Event::assertNotDispatched(OrderPlaced::class);
+});
+
+it('rejects inactive and out of stock products', function () {
+    $inactive = Product::factory()->inactive()->withStock(10)->create();
+    $empty = productWithStock(0);
+    $this->actingAs(customer());
+
+    checkout([['product_id' => $inactive->id, 'quantity' => 1]])->assertConflict();
+    checkout([['product_id' => $empty->id, 'quantity' => 1]])->assertConflict();
+    checkout([['product_id' => 999999, 'quantity' => 1]])->assertConflict();
+
+    expect(Order::query()->count())->toBe(0);
+});
+
+it('never lets stock go negative (spec scenario: stock 5, buy 4 then 3)', function () {
+    $product = productWithStock(5);
+
+    $this->actingAs(customer());
+    checkout([['product_id' => $product->id, 'quantity' => 4]])->assertCreated();
+
+    $this->actingAs(customer());
+    checkout([['product_id' => $product->id, 'quantity' => 3]])->assertConflict();
+
+    expect($product->stock->fresh()->quantity)->toBe(1)
+        ->and(Order::query()->count())->toBe(1);
+});
+
+it('locks the stock rows with SELECT ... FOR UPDATE', function () {
+    $product = productWithStock(5);
+    $this->actingAs(customer());
+
+    DB::enableQueryLog();
+    checkout([['product_id' => $product->id, 'quantity' => 1]])->assertCreated();
+
+    $lockQueries = collect(DB::getQueryLog())
+        ->pluck('query')
+        ->filter(fn (string $sql) => str_contains($sql, 'from "stocks"') && str_contains($sql, 'for update'));
+
+    expect($lockQueries)->toHaveCount(1);
+});
+
+it('is protected by a database check constraint as a last line of defense', function () {
+    $product = productWithStock(1);
+
+    expect(fn () => DB::table('stocks')->where('product_id', $product->id)->update(['quantity' => -1]))
+        ->toThrow(QueryException::class);
+});
+
+it('requires authentication and valid items', function () {
+    checkout([['product_id' => 1, 'quantity' => 1]])->assertUnauthorized();
+
+    $this->actingAs(customer());
+    $this->postJson('/api/orders', ['items' => []])->assertUnprocessable()->assertJsonValidationErrors('items');
+});
+
+it('lists only the orders of the authenticated customer', function () {
+    $user = customer();
+    Order::factory()->count(2)->for($user, 'customer')->create();
+    Order::factory()->create();
+
+    $this->actingAs($user)->getJson('/api/orders')->assertOk()->assertJsonCount(2, 'data');
+});
+
+it('shows an order with items and timeline', function () {
+    $user = customer();
+    $order = Order::factory()->for($user, 'customer')->status(OrderStatus::PaymentApproved)->create();
+
+    $this->actingAs($user)->getJson("/api/orders/{$order->id}")
+        ->assertOk()
+        ->assertJsonPath('data.status_label', 'Pagamento aprovado')
+        ->assertJsonPath('data.timeline.2.completed', true)
+        ->assertJsonPath('data.timeline.3.completed', false);
+});
