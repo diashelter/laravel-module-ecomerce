@@ -3,6 +3,8 @@
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
+use App\Modules\Catalog\ValueObjects\CategoryIds;
+use App\Modules\Catalog\ValueObjects\ProductIds;
 
 beforeEach(fn () => $this->repository = app(ProductRepository::class));
 
@@ -69,7 +71,7 @@ it('syncs the product categories', function () {
     [$old, $kept, $new] = Category::factory()->count(3)->create();
     $product->categories()->attach([$old->id, $kept->id]);
 
-    $this->repository->syncCategories($product, [$kept->id, $new->id]);
+    $this->repository->syncCategories($product, new CategoryIds($kept->id, $new->id));
 
     expect($product->categories()->pluck('categories.id')->sort()->values()->all())
         ->toBe(collect([$kept->id, $new->id])->sort()->values()->all());
@@ -80,7 +82,7 @@ it('finds many products keyed by id', function () {
     $second = productWithStock(2);
     productWithStock(1);
 
-    $products = $this->repository->findManyKeyedById([$second->id, $first->id, 999999]);
+    $products = $this->repository->findManyKeyedById(new ProductIds($second->id, $first->id, 999999));
 
     expect($products->keys()->sort()->values()->all())->toBe(collect([$first->id, $second->id])->sort()->values()->all())
         ->and($products->get($first->id)->relationLoaded('stock'))->toBeFalse();
@@ -89,7 +91,7 @@ it('finds many products keyed by id', function () {
 it('optionally eager loads the stock when finding many products', function () {
     $product = productWithStock(4);
 
-    $products = $this->repository->findManyKeyedById([$product->id], withStock: true);
+    $products = $this->repository->findManyKeyedById(new ProductIds($product->id), withStock: true);
 
     expect($products->get($product->id)->relationLoaded('stock'))->toBeTrue()
         ->and($products->get($product->id)->stock->quantity)->toBe(4);

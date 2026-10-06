@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Catalog\Repositories;
 
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Catalog\ValueObjects\CategoryIds;
+use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,21 +53,19 @@ class ProductRepository extends BaseRepository
             ->paginate($perPage);
     }
 
-    /** @param  list<int>  $categoryIds */
-    public function syncCategories(Product $product, array $categoryIds): void
+    public function syncCategories(Product $product, CategoryIds $categoryIds): void
     {
-        $product->categories()->sync($categoryIds);
+        $product->categories()->sync($categoryIds->all());
     }
 
     /**
-     * @param  list<int>  $ids
      * @return Collection<int, Product>
      */
-    public function findManyKeyedById(array $ids, bool $withStock = false): Collection
+    public function findManyKeyedById(ProductIds $ids, bool $withStock = false): Collection
     {
         return $this->query()
             ->when($withStock, fn (Builder $query) => $query->with('stock'))
-            ->whereIn('id', $ids)
+            ->whereIn('id', $ids->all())
             ->get()
             ->keyBy('id');
     }

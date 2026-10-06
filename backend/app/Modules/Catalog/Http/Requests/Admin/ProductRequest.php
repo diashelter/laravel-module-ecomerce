@@ -6,6 +6,7 @@ namespace App\Modules\Catalog\Http\Requests\Admin;
 
 use App\Modules\Catalog\DTOs\ProductDTO;
 use App\Modules\Catalog\Enums\ProductStatus;
+use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
 use Illuminate\Validation\Rule;
 
@@ -43,7 +44,7 @@ abstract class ProductRequest extends ApiFormRequest
             description: $this->validated('description'),
             imageUrl: $this->validated('image_url'),
             status: ProductStatus::from($this->validated('status')),
-            categoryIds: array_map(intval(...), array_values($this->validated('category_ids'))),
+            categoryIds: new CategoryIds(...array_map(intval(...), array_values($this->validated('category_ids')))),
         );
     }
 }

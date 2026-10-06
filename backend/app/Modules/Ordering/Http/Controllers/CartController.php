@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Ordering\Http\Controllers;
 
 use App\Modules\Ordering\Http\Requests\ValidateCartRequest;
+use App\Modules\Ordering\Http\Resources\ValidatedCartResource;
 use App\Modules\Ordering\UseCases\ValidateCartUseCase;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,6 @@ class CartController extends Controller
      */
     public function validate(ValidateCartRequest $request, ValidateCartUseCase $validateCart): JsonResponse
     {
-        return response()->json(['data' => $validateCart->execute($request->toDto())]);
+        return (new ValidatedCartResource($validateCart->execute($request->toDto())))->response();
     }
 }

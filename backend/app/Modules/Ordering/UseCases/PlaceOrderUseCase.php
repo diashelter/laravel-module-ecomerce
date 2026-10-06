@@ -33,10 +33,10 @@ final class PlaceOrderUseCase
      */
     public function execute(int $customerId, CartDTO $cart): Order
     {
-        $quantities = $cart->quantitiesByProduct();
+        $quantities = $cart->quantities();
 
         $order = DB::transaction(function () use ($customerId, $quantities): Order {
-            $productIds = array_keys($quantities);
+            $productIds = $quantities->productIds();
 
             // 1. Lock the stock rows (SELECT ... FOR UPDATE). Any concurrent checkout touching
             //    the same products waits here until this transaction commits or rolls back.
@@ -54,7 +54,7 @@ final class PlaceOrderUseCase
             $this->checkout->assertCanFulfil($quantities, $products);
 
             // 3. Prices come from the database.
-            ['total_cents' => $totalCents, 'lines' => $lines] = $this->checkout->buildOrderLines($quantities, $products);
+            $lines = $this->checkout->buildOrderLines($quantities, $products);
 
             // 4. UPDATE stocks SET quantity = quantity - ? (safe: the rows are locked).
             foreach ($quantities as $productId => $quantity) {
@@ -62,10 +62,7 @@ final class PlaceOrderUseCase
             }
 
             // 5. Create the order and its items (snapshot of name and price).
-            return $this->orders->createWithItems($customerId, [
-                'total_cents' => $totalCents,
-                'status' => OrderStatus::Placed,
-            ], $lines);
+            return $this->orders->createWithItems($customerId, OrderStatus::Placed, $lines);
         });
 
         // 6. Only after COMMIT: the queued listener moves the order to "awaiting_payment".
