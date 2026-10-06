@@ -4,6 +4,9 @@ use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Ordering\Repositories\OrderRepository;
+use App\Modules\Ordering\ValueObjects\CustomerIds;
+use App\Modules\Ordering\ValueObjects\OrderLine;
+use App\Modules\Ordering\ValueObjects\OrderLines;
 use Illuminate\Support\Carbon;
 
 beforeEach(fn () => $this->repository = app(OrderRepository::class));
@@ -63,16 +66,13 @@ it('creates an order with its items', function () {
     $user = customer();
     $product = productWithStock(5, ['name' => 'Fone', 'price_cents' => 5000]);
 
-    $order = $this->repository->createWithItems($user->id, ['total_cents' => 10000, 'status' => OrderStatus::Placed], [[
-        'product_id' => $product->id,
-        'product_name' => 'Fone',
-        'unit_price_cents' => 5000,
-        'quantity' => 2,
-        'subtotal_cents' => 10000,
-    ]]);
+    $order = $this->repository->createWithItems($user->id, OrderStatus::Placed, new OrderLines(
+        new OrderLine($product->id, 'Fone', 5000, 2),
+    ));
 
     expect($order->user_id)->toBe($user->id)
         ->and($order->status)->toBe(OrderStatus::Placed)
+        ->and($order->total_cents)->toBe(10000)
         ->and($order->items()->count())->toBe(1)
         ->and($order->items()->first()->subtotal_cents)->toBe(10000);
 });
@@ -85,8 +85,10 @@ it('counts the orders of several customers in a single query', function () {
     Order::factory()->for($other, 'customer')->create();
     Order::factory()->create();
 
-    expect($this->repository->countPerCustomer([$buyer->id, $other->id, $withoutOrders->id]))
-        ->toEqualCanonicalizing([$buyer->id => 3, $other->id => 1]);
+    $counts = $this->repository->countPerCustomer(new CustomerIds($buyer->id, $other->id, $withoutOrders->id));
+
+    expect(iterator_to_array($counts))->toEqualCanonicalizing([$buyer->id => 3, $other->id => 1])
+        ->and($counts->countFor($withoutOrders->id))->toBe(0);
 });
 
 it('counts orders per day since a date', function () {

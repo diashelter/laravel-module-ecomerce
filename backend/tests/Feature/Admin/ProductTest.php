@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Models\OrderItem;
 
@@ -15,6 +16,29 @@ it('creates a product with its price in cents', function () {
 
     $product = Product::query()->findOrFail($response->json('data.id'));
     expect($product->image_url)->toBe("https://picsum.photos/seed/product-{$product->id}/600/600");
+});
+
+it('creates a product in exactly the given categories', function () {
+    [$first, $second, $other] = Category::factory()->count(3)->create();
+
+    $response = $this->postJson('/api/admin/products', productPayload(['category_ids' => [$first->id, $second->id]]))
+        ->assertCreated();
+
+    expect(Product::query()->findOrFail($response->json('data.id'))->categories()->pluck('categories.id')->sort()->values()->all())
+        ->toBe(collect([$first->id, $second->id])->sort()->values()->all())
+        ->and($other->products()->count())->toBe(0);
+});
+
+it('replaces the product categories on update', function () {
+    [$c1, $c2, $c3] = Category::factory()->count(3)->create();
+    $product = productWithStock(3);
+    $product->categories()->attach([$c1->id, $c2->id]);
+
+    $this->putJson("/api/admin/products/{$product->id}", productPayload(['category_ids' => [$c2->id, $c3->id]]))
+        ->assertOk();
+
+    expect($product->categories()->pluck('categories.id')->sort()->values()->all())
+        ->toBe(collect([$c2->id, $c3->id])->sort()->values()->all());
 });
 
 it('validates product data', function () {

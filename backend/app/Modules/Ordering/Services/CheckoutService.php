@@ -6,6 +6,9 @@ namespace App\Modules\Ordering\Services;
 
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Exceptions\InsufficientStockException;
+use App\Modules\Ordering\ValueObjects\OrderLine;
+use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\ProductQuantities;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -17,12 +20,11 @@ class CheckoutService
     public function __construct(private readonly PurchaseAvailabilityService $availability) {}
 
     /**
-     * @param  array<int, int>  $quantities  [product_id => quantity]
      * @param  Collection<int, Product>  $products  keyed by id, with the `stock` relation set
      *
      * @throws InsufficientStockException
      */
-    public function assertCanFulfil(array $quantities, Collection $products): void
+    public function assertCanFulfil(ProductQuantities $quantities, Collection $products): void
     {
         $errors = [];
 
@@ -48,29 +50,18 @@ class CheckoutService
     /**
      * Prices always come from the database, never from the client.
      *
-     * @param  array<int, int>  $quantities  [product_id => quantity]
      * @param  Collection<int, Product>  $products  keyed by id
-     * @return array{total_cents: int, lines: list<array<string, mixed>>}
      */
-    public function buildOrderLines(array $quantities, Collection $products): array
+    public function buildOrderLines(ProductQuantities $quantities, Collection $products): OrderLines
     {
-        $totalCents = 0;
         $lines = [];
 
         foreach ($quantities as $productId => $quantity) {
             $product = $products->get($productId);
-            $subtotalCents = $product->price_cents * $quantity;
-            $totalCents += $subtotalCents;
 
-            $lines[] = [
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                'unit_price_cents' => $product->price_cents,
-                'quantity' => $quantity,
-                'subtotal_cents' => $subtotalCents,
-            ];
+            $lines[] = new OrderLine($product->id, $product->name, $product->price_cents, $quantity);
         }
 
-        return ['total_cents' => $totalCents, 'lines' => $lines];
+        return new OrderLines(...$lines);
     }
 }

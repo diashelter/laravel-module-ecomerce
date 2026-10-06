@@ -25,7 +25,7 @@ class ValidateCartRequest extends ApiFormRequest
 
     public function toDto(): CartDTO
     {
-        return new CartDTO(array_map(
+        return new CartDTO(...array_map(
             fn (array $item) => new CartItemDTO((int) $item['product_id'], (int) $item['quantity']),
             array_values($this->validated('items')),
         ));
