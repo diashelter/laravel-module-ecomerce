@@ -1,0 +1,64 @@
+# Runs the backend checks on every pull request and on every push to main.
+# It uses the same Docker Compose services and Makefile targets as local development,
+# so CI and `make test` run on the same PHP image and PostgreSQL version.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch cancels the run that is still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Pest + Pint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create the .env files from the examples
+        run: make env-files
+
+      - name: Restore Composer dependencies
+        uses: actions/cache@v6
+        with:
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+
+      - name: Build the PHP image
+        run: docker compose build api
+
+      - name: Start PostgreSQL, Redis and the API container
+        run: |
+          docker compose up -d --wait db redis
+          docker compose up -d api
+          make wait-api
+
+      - name: Install Composer dependencies
+        run: docker compose exec -T api composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate the application key
+        run: docker compose exec -T api php artisan key:generate --force
+
+      - name: Code style (Pint)
+        run: docker compose exec -T api ./vendor/bin/pint --test
+
+      - name: Tests (Pest, including the module boundary architecture tests)
+        run: make test
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --no-color db api
+
+      - name: Stop the containers
+        if: always()
+        run: docker compose down --volumes

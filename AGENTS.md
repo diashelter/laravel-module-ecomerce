@@ -87,10 +87,13 @@ Depois de alterar listeners ou jobs, reinicie o worker:
 make queue-restart
 ```
 
+O CI (`.github/workflows/ci.yml`) roda o Pint e o `make test` em todo pull request, com o mesmo Docker Compose do ambiente local. Rode os dois localmente antes de abrir o PR: o CI só confirma.
+
 ### Checklist final
 
 - [ ] Os testes passam (`make test`).
 - [ ] O estilo está correto (Pint).
+- [ ] Se mudou o ambiente (Dockerfile, `docker-compose.yml`, `Makefile`, `.env.example`), o workflow de CI continua coerente com ele.
 - [ ] O README descreve o comportamento atual.
 - [ ] A análise de domínio reflete o estado atual dos contextos.
 - [ ] Nenhuma menção a nomes antigos ficou para trás.
