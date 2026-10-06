@@ -1,7 +1,6 @@
 <?php
 
 use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Inventory\Repositories\StockRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -34,7 +33,7 @@ it('locks the stock rows of the given products keyed by product id', function ()
     $second = productWithStock(8);
     productWithStock(1);
 
-    $stocks = DB::transaction(fn () => $this->repository->lockForProducts(new ProductIds($second->id, $first->id)));
+    $stocks = DB::transaction(fn () => $this->repository->lockForProducts([$second->id, $first->id]));
 
     expect($stocks->keys()->all())->toBe(collect([$first->id, $second->id])->sort()->values()->all())
         ->and($stocks->get($second->id)->quantity)->toBe(8);

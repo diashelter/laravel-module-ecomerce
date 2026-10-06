@@ -4,41 +4,30 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\DTOs;
 
-use App\Modules\Ordering\ValueObjects\ProductQuantities;
-use ArrayIterator;
-use Countable;
-use IteratorAggregate;
-use Traversable;
-
 /**
  * Only product ids and quantities: prices, names and totals are always read from the database.
- *
- * @implements IteratorAggregate<int, CartItemDTO>
  */
-final readonly class CartDTO implements Countable, IteratorAggregate
+final readonly class CartDTO
 {
-    /** @var list<CartItemDTO> */
-    private array $items;
+    /** @param  list<CartItemDTO>  $items */
+    public function __construct(public array $items) {}
 
-    public function __construct(CartItemDTO ...$items)
+    /**
+     * Groups the items into [product_id => total quantity], sorted by product_id
+     * (the checkout relies on this order to lock stock rows without deadlocks).
+     *
+     * @return array<int, int>
+     */
+    public function quantitiesByProduct(): array
     {
-        $this->items = array_values($items);
-    }
+        $quantities = [];
 
-    /** Groups the items by product (see ProductQuantities). */
-    public function quantities(): ProductQuantities
-    {
-        return new ProductQuantities(...$this->items);
-    }
+        foreach ($this->items as $item) {
+            $quantities[$item->productId] = ($quantities[$item->productId] ?? 0) + $item->quantity;
+        }
 
-    public function count(): int
-    {
-        return count($this->items);
-    }
+        ksort($quantities);
 
-    /** @return Traversable<int, CartItemDTO> */
-    public function getIterator(): Traversable
-    {
-        return new ArrayIterator($this->items);
+        return $quantities;
     }
 }

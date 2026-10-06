@@ -7,7 +7,6 @@ namespace App\Modules\Ordering\UseCases;
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Ordering\DTOs\CartDTO;
 use App\Modules\Ordering\Services\CartValidationService;
-use App\Modules\Ordering\ValueObjects\ValidatedCart;
 
 /**
  * Visitor: re-checks the cart against the database before checkout (read only, no locks).
@@ -19,12 +18,15 @@ final class ValidateCartUseCase
         private readonly CartValidationService $cartValidation,
     ) {}
 
-    public function execute(CartDTO $cart): ValidatedCart
+    /**
+     * @return array{items: list<array<string, mixed>>, total_cents: int, is_valid: bool}
+     */
+    public function execute(CartDTO $cart): array
     {
-        $quantities = $cart->quantities();
+        $productIds = array_keys($cart->quantitiesByProduct());
 
-        $products = $this->products->findManyKeyedById($quantities->productIds(), withStock: true);
+        $products = $this->products->findManyKeyedById($productIds, withStock: true);
 
-        return $this->cartValidation->validate($quantities, $products);
+        return $this->cartValidation->validate($cart, $products);
     }
 }

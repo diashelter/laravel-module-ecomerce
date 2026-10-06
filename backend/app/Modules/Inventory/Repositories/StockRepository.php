@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Repositories;
 
 use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Models\Stock;
@@ -48,12 +47,13 @@ class StockRepository extends BaseRepository implements StockInitializer, StockR
      * SELECT ... FOR UPDATE on the stock rows of the given products. Must run inside a
      * transaction. Rows are always locked in the same order (by product_id) to avoid deadlocks.
      *
+     * @param  list<int>  $productIds
      * @return Collection<int, Stock> keyed by product_id
      */
-    public function lockForProducts(ProductIds $productIds): Collection
+    public function lockForProducts(array $productIds): Collection
     {
         return $this->query()
-            ->whereIn('product_id', $productIds->all())
+            ->whereIn('product_id', $productIds)
             ->orderBy('product_id')
             ->lockForUpdate()
             ->get()

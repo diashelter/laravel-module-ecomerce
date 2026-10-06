@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Contracts;
 
-use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Inventory\Models\Stock;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -21,9 +20,10 @@ interface StockReservation
      * SELECT ... FOR UPDATE on the stock rows of the given products. Rows are always locked in
      * the same order (by product_id), so concurrent checkouts never deadlock.
      *
+     * @param  list<int>  $productIds
      * @return Collection<int, Stock> keyed by product_id
      */
-    public function lockForProducts(ProductIds $productIds): Collection;
+    public function lockForProducts(array $productIds): Collection;
 
     /**
      * Deducts sold units from a stock row previously locked with lockForProducts().

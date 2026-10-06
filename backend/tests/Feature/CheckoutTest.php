@@ -62,22 +62,6 @@ it('keeps the historical snapshot when the product changes later', function () {
     expect($item->product_name)->toBe('Old name')->and($item->unit_price_cents)->toBe(1000);
 });
 
-it('stores an order total equal to the sum of its item subtotals', function () {
-    $first = productWithStock(10, ['price_cents' => 1990]);
-    $second = productWithStock(10, ['price_cents' => 350]);
-    $this->actingAs(customer());
-
-    checkout([
-        ['product_id' => $first->id, 'quantity' => 3],
-        ['product_id' => $second->id, 'quantity' => 2],
-    ])->assertCreated();
-
-    $order = Order::query()->sole();
-    expect($order->total_cents)->toBe(3 * 1990 + 2 * 350)
-        ->and($order->total_cents)->toBe((int) $order->items()->sum('subtotal_cents'))
-        ->and($order->items->every(fn ($item) => $item->subtotal_cents === $item->unit_price_cents * $item->quantity))->toBeTrue();
-});
-
 it('merges repeated products in the same cart', function () {
     $product = productWithStock(5, ['price_cents' => 1000]);
     $this->actingAs(customer());

@@ -35,9 +35,9 @@ it('converts cart items into typed DTOs grouped by product', function () {
         ['product_id' => 7, 'quantity' => 4],
     ]])->toDto();
 
-    expect($cart)->toHaveCount(3)
-        ->and(iterator_to_array($cart)[0])->toEqual(new CartItemDTO(7, 2))
-        ->and(iterator_to_array($cart->quantities()))->toBe([3 => 1, 7 => 6]);
+    expect($cart->items)->toHaveCount(3)
+        ->and($cart->items[0])->toEqual(new CartItemDTO(7, 2))
+        ->and($cart->quantitiesByProduct())->toBe([3 => 1, 7 => 6]);
 });
 
 it('converts the product payload into a CreateProductDTO', function () {
@@ -56,7 +56,7 @@ it('converts the product payload into a CreateProductDTO', function () {
         ->and($dto->product->priceCents)->toBe(129990)
         ->and($dto->product->status)->toBe(ProductStatus::Active)
         ->and($dto->product->imageUrl)->toBeNull()
-        ->and($dto->product->categoryIds->all())->toBe($categories->pluck('id')->all());
+        ->and($dto->product->categoryIds)->toBe($categories->pluck('id')->all());
 });
 
 it('maps an empty password to null on profile updates', function () {

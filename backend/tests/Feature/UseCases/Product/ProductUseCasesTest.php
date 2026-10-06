@@ -10,7 +10,6 @@ use App\Modules\Catalog\UseCases\ChangeProductStatusUseCase;
 use App\Modules\Catalog\UseCases\CreateProductUseCase;
 use App\Modules\Catalog\UseCases\DeleteProductUseCase;
 use App\Modules\Catalog\UseCases\UpdateProductUseCase;
-use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
@@ -23,7 +22,7 @@ beforeEach(function () {
         'description' => 'Monitor IPS',
         'imageUrl' => null,
         'status' => ProductStatus::Active,
-        'categoryIds' => new CategoryIds(...$categoryIds),
+        'categoryIds' => $categoryIds,
         ...$overrides,
     ]);
 });

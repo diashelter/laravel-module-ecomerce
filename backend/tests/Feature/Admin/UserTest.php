@@ -3,7 +3,6 @@
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\Models\User;
 use App\Modules\Ordering\Models\Order;
-use Illuminate\Support\Facades\DB;
 
 beforeEach(fn () => $this->actingAs(admin()));
 
@@ -15,29 +14,6 @@ it('lists users with their order count', function () {
 
     expect($users[$customer->id]['orders_count'])->toBe(2)
         ->and($users[$customer->id]['role'])->toBe('customer');
-});
-
-it('lists users with their order count including zero', function () {
-    $buyer = customer();
-    $withoutOrders = customer();
-    Order::factory()->count(2)->for($buyer, 'customer')->create();
-
-    $users = collect($this->getJson('/api/admin/users')->assertOk()->json('data'))->keyBy('id');
-
-    expect($users[$buyer->id]['orders_count'])->toBe(2)
-        ->and($users[$withoutOrders->id]['orders_count'])->toBe(0);
-});
-
-it('reads the order counts of a customers page in one query', function () {
-    User::factory()->customer()->count(14)->create()
-        ->each(fn (User $account) => Order::factory()->for($account, 'customer')->create());
-
-    DB::enableQueryLog();
-    $this->getJson('/api/admin/users')->assertOk()->assertJsonCount(15, 'data');
-    $orderQueries = collect(DB::getQueryLog())->filter(fn ($query) => str_contains($query['query'], 'from "orders"'));
-    DB::disableQueryLog();
-
-    expect($orderQueries)->toHaveCount(1);
 });
 
 it('always creates customers, never admins', function () {

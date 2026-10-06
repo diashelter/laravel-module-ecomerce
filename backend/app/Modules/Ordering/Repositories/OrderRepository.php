@@ -8,10 +8,6 @@ use App\Modules\Catalog\Contracts\ProductOrderHistory;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
-use App\Modules\Ordering\ValueObjects\CustomerIds;
-use App\Modules\Ordering\ValueObjects\OrderCountsByCustomer;
-use App\Modules\Ordering\ValueObjects\OrderLine;
-use App\Modules\Ordering\ValueObjects\OrderLines;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -64,15 +60,20 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
 
     /**
      * Order count of several customers in a single query (no N+1 on listings).
-     * Customers without orders have no row: the result answers zero for them.
+     * Customers without orders are left out: callers default them to zero.
+     *
+     * @param  list<int>  $customerIds
+     * @return array<int, int> [customer_id => total]
      */
-    public function countPerCustomer(CustomerIds $customerIds): OrderCountsByCustomer
+    public function countPerCustomer(array $customerIds): array
     {
-        return new OrderCountsByCustomer($this->query()
-            ->whereIn('user_id', $customerIds->all())
+        return $this->query()
+            ->whereIn('user_id', $customerIds)
             ->selectRaw('user_id, count(*) as total')
             ->groupBy('user_id')
-            ->pluck('total', 'user_id'));
+            ->pluck('total', 'user_id')
+            ->map(fn ($total) => (int) $total)
+            ->all();
     }
 
     /**
@@ -85,23 +86,15 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
     }
 
     /**
-     * Creates the order and its items (snapshot of name and price). The order total is the one
-     * the lines calculate, so it cannot diverge from the items.
+     * Creates the order and its items (snapshot of name and price).
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  list<array<string, mixed>>  $lines
      */
-    public function createWithItems(int $customerId, OrderStatus $status, OrderLines $lines): Order
+    public function createWithItems(int $customerId, array $attributes, array $lines): Order
     {
-        $order = $this->query()->create([
-            'user_id' => $customerId,
-            'total_cents' => $lines->totalCents(),
-            'status' => $status,
-        ]);
-        $order->items()->createMany(array_map(fn (OrderLine $line) => [
-            'product_id' => $line->productId,
-            'product_name' => $line->productName,
-            'unit_price_cents' => $line->unitPriceCents,
-            'quantity' => $line->quantity,
-            'subtotal_cents' => $line->subtotalCents(),
-        ], iterator_to_array($lines)));
+        $order = $this->query()->create([...$attributes, 'user_id' => $customerId]);
+        $order->items()->createMany($lines);
 
         return $order;
     }
