@@ -12,9 +12,9 @@ use SensitiveParameterValue;
  * A password somebody chose, which already complies with the policy (minimum length).
  * The login does not use it: old passwords must keep working after the policy changes.
  *
- * The plain text never shows up in dumps, serialization or stack traces: it is wrapped in a
+ * While it is wrapped, the plain text never shows up in dumps, serialization or stack traces: it is wrapped in a
  * `SensitiveParameterValue` and the constructor argument is marked as sensitive. There is no
- * `__toString`; the text leaves only through `reveal()`, right before it is hashed.
+ * `__toString`; the text leaves only through `reveal()`, when the attributes for the repository are built, and is a plain string from then on.
  */
 final readonly class Password
 {
