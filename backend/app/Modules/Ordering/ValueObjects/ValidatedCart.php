@@ -35,7 +35,7 @@ final readonly class ValidatedCart implements Countable, IteratorAggregate
 
     public function isValid(): bool
     {
-        return $this->lines !== [] && array_all($this->lines, fn (ValidatedCartLine $line) => ! $line->hasProblem());
+        return $this->lines !== [] && ! in_array(true, array_map(fn (ValidatedCartLine $line) => $line->hasProblem(), $this->lines), true);
     }
 
     public function count(): int
