@@ -557,6 +557,20 @@ make test-filter FILTER=CheckoutTest   # apenas um arquivo/teste
 
 Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes.
 
+### Integração contínua (GitHub Actions)
+
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em todo pull request e em todo push na `main`. Ele usa os **mesmos serviços do Docker Compose e os mesmos alvos do `Makefile`** do ambiente local, então o CI testa na mesma imagem PHP e na mesma versão do PostgreSQL que o `make test`:
+
+1. cria os `.env` a partir dos exemplos (`make env-files`);
+2. constrói a imagem PHP e sobe `db`, `redis` e `api`;
+3. instala as dependências do Composer (com cache por `composer.lock`) e gera a `APP_KEY`;
+4. verifica o estilo com o Pint (`pint --test`);
+5. roda toda a suíte (`make test`), inclusive os testes de arquitetura que verificam as fronteiras entre módulos.
+
+Se algum passo falhar, os logs dos containers `db` e `api` aparecem no próprio run. Um push novo na mesma branch cancela o run anterior que ainda estiver em andamento.
+
+O frontend ainda não é verificado no CI.
+
 | Arquivo | Cobertura |
 | --- | --- |
 | `Auth/AuthTest` | cadastro sempre `customer`, login, logout, `me`, credenciais inválidas |
