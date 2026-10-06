@@ -81,6 +81,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
   - **Services** (`Services/`): regras de negócio **puras**, sem acesso a banco, transação ou eventos.
   - **Repositories** (`Repositories/`): única camada que lê e grava no banco.
   - **Value objects** (`ValueObjects/`): conceitos com invariante própria, `final readonly`, que lançam `InvalidArgumentException` se construídos com um valor inválido. Hoje existem no Identity: `Email` e `Password`. Os Form Requests os usam pelas regras `EmailRule` e `PasswordRule` (`Identity/Http/Rules`), e eles viram `string` só na gravação, nos casos de uso e no `UserService`.
+  - **Listas tipadas** (também em `ValueObjects/`): as listas de domínio que atravessam camadas não são `array`. Cada uma é `final readonly`, implementa `IteratorAggregate` e `Countable`, é construída com parâmetro variádico tipado (um elemento de outro tipo lança `TypeError`) e calcula os próprios totais. No Catalog: `ProductIds` e `CategoryIds` (ids positivos e sem repetição, senão `InvalidArgumentException`). No Ordering: `ProductQuantities` (quantidade por produto, em ordem de `product_id`), `OrderLines`/`OrderLine` (linhas do pedido novo e o total derivado), `ValidatedCart`/`ValidatedCartLine` (resultado da validação do carrinho, com `total_cents` e `is_valid` derivados), `CustomerIds` e `OrderCountsByCustomer` (responde zero para cliente sem pedidos). O `CartDTO` é a lista tipada de `CartItemDTO`. O `array` só aparece onde o Laravel o exige: `whereIn`, `sync`, `createMany` e o `ValidatedCartResource`.
 - **Fronteiras verificadas por teste**: o `ModuleBoundariesTest` (teste de arquitetura do Pest) falha se um módulo usar o que não devia de outro.
 - **Processamento assíncrono**: mudanças de status do pedido são feitas por listeners/jobs executados pelo container `queue-worker`.
 
@@ -377,6 +378,7 @@ Trecho central de `backend/app/Modules/Ordering/UseCases/PlaceOrderUseCase.php`:
 DB::transaction(function () use ($customerId, $quantities) {
     // SELECT ... FROM stocks WHERE product_id IN (...) ORDER BY product_id FOR UPDATE
     // (contrato StockReservation, implementado pelo StockRepository — ordem fixa evita deadlocks)
+    // $productIds é um ProductIds, derivado do ProductQuantities do carrinho
     $stocks = $this->stockReservation->lockForProducts($productIds);
 
     // revalida com os valores bloqueados; se faltar estoque, lança exceção → ROLLBACK
@@ -590,7 +592,8 @@ O frontend ainda não é verificado no CI.
 | `Models/CustomerTest` | comprador lido a partir da conta, projeção somente leitura |
 | `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Shared sem módulos de negócio |
 | `Auth/EmailAndPasswordTest` | e-mail como conta única (caixa, `CHECK` do banco, login, perfil, admin), política de senha só ao escolher uma |
-| `Unit/ValueObjects/*` | `Email` (normalização e recusas) e `Password` (política, sem vazar o texto em dumps, serialização e traces) |
+| `Unit/ValueObjects/*` | `Email` (normalização e recusas), `Password` (política, sem vazar o texto em dumps, serialização e traces) e as listas tipadas (`TypedListsTest`: agrupamento, totais derivados, recusa de tipo e de id inválido) |
+| `Unit/Architecture/TypedListSignaturesTest` | nenhum `array` nas assinaturas de domínio que carregam as listas tipadas |
 | `Requests/AccountRequestRulesTest` | os Form Requests de conta usam `EmailRule` e `PasswordRule` e não repetem as regras |
 | `SeederTest` | quantidades mínimas exigidas e determinismo dos seeders |
 
@@ -637,6 +640,7 @@ Decisões relevantes:
 
 - **Dinheiro**: centavos inteiros do banco à tela. As colunas são `bigint` (`price_cents`, `unit_price_cents`, `subtotal_cents`, `total_cents`) com `CHECK >= 0`, a API trafega inteiros com o sufixo `_cents` (sem alias para os nomes antigos) e o estado do frontend também guarda centavos. A conversão para reais existe só no frontend (`utils/money`): para exibir (`formatCents`) e para ler o preço que o admin digita (`parseReaisInput`, aceita `199,90`, `199.90`, `199,9` e `199`). O carrinho persiste em `localStorage` na chave `cart-v2`; a chave antiga `cart` é descartada. As migrations originais foram editadas no lugar: quem tem banco local roda `make fresh`, e dumps antigos de `storage-dumps/` deixam de ser compatíveis.
 - **E-mail e senha como value objects**: e-mails que só diferem na caixa são a mesma conta. O `Email` (`Identity/ValueObjects`) remove os espaços das pontas, coloca em minúsculas, valida o formato (RFC) e limita a 255 caracteres. Os Form Requests normalizam o `email` antes de validar (`NormalizesEmailInput`), então o `unique`, o login e a resposta (`data.email`) usam a forma canônica. A coluna `users.email` tem o `CHECK users_email_normalized (email = lower(btrim(email)))`, editado na migration original: quem tem banco local roda `make fresh`. O `Password` aplica a política (mínimo de 8 caracteres) só quando alguém escolhe uma senha (cadastro, admin e perfil); o login aceita senhas antigas. O texto da senha não aparece em `json_encode`, `serialize`, `var_export`, `print_r`, `var_dump` nem em stack traces enquanto estiver no value object. Ele só sai por `reveal()`, usado ao montar os atributos que vão para o `UserRepository`, e dali em diante é uma string comum.
+- **Listas de domínio tipadas**: o carrinho, as linhas do pedido, o resultado da validação, os ids de produto, categoria e cliente e a contagem de pedidos por cliente são classes, não `array`. O total do pedido (`OrderLines::totalCents()`) e o do carrinho (`ValidatedCart::totalCents()`) são calculados a partir das linhas, então não divergem delas; o `OrderRepository::createWithItems()` grava o total que as linhas calculam. A resposta da API não mudou. O contrato `StockReservation::lockForProducts()` recebe `ProductIds`.
 - **Estoque separado do produto**: a edição de produto (`PUT /api/admin/products/{id}`) não altera estoque; ajustes passam por `/api/admin/stocks/{id}`.
 - **Administradores** são criados apenas pelo seeder; a tela de clientes só cria/edita clientes.
 - **Módulos** (`app/Modules/<Módulo>`): cada módulo repete a mesma estrutura interna, só com as pastas de que precisa:
@@ -654,13 +658,13 @@ Decisões relevantes:
   - **Testes:** continuam em `backend/tests`, organizados por tipo (Unit/Feature). Só os namespaces importados mudaram.
 - **Contratos do estoque**: o catálogo e o checkout não usam o `StockRepository` diretamente, e sim dois contratos em `App\Modules\Inventory\Contracts`:
   - `StockInitializer::createForProduct()`, usado pelo `CreateProductUseCase` para abrir o estoque de um produto novo.
-  - `StockReservation::lockForProducts()` / `decrement()`, usados pelo `PlaceOrderUseCase` para bloquear e debitar o estoque.
+  - `StockReservation::lockForProducts(ProductIds)` / `decrement()`, usados pelo `PlaceOrderUseCase` para bloquear e debitar o estoque.
   - Os dois são implementados pelo próprio `StockRepository` e ligados no `InventoryServiceProvider` (`$bindings`). Por isso a transação e o `FOR UPDATE` continuam idênticos.
   - O teste de arquitetura `ModuleBoundariesTest` falha se qualquer outro módulo (exceto o read model do Backoffice) usar o `StockRepository`.
 - **Usuário x cliente**: a mesma tabela `users` tem dois modelos com papéis distintos.
   - `User` é a **identidade** (login, senha, papel e perfil) e não conhece pedidos.
   - `Customer` é o **comprador visto pelo lado de pedidos**: projeção somente leitura com `id`, `name` e `email`, que lança `LogicException` se alguém tentar gravar por ela. O pedido aponta para ele em `Order::customer()`.
-  - O `OrderRepository` filtra pedidos pelo id do cliente (`paginateForCustomer`, `recentForCustomer`, `countForCustomer`, `countPerCustomer`), sem receber o `User`.
+  - O `OrderRepository` filtra pedidos pelo id do cliente (`paginateForCustomer`, `recentForCustomer`, `countForCustomer`, `countPerCustomer`), sem receber o `User`. O `countPerCustomer` recebe `CustomerIds` e devolve `OrderCountsByCustomer`.
   - A tela **Clientes** do admin junta as duas partes no `CustomerSummaryDTO` / `CustomerSummaryResource`, montados pelos casos de uso `ListCustomersUseCase` e `ShowCustomerUseCase`. A listagem faz sempre 2 consultas por página (contas e, depois, a contagem de pedidos agrupada).
   - A coluna continua `orders.user_id`, porque o cliente é identificado pelo id da conta.
 - **Pagamento recusado** não foi implementado (era opcional), mantendo os quatro status de negócio da especificação.

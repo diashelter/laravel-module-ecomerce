@@ -1,7 +1,7 @@
 # Análise de Domínio: Contextos Delimitados do Backend
 
 > Análise estratégica (DDD) do código em [`backend/`](../backend), feita em 06/10/2026.
-> Última atualização: 06/10/2026 (todos os 5 passos do plano de evolução concluídos).
+> Última atualização: 06/10/2026 (todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas).
 > O objetivo é identificar subdomínios (Core, Supporting, Generic), mapear os contextos delimitados (bounded contexts) e apontar problemas de coesão e acoplamento.
 
 ## Sumário
@@ -110,7 +110,8 @@ Score = (
 - `Order` (Entity): pedido do cliente, com total e status.
 - `OrderItem` (Entity): item do pedido com snapshot de nome e preço.
 - `OrderStatus` (Enum): ciclo de vida `placed → awaiting_payment → payment_approved → delivered`.
-- `CartDTO` / `CartItemDTO` (Value Objects): o carrinho carrega apenas ids e quantidades.
+- `CartDTO` / `CartItemDTO` (DTOs): o carrinho carrega apenas ids e quantidades. O `CartDTO` é a lista tipada de `CartItemDTO` e entrega um `ProductQuantities`.
+- [`ValueObjects`](../backend/app/Modules/Ordering/ValueObjects/): `ProductQuantities`, `OrderLines`/`OrderLine`, `ValidatedCart`/`ValidatedCartLine`, `CustomerIds` e `OrderCountsByCustomer`, listas tipadas que calculam os próprios totais.
 - `CheckoutService` (Service): valida o atendimento do pedido e monta os itens.
 - `CartValidationService` (Service): revalida o carrinho antes do checkout.
 - `PurchaseAvailabilityService` (Service): fonte única da regra "pode ser comprado" (produto ativo **e** com estoque).
@@ -150,6 +151,7 @@ Score = (
 - `Product` (Entity), `Category` (Entity), `ProductStatus` (Enum).
 - `ProductService`, `CategoryService` (Services): imagem padrão e regras de exclusão.
 - `ProductCatalogFilterDTO`, `ProductDTO`, `CreateProductDTO`, `CategoryDTO`.
+- `ProductIds` e `CategoryIds` ([`ValueObjects`](../backend/app/Modules/Catalog/ValueObjects/)): listas tipadas de ids positivos e sem repetição. O `ProductIds` é o tipo do contrato `StockReservation::lockForProducts()`.
 - Use cases: `CreateProductUseCase`, `UpdateProductUseCase`, `DeleteProductUseCase`, `ChangeProductStatusUseCase`, `CreateCategoryUseCase`, `UpdateCategoryUseCase`, `DeleteCategoryUseCase`.
 - `ProductController` (catálogo público), `Admin\ProductController`, `Admin\CategoryController`.
 
@@ -314,7 +316,7 @@ Score = (
 - **Solução aplicada:**
   - [`User`](../backend/app/Modules/Identity/Models/User.php) ficou só com identidade (login, senha, papel e perfil). O [`UserResource`](../backend/app/Modules/Identity/Http/Resources/UserResource.php) não fala mais de pedidos.
   - Novo [`Customer`](../backend/app/Modules/Ordering/Models/Customer.php): o comprador visto pelo Ordering, uma projeção somente leitura de `users` com `id`, `name` e `email`. Ele lança `LogicException` em qualquer tentativa de gravar ou excluir. `Order::user()` virou `Order::customer()`.
-  - O [`OrderRepository`](../backend/app/Modules/Ordering/Repositories/OrderRepository.php) trabalha com o id do cliente (`paginateForCustomer`, `recentForCustomer`, `countForCustomer`, `countPerCustomer`, `createWithItems`), e o `PlaceOrderUseCase` recebe `int $customerId`.
+  - O [`OrderRepository`](../backend/app/Modules/Ordering/Repositories/OrderRepository.php) trabalha com o id do cliente (`paginateForCustomer`, `recentForCustomer`, `countForCustomer`, `countPerCustomer`, `createWithItems`), com `CustomerIds`, `OrderCountsByCustomer` e `OrderLines` no lugar de arrays, e o `PlaceOrderUseCase` recebe `int $customerId`.
   - A tela "Clientes" do admin compõe os dois lados no [`CustomerSummaryDTO`](../backend/app/Modules/Customers/DTOs/CustomerSummaryDTO.php) e no [`CustomerSummaryResource`](../backend/app/Modules/Customers/Http/Resources/CustomerSummaryResource.php), por meio do `ListCustomersUseCase` e do `ShowCustomerUseCase`. A listagem faz 2 consultas por página, sem N+1.
 - **Decisões:**
   - **O contrato da API não mudou:** os endpoints `/api/admin/users`, `/api/account` e `/api/auth/me` devolvem os mesmos campos, e o frontend não precisou de ajustes.
