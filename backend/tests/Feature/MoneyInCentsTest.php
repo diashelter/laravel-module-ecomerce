@@ -107,6 +107,14 @@ describe('admin products', function () {
         }
     });
 
+    it('explains invalid price_cents in reais', function () {
+        $this->postJson('/api/admin/products', moneyProductPayload(['price_cents' => 10000000000]))
+            ->assertJsonPath('errors.price_cents.0', 'O preço não pode ser maior que R$ 99.999.999,99.');
+
+        $this->postJson('/api/admin/products', moneyProductPayload(['price_cents' => 'abc']))
+            ->assertJsonPath('errors.price_cents.0', 'O campo preço deve ser um número inteiro.');
+    });
+
     it('accepts the maximum price_cents', function () {
         $this->postJson('/api/admin/products', moneyProductPayload(['price_cents' => 9999999999]))
             ->assertCreated()

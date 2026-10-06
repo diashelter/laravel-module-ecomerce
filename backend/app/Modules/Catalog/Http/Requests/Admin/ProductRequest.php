@@ -27,6 +27,14 @@ abstract class ProductRequest extends ApiFormRequest
         ];
     }
 
+    /** The limit is typed in reais by the admin, so the cents bound is not shown as is. */
+    public function messages(): array
+    {
+        return [
+            'price_cents.max' => 'O preço não pode ser maior que R$ 99.999.999,99.',
+        ];
+    }
+
     protected function productDto(): ProductDTO
     {
         return new ProductDTO(
