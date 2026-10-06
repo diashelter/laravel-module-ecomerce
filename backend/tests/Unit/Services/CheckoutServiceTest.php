@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Collection;
 
 beforeEach(function () {
     $this->service = new CheckoutService(new PurchaseAvailabilityService);
-    $this->product = function (int $id, string $price, int $stock, ProductStatus $status = ProductStatus::Active): Product {
-        $product = new Product(['name' => "Produto {$id}", 'price' => $price, 'status' => $status]);
+    $this->product = function (int $id, int $priceCents, int $stock, ProductStatus $status = ProductStatus::Active): Product {
+        $product = new Product(['name' => "Produto {$id}", 'price_cents' => $priceCents, 'status' => $status]);
         $product->id = $id;
 
         return $product->setRelation('stock', new Stock(['quantity' => $stock]));
@@ -19,15 +19,15 @@ beforeEach(function () {
 });
 
 it('accepts quantities that the stock can fulfil', function () {
-    $products = new Collection([1 => ($this->product)(1, '10.00', 3)]);
+    $products = new Collection([1 => ($this->product)(1, 1000, 3)]);
 
     $this->service->assertCanFulfil([1 => 3], $products);
 })->throwsNoExceptions();
 
 it('reports every product that cannot be bought, keyed by item', function () {
     $products = new Collection([
-        1 => ($this->product)(1, '10.00', 2),
-        2 => ($this->product)(2, '10.00', 5, ProductStatus::Inactive),
+        1 => ($this->product)(1, 1000, 2),
+        2 => ($this->product)(2, 1000, 5, ProductStatus::Inactive),
     ]);
 
     try {
@@ -42,17 +42,17 @@ it('reports every product that cannot be bought, keyed by item', function () {
     }
 });
 
-it('builds the order lines and total from the product prices', function () {
+it('builds the order lines and total in cents', function () {
     $products = new Collection([
-        1 => ($this->product)(1, '19.90', 10),
-        2 => ($this->product)(2, '0.10', 10),
+        1 => ($this->product)(1, 1990, 10),
+        2 => ($this->product)(2, 10, 10),
     ]);
 
     $result = $this->service->buildOrderLines([1 => 3, 2 => 3], $products);
 
-    expect($result['total'])->toBe('60.00')
+    expect($result['total_cents'])->toBe(6000)
         ->and($result['lines'])->toBe([
-            ['product_id' => 1, 'product_name' => 'Produto 1', 'unit_price' => '19.90', 'quantity' => 3, 'subtotal' => '59.70'],
-            ['product_id' => 2, 'product_name' => 'Produto 2', 'unit_price' => '0.10', 'quantity' => 3, 'subtotal' => '0.30'],
+            ['product_id' => 1, 'product_name' => 'Produto 1', 'unit_price_cents' => 1990, 'quantity' => 3, 'subtotal_cents' => 5970],
+            ['product_id' => 2, 'product_name' => 'Produto 2', 'unit_price_cents' => 10, 'quantity' => 3, 'subtotal_cents' => 30],
         ]);
 });

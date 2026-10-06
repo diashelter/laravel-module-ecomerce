@@ -10,7 +10,7 @@ function productPayload(array $overrides = []): array
 {
     return array_merge([
         'name' => 'Monitor 27',
-        'price' => '1299.90',
+        'price_cents' => 129990,
         'description' => 'Monitor IPS',
         'image_url' => null,
         'status' => 'active',
@@ -19,10 +19,11 @@ function productPayload(array $overrides = []): array
     ], $overrides);
 }
 
-it('creates a product with categories and its stock', function () {
+it('creates a product with its price in cents', function () {
     $response = $this->postJson('/api/admin/products', productPayload())
         ->assertCreated()
-        ->assertJsonPath('data.price', '1299.90')
+        ->assertJsonPath('data.price_cents', 129990)
+        ->assertJsonMissingPath('data.price')
         ->assertJsonPath('data.stock.quantity', 7)
         ->assertJsonCount(2, 'data.categories');
 
@@ -32,11 +33,11 @@ it('creates a product with categories and its stock', function () {
 
 it('validates product data', function () {
     $this->postJson('/api/admin/products', productPayload([
-        'price' => '-1',
+        'price_cents' => -1,
         'status' => 'deleted',
         'category_ids' => [],
         'stock_quantity' => -5,
-    ]))->assertUnprocessable()->assertJsonValidationErrors(['price', 'status', 'category_ids', 'stock_quantity']);
+    ]))->assertUnprocessable()->assertJsonValidationErrors(['price_cents', 'status', 'category_ids', 'stock_quantity']);
 });
 
 it('updates a product without touching its stock', function () {

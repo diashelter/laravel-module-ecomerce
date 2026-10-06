@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['order_id', 'product_id', 'product_name', 'unit_price', 'quantity', 'subtotal'])]
+#[Fillable(['order_id', 'product_id', 'product_name', 'unit_price_cents', 'quantity', 'subtotal_cents'])]
 #[UseFactory(OrderItemFactory::class)]
 class OrderItem extends Model
 {
@@ -22,8 +22,8 @@ class OrderItem extends Model
     protected function casts(): array
     {
         return [
-            'unit_price' => 'decimal:2',
-            'subtotal' => 'decimal:2',
+            'unit_price_cents' => 'integer',
+            'subtotal_cents' => 'integer',
             'quantity' => 'integer',
         ];
     }

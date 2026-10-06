@@ -45,7 +45,7 @@ it('converts the product payload into a CreateProductDTO', function () {
 
     $dto = validatedRequest(StoreProductRequest::class, [
         'name' => 'Monitor 27',
-        'price' => 1299.9,
+        'price_cents' => '129990',
         'description' => 'Monitor IPS',
         'status' => 'active',
         'category_ids' => $categories->pluck('id')->map(fn (int $id) => (string) $id)->all(),
@@ -53,7 +53,7 @@ it('converts the product payload into a CreateProductDTO', function () {
     ])->toDto();
 
     expect($dto->stockQuantity)->toBe(5)
-        ->and($dto->product->price)->toBe('1299.9')
+        ->and($dto->product->priceCents)->toBe(129990)
         ->and($dto->product->status)->toBe(ProductStatus::Active)
         ->and($dto->product->imageUrl)->toBeNull()
         ->and($dto->product->categoryIds)->toBe($categories->pluck('id')->all());

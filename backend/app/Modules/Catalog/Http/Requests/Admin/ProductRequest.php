@@ -18,7 +18,7 @@ abstract class ProductRequest extends ApiFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'price' => ['required', 'decimal:0,2', 'min:0.01', 'max:99999999.99'],
+            'price_cents' => ['required', 'integer', 'min:1', 'max:9999999999'],
             'description' => ['required', 'string', 'max:5000'],
             'image_url' => ['nullable', 'url', 'max:2048'],
             'status' => ['required', Rule::enum(ProductStatus::class)],
@@ -31,7 +31,7 @@ abstract class ProductRequest extends ApiFormRequest
     {
         return new ProductDTO(
             name: $this->validated('name'),
-            price: (string) $this->validated('price'),
+            priceCents: (int) $this->validated('price_cents'),
             description: $this->validated('description'),
             imageUrl: $this->validated('image_url'),
             status: ProductStatus::from($this->validated('status')),

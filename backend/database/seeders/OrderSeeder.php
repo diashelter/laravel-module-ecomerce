@@ -9,7 +9,6 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
-use BcMath\Number;
 use Illuminate\Database\Seeder;
 
 /**
@@ -47,7 +46,7 @@ class OrderSeeder extends Seeder
                 ->status($status)
                 ->create(['created_at' => $createdAt, 'updated_at' => $createdAt]);
 
-            $total = new Number('0');
+            $totalCents = 0;
 
             foreach (fake()->randomElements($products->all(), fake()->numberBetween(1, 4)) as $product) {
                 $item = OrderItem::factory()
@@ -55,10 +54,10 @@ class OrderSeeder extends Seeder
                     ->forProduct($product, fake()->numberBetween(1, 3))
                     ->create(['created_at' => $createdAt, 'updated_at' => $createdAt]);
 
-                $total = $total + new Number($item->subtotal);
+                $totalCents += $item->subtotal_cents;
             }
 
-            $order->total = (string) $total;
+            $order->total_cents = $totalCents;
             $order->timestamps = false;
             $order->save();
         }

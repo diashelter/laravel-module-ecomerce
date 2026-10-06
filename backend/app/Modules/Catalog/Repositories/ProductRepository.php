@@ -35,8 +35,8 @@ class ProductRepository extends BaseRepository
                 fn (Builder $categories) => $categories->where('slug', $slug),
             ))
             ->tap(fn (Builder $query) => match ($sort) {
-                'price_asc' => $query->orderBy('price')->orderBy('id'),
-                'price_desc' => $query->orderByDesc('price')->orderBy('id'),
+                'price_asc' => $query->orderBy('price_cents')->orderBy('id'),
+                'price_desc' => $query->orderByDesc('price_cents')->orderBy('id'),
                 default => $query->orderBy('name')->orderBy('id'),
             })
             ->paginate($perPage);

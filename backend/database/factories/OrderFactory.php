@@ -20,7 +20,7 @@ class OrderFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'total' => '0.00',
+            'total_cents' => 0,
             'status' => OrderStatus::Placed,
         ];
     }

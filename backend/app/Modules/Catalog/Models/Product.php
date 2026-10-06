@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['name', 'price', 'description', 'image_url', 'status'])]
+#[Fillable(['name', 'price_cents', 'description', 'image_url', 'status'])]
 #[UseFactory(ProductFactory::class)]
 class Product extends Model
 {
@@ -24,7 +24,7 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'price' => 'decimal:2',
+            'price_cents' => 'integer',
             'status' => ProductStatus::class,
         ];
     }

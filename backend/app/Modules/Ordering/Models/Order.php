@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'total', 'status'])]
+#[Fillable(['user_id', 'total_cents', 'status'])]
 #[UseFactory(OrderFactory::class)]
 #[UsePolicy(OrderPolicy::class)]
 class Order extends Model
@@ -26,7 +26,7 @@ class Order extends Model
     protected function casts(): array
     {
         return [
-            'total' => 'decimal:2',
+            'total_cents' => 'integer',
             'status' => OrderStatus::class,
         ];
     }
