@@ -1,6 +1,5 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Events\OrderPlaced;
@@ -17,19 +16,6 @@ dataset('money columns', [
     'order_items.unit_price_cents' => ['order_items', 'unit_price_cents'],
     'order_items.subtotal_cents' => ['order_items', 'subtotal_cents'],
 ]);
-
-function moneyProductPayload(array $overrides = []): array
-{
-    return array_merge([
-        'name' => 'Monitor 27',
-        'price_cents' => 129990,
-        'description' => 'Monitor IPS',
-        'image_url' => null,
-        'status' => 'active',
-        'category_ids' => Category::factory()->count(1)->create()->pluck('id')->all(),
-        'stock_quantity' => 7,
-    ], $overrides);
-}
 
 function assertNoLegacyMoneyKeys(array $payload): void
 {
@@ -70,7 +56,7 @@ describe('admin products', function () {
     it('updates the product price in cents', function () {
         $product = productWithStock(1, ['price_cents' => 5000]);
 
-        $this->putJson("/api/admin/products/{$product->id}", moneyProductPayload(['price_cents' => 19990]))
+        $this->putJson("/api/admin/products/{$product->id}", productPayload(['price_cents' => 19990]))
             ->assertOk()
             ->assertJsonPath('data.price_cents', 19990);
 
@@ -80,7 +66,7 @@ describe('admin products', function () {
     it('rejects an invalid price_cents', function (string $method, array $override) {
         $product = productWithStock(1, ['price_cents' => 5000]);
         $uri = $method === 'post' ? '/api/admin/products' : "/api/admin/products/{$product->id}";
-        $payload = moneyProductPayload($override);
+        $payload = productPayload($override);
 
         if (array_key_exists('price_cents', $override) === false) {
             unset($payload['price_cents']);
@@ -108,15 +94,15 @@ describe('admin products', function () {
     });
 
     it('explains invalid price_cents in reais', function () {
-        $this->postJson('/api/admin/products', moneyProductPayload(['price_cents' => 10000000000]))
+        $this->postJson('/api/admin/products', productPayload(['price_cents' => 10000000000]))
             ->assertJsonPath('errors.price_cents.0', 'O preço não pode ser maior que R$ 99.999.999,99.');
 
-        $this->postJson('/api/admin/products', moneyProductPayload(['price_cents' => 'abc']))
+        $this->postJson('/api/admin/products', productPayload(['price_cents' => 'abc']))
             ->assertJsonPath('errors.price_cents.0', 'O campo preço deve ser um número inteiro.');
     });
 
     it('accepts the maximum price_cents', function () {
-        $this->postJson('/api/admin/products', moneyProductPayload(['price_cents' => 9999999999]))
+        $this->postJson('/api/admin/products', productPayload(['price_cents' => 9999999999]))
             ->assertCreated()
             ->assertJsonPath('data.price_cents', 9999999999);
     });

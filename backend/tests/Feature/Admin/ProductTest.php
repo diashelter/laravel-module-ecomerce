@@ -1,23 +1,9 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Models\OrderItem;
 
 beforeEach(fn () => $this->actingAs(admin()));
-
-function productPayload(array $overrides = []): array
-{
-    return array_merge([
-        'name' => 'Monitor 27',
-        'price_cents' => 129990,
-        'description' => 'Monitor IPS',
-        'image_url' => null,
-        'status' => 'active',
-        'category_ids' => Category::factory()->count(2)->create()->pluck('id')->all(),
-        'stock_quantity' => 7,
-    ], $overrides);
-}
 
 it('creates a product with its price in cents', function () {
     $response = $this->postJson('/api/admin/products', productPayload())
