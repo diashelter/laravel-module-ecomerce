@@ -152,4 +152,52 @@ describe('useAddressBook', () => {
 
     vi.unstubAllGlobals()
   })
+
+  it('drops the form message once a later save succeeds', async () => {
+    vi.mocked(addressService.list).mockResolvedValue([])
+    vi.mocked(addressService.create)
+      .mockRejectedValueOnce(new ApiError(409, 'Você pode cadastrar até 10 endereços.'))
+      .mockResolvedValueOnce(address(7))
+    const book = useAddressBook()
+    await book.load()
+
+    await book.save(payload)
+    expect(book.formMessage.value).toBe('Você pode cadastrar até 10 endereços.')
+
+    await book.save(payload)
+    expect(book.formMessage.value).toBeNull()
+    expect(book.fieldErrors.value).toEqual({})
+  })
+
+  it('clears the form message when the form is reopened', async () => {
+    vi.mocked(addressService.create).mockRejectedValueOnce(new ApiError(409, 'Você pode cadastrar até 10 endereços.'))
+    const book = useAddressBook()
+
+    await book.save(payload)
+    expect(book.formMessage.value).not.toBeNull()
+
+    book.clearFormErrors()
+    expect(book.formMessage.value).toBeNull()
+    expect(book.fieldErrors.value).toEqual({})
+  })
+
+  it('clears the load error when a reload succeeds', async () => {
+    vi.mocked(addressService.list).mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce([address(1)])
+    const book = useAddressBook()
+
+    await book.load()
+    expect(book.loadError.value).toBe('Não foi possível carregar os endereços.')
+
+    await book.load()
+    expect(book.loadError.value).toBeNull()
+    expect(book.addresses.value.map((current) => current.id)).toEqual([1])
+  })
+
+  it('shows the API message when saving an address that no longer exists', async () => {
+    vi.mocked(addressService.update).mockRejectedValueOnce(new ApiError(404, 'Registro não encontrado.'))
+    const book = useAddressBook()
+
+    expect(await book.save(payload, 3)).toBeNull()
+    expect(book.formMessage.value).toBe('Registro não encontrado.')
+  })
 })

@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/addresses-and-shipping/plan.md`
 
-81 checks in 5 slices · 5 one-way doors · 0 open
+82 checks in 5 slices · 5 one-way doors · 0 open
 
 Comandos: o backend roda via `docker compose exec -T api ./vendor/bin/pest --filter="<nome do teste>"`, no mesmo container do `make test` que o CI executa. O frontend roda via `docker compose exec -T frontend npx vitest run -t "<nome do teste>"`, o mesmo Vitest do `make test-frontend`, e a checagem de tipos via `docker compose exec -T frontend npm run type-check`. O CI não roda o frontend, então essas provas precisam rodar localmente antes do PR. Os nomes de teste não usam parênteses, colchetes nem barras, porque o `--filter` do Pest e o `-t` do Vitest são expressões regulares.
 
@@ -264,6 +264,9 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="schedules the del
 **C81** - No caderno de endereços, um `409` ao salvar deixa `formMessage` preenchida e uma exclusão bem-sucedida em seguida a deixa `null`; uma exclusão que falha deixa o endereço na lista e põe a mensagem da API em `formMessage` (AC 23, 24; rodada 2 da verificação)
 Proof: `docker compose exec -T frontend npx vitest run -t "clears a previous form message when a delete succeeds|keeps the address and reports a failed delete"`
 
+**C82** - No caderno de endereços: um `save` bem-sucedido depois de um `409` deixa `formMessage` e `fieldErrors` vazios; `clearFormErrors` zera os dois; um `load` bem-sucedido depois de uma falha zera `loadError`; um `404` ao salvar (`update`) põe a mensagem da API em `formMessage` (AC 19, 23; rodada 3 da verificação)
+Proof: `docker compose exec -T frontend npx vitest run -t "drops the form message once a later save succeeds|clears the form message when the form is reopened|clears the load error when a reload succeeds|shows the API message when saving an address that no longer exists"`
+
 ### S5 - Dados de demonstração · ~4 arquivos · ~12 KB · ~3k
 
 **C74** - Depois do `db:seed`, todo cliente semeado tem ao menos 1 endereço, e `cliente@example.com` tem um endereço com `state` `SP` (AC 66)
@@ -317,6 +320,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="seeds the deliver
 | namespace raiz do Fulfillment proibido ao Ordering (1) | `FulfillmentServiceProvider` C79 | - |
 | valor do delay do `DeliverOrder` (1) | `shop.delivery_delay_seconds` C80 | - |
 | mensagem do formulário do caderno em exclusões (2) | exclusão que falha mostra a mensagem C81 · exclusão que dá certo limpa a mensagem C81 | - |
+| ciclo de `formMessage` e `loadError` do caderno (4) | limpa ao salvar com sucesso C82 · limpa ao reabrir o formulário C82 · `loadError` limpo ao recarregar C82 · `404` ao salvar vira mensagem C82 | - |
 | textos de entrega no pedido (3) | prazo em dias C72 · data prevista C72, C73 · entregue C72 | - |
 | decisões do composable do checkout (8) | sem endereço C53 · salvo no checkout C54 · pré-seleção C55 · subtotal, frete e total C56 · troca de endereço C57 · orçamento pendente ou com falha C58 · confirmação C59 · `422` em `address_id` C60 | - |
 | decisões do composable do caderno (5) | carregando e falha C23 · vazio C24 · ordem da API C24 · erros do formulário C27 · confirmação de exclusão C28 | - |
