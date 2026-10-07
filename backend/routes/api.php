@@ -7,6 +7,7 @@ use App\Modules\Catalog\Http\Controllers\CategoryController;
 use App\Modules\Catalog\Http\Controllers\ProductController;
 use App\Modules\Customers\Http\Controllers\AccountController;
 use App\Modules\Customers\Http\Controllers\Admin\CustomerController as AdminCustomerController;
+use App\Modules\Customers\Http\Controllers\CustomerAddressController;
 use App\Modules\Customers\Http\Controllers\ProfileController;
 use App\Modules\Identity\Http\Controllers\Admin\StaffAuthController;
 use App\Modules\Identity\Http\Controllers\Admin\StaffMemberController as AdminStaffMemberController;
@@ -49,6 +50,11 @@ Route::middleware('auth:customer')->group(function (): void {
 
     Route::get('account', [AccountController::class, 'show']);
     Route::put('account/profile', [ProfileController::class, 'update']);
+
+    Route::get('account/addresses', [CustomerAddressController::class, 'index']);
+    Route::post('account/addresses', [CustomerAddressController::class, 'store']);
+    Route::put('account/addresses/{address}', [CustomerAddressController::class, 'update']);
+    Route::delete('account/addresses/{address}', [CustomerAddressController::class, 'destroy']);
 });
 
 // Administration (guard `staff`). Reading and editing is open to both roles; every DELETE and

@@ -2,6 +2,7 @@
 
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
 use App\Modules\Payment\Contracts\PaymentGateway;
@@ -22,6 +23,27 @@ pest()->extend(TestCase::class)->in('Unit');
 function customer(array $attributes = []): CustomerAccount
 {
     return CustomerAccount::factory()->create($attributes);
+}
+
+/** A saved address of the customer's address book (SP, unless an override says otherwise). */
+function addressOf(CustomerAccount $account, array $attributes = []): CustomerAddress
+{
+    return CustomerAddress::factory()->create(['customer_id' => $account->id, ...$attributes]);
+}
+
+/** Valid body for `POST|PUT /api/account/addresses`; pass overrides to change fields. */
+function addressPayload(array $overrides = []): array
+{
+    return array_merge([
+        'recipient_name' => 'Ana Souza',
+        'postal_code' => '01310-100',
+        'street' => 'Avenida Paulista',
+        'number' => '1000',
+        'complement' => 'Apto 12',
+        'district' => 'Bela Vista',
+        'city' => 'São Paulo',
+        'state' => 'SP',
+    ], $overrides);
 }
 
 function admin(array $attributes = []): User
