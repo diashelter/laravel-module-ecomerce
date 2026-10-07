@@ -2,7 +2,7 @@
 import type { OrderItem } from '@/types'
 import { formatCents } from '@/utils/money'
 
-defineProps<{ items: OrderItem[]; totalCents: number }>()
+defineProps<{ items: OrderItem[]; itemsTotalCents: number; shippingCents: number; totalCents: number }>()
 </script>
 
 <template>
@@ -26,6 +26,14 @@ defineProps<{ items: OrderItem[]; totalCents: number }>()
       </tbody>
       <tfoot>
         <tr class="border-t-2 border-slate-200">
+          <td colspan="3" class="px-4 py-2 text-right text-slate-600">Subtotal</td>
+          <td class="px-4 py-2 text-right">{{ formatCents(itemsTotalCents) }}</td>
+        </tr>
+        <tr>
+          <td colspan="3" class="px-4 py-2 text-right text-slate-600">Frete</td>
+          <td class="px-4 py-2 text-right">{{ formatCents(shippingCents) }}</td>
+        </tr>
+        <tr>
           <td colspan="3" class="px-4 py-3 text-right font-semibold">Total</td>
           <td class="px-4 py-3 text-right text-lg font-bold">{{ formatCents(totalCents) }}</td>
         </tr>

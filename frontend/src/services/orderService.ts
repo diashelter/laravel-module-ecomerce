@@ -2,9 +2,9 @@ import type { CartItemPayload, Order, Paginated } from '@/types'
 import { api } from './api'
 
 export const orderService = {
-  /** Only ids and quantities are sent: prices and totals are calculated by the backend. */
-  async place(items: CartItemPayload[]): Promise<Order> {
-    const { data } = await api.post<{ data: Order }>('orders', { items })
+  /** Only ids, quantities and the address id are sent: prices, shipping and totals are calculated by the backend. */
+  async place(items: CartItemPayload[], addressId: number): Promise<Order> {
+    const { data } = await api.post<{ data: Order }>('orders', { items, address_id: addressId })
     return data.data
   },
 

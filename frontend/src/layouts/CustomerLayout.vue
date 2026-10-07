@@ -2,15 +2,12 @@
 import { useRouter } from 'vue-router'
 import AppNavbar from '@/components/AppNavbar.vue'
 import { useAuthStore } from '@/stores/auth'
+import { accountMenuLinks } from '@/utils/accountMenu'
 
 const auth = useAuthStore()
 const router = useRouter()
 
-const links = [
-  { to: { name: 'account' }, label: 'Dashboard', exact: true },
-  { to: { name: 'account.orders' }, label: 'Meus pedidos', exact: false },
-  { to: { name: 'account.profile' }, label: 'Meu perfil', exact: true },
-]
+const links = accountMenuLinks()
 
 async function logout(): Promise<void> {
   await auth.logout()

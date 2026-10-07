@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import LoadingState from '@/components/LoadingState.vue'
+import OrderDeliveryCard from '@/components/OrderDeliveryCard.vue'
 import OrderItemsTable from '@/components/OrderItemsTable.vue'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
 import OrderTimeline from '@/components/OrderTimeline.vue'
@@ -64,9 +65,16 @@ onMounted(async () => {
       </div>
     </section>
 
+    <OrderDeliveryCard :order="order" />
+
     <section class="card">
       <h2 class="border-b border-slate-100 px-5 py-4 font-semibold">Produtos</h2>
-      <OrderItemsTable :items="order.items ?? []" :total-cents="order.total_cents" />
+      <OrderItemsTable
+        :items="order.items ?? []"
+        :items-total-cents="order.items_total_cents"
+        :shipping-cents="order.shipping_cents"
+        :total-cents="order.total_cents"
+      />
     </section>
   </div>
 </template>

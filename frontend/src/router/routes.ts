@@ -58,6 +58,7 @@ export const routes: RouteRecordRaw[] = [
       { path: '', name: 'account', component: () => import('@/pages/account/AccountDashboardPage.vue'), meta: { title: 'Minha conta' } },
       { path: 'profile', name: 'account.profile', component: () => import('@/pages/account/ProfilePage.vue'), meta: { title: 'Meu perfil' } },
       { path: 'orders', name: 'account.orders', component: () => import('@/pages/account/OrderListPage.vue'), meta: { title: 'Meus pedidos' } },
+      { path: 'addresses', name: 'account.addresses', component: () => import('@/pages/account/AddressBookPage.vue'), meta: { title: 'Endereços' } },
       {
         path: 'orders/:id(\\d+)',
         name: 'account.order',

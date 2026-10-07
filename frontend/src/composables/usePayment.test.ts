@@ -19,6 +19,22 @@ function order(status: OrderStatus): Order {
   return {
     id: 7,
     total_cents: 12345,
+    items_total_cents: 12345,
+    shipping_cents: 0,
+    delivery: {
+      business_days: 2,
+      estimated_on: null,
+      address: {
+        recipient_name: 'Ana Souza',
+        postal_code: '01310100',
+        street: 'Avenida Paulista',
+        number: '1000',
+        complement: null,
+        district: 'Bela Vista',
+        city: 'São Paulo',
+        state: 'SP',
+      },
+    },
     status,
     status_label: '',
     status_step: 2,
