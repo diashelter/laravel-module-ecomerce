@@ -25,7 +25,7 @@ it('ties orders to existing customers and keeps customers that have orders', fun
     expect(refused(fn () => DB::table('customers')->where('id', $buyer->id)->delete()))->toBeTrue()
         ->and(DB::table('customers')->where('id', $buyer->id)->exists())->toBeTrue()
         ->and(DB::table('customers')->where('id', $free->id)->delete())->toBe(1)
-        ->and(refused(fn () => DB::table('orders')->insert(['customer_id' => 999999, 'total_cents' => 0, 'status' => 'placed'])))->toBeTrue();
+        ->and(refused(fn () => DB::table('orders')->insert(orderRow(999999))))->toBeTrue();
 });
 
 it('rejects invalid customer e-mails in the database', function (string $email) {

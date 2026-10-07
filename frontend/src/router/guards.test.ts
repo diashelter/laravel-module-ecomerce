@@ -54,4 +54,13 @@ describe('router guard', () => {
     ])
     expect(adminMenuLinks(false).find((link) => link.label === 'Clientes')?.to).toEqual({ name: 'admin.customers' })
   })
+
+  it('registers the address book under the customer account', () => {
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    const resolved = router.resolve('/account/addresses')
+
+    expect(resolved.name).toBe('account.addresses')
+    expect(resolved.matched[0].meta.requiresShopper).toBe(true)
+    expect(guardRedirect(target('/account/addresses'), visitor)).toEqual({ name: 'login', query: { redirect: '/account/addresses' } })
+  })
 })

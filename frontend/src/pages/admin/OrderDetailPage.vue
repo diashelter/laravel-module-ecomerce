@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import LoadingState from '@/components/LoadingState.vue'
+import OrderDeliveryCard from '@/components/OrderDeliveryCard.vue'
 import OrderItemsTable from '@/components/OrderItemsTable.vue'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
 import OrderTimeline from '@/components/OrderTimeline.vue'
@@ -30,7 +31,7 @@ onMounted(async () => {
 
     <section v-if="order.customer" class="card p-5">
       <h2 class="mb-2 font-semibold">Cliente</h2>
-      <RouterLink :to="{ name: 'admin.users.show', params: { id: order.customer.id } }" class="font-medium text-indigo-600 hover:underline">
+      <RouterLink :to="{ name: 'admin.customers.show', params: { id: order.customer.id } }" class="font-medium text-indigo-600 hover:underline">
         {{ order.customer.name }}
       </RouterLink>
       <p class="text-sm text-slate-500">{{ order.customer.email }}</p>
@@ -44,9 +45,16 @@ onMounted(async () => {
       </p>
     </section>
 
+    <OrderDeliveryCard :order="order" />
+
     <section class="card">
       <h2 class="border-b border-slate-100 px-5 py-4 font-semibold">Produtos</h2>
-      <OrderItemsTable :items="order.items ?? []" :total-cents="order.total_cents" />
+      <OrderItemsTable
+        :items="order.items ?? []"
+        :items-total-cents="order.items_total_cents"
+        :shipping-cents="order.shipping_cents"
+        :total-cents="order.total_cents"
+      />
     </section>
   </div>
 </template>

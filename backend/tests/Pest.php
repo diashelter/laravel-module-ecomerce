@@ -2,6 +2,7 @@
 
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
 use App\Modules\Payment\Contracts\PaymentGateway;
@@ -22,6 +23,50 @@ pest()->extend(TestCase::class)->in('Unit');
 function customer(array $attributes = []): CustomerAccount
 {
     return CustomerAccount::factory()->create($attributes);
+}
+
+/** A saved address of the customer's address book (SP, unless an override says otherwise). */
+function addressOf(CustomerAccount $account, array $attributes = []): CustomerAddress
+{
+    return CustomerAddress::factory()->create(['customer_id' => $account->id, ...$attributes]);
+}
+
+/** Valid body for `POST|PUT /api/account/addresses`; pass overrides to change fields. */
+function addressPayload(array $overrides = []): array
+{
+    return array_merge([
+        'recipient_name' => 'Ana Souza',
+        'postal_code' => '01310-100',
+        'street' => 'Avenida Paulista',
+        'number' => '1000',
+        'complement' => 'Apto 12',
+        'district' => 'Bela Vista',
+        'city' => 'São Paulo',
+        'state' => 'SP',
+    ], $overrides);
+}
+
+/** A complete row for `orders`, written straight to the table with no model in between. */
+function orderRow(int $customerId, array $overrides = []): array
+{
+    return array_merge([
+        'customer_id' => $customerId,
+        'total_cents' => 0,
+        'shipping_cents' => 0,
+        'delivery_business_days' => 2,
+        'estimated_delivery_on' => null,
+        'delivery_recipient_name' => 'Ana Souza',
+        'delivery_postal_code' => '01310100',
+        'delivery_street' => 'Avenida Paulista',
+        'delivery_number' => '1000',
+        'delivery_complement' => null,
+        'delivery_district' => 'Bela Vista',
+        'delivery_city' => 'São Paulo',
+        'delivery_state' => 'SP',
+        'status' => 'placed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ], $overrides);
 }
 
 function admin(array $attributes = []): User

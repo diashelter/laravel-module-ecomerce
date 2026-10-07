@@ -1,7 +1,7 @@
 # Análise de Domínio: Contextos Delimitados do Backend
 
 > Análise estratégica (DDD) do código em [`backend/`](../backend), feita em 06/10/2026.
-> Última atualização: 07/10/2026 (equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
+> Última atualização: 07/10/2026 (endereços de entrega e frete: Customers com o caderno de endereços, Fulfillment com a tabela de frete e a data prevista, e o pedido com a cópia do endereço; equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
 > O objetivo é identificar subdomínios (Core, Supporting, Generic), mapear os contextos delimitados (bounded contexts) e apontar problemas de coesão e acoplamento.
 
 ## Sumário
@@ -19,7 +19,7 @@
 
 ## Visão geral
 
-O backend é uma API Laravel de e-commerce com catálogo, estoque, carrinho, checkout, pagamento simulado e entrega simulada. A autenticação é feita com Sanctum em modo SPA (cookie de sessão).
+O backend é uma API Laravel de e-commerce com catálogo, estoque, carrinho, endereços de entrega, checkout com frete por UF, pagamento simulado e entrega simulada com data prevista. A autenticação é feita com Sanctum em modo SPA (cookie de sessão).
 
 Quando esta análise foi feita, o código estava organizado por **camada técnica** (`app/Models`, `app/Services`, `app/UseCases`, `app/Repositories`, `app/Http`), e não por domínio. Mesmo assim, a linguagem do código mostrava **7 contextos delimitados**, um **contexto de leitura** (dashboard) e um **kernel compartilhado** de infraestrutura.
 
@@ -31,9 +31,9 @@ Desde o passo 5 do [plano de evolução](#plano-de-evolução), cada um deles é
 | Catalog | Supporting | 9/10 ✅ |
 | Inventory | Supporting | 9/10 ✅ |
 | Payment | Supporting (simulado) | 8/10 ✅ |
-| Fulfillment / Delivery | Supporting (simulado) | 7/10 ⚠️ |
+| Fulfillment / Delivery | Supporting (simulado) | 8/10 ✅ |
 | Identity & Access | Generic | 8/10 ✅ |
-| Customer Account | Supporting | 7/10 ⚠️ |
+| Customer Account | Supporting | 8/10 ✅ |
 | Backoffice Reporting | Read model | não se aplica |
 
 ### Como a coesão foi calculada
@@ -75,9 +75,12 @@ Score = (
      └──────────────┘                                └──────────────┘
 
  Ordering → Payment:   consulta "pode ser pago?"   Ordering → Fulfillment: OrderPaid
- Payment → Ordering:   PaymentApproved             Fulfillment → Ordering: OrderDelivered
+ Payment → Ordering:   PaymentApproved             Fulfillment → Ordering: DeliveryScheduled, OrderDelivered
 
  Payment e Fulfillment não se conhecem: só o Ordering muda o status do pedido.
+
+ Ordering define os contratos DeliveryAddressBook (implementado pelo Customers) e
+ ShippingQuoter (implementado pelo Fulfillment): o Ordering não conhece nenhum dos dois módulos.
 
    Customer Account (Supporting) e Backoffice Reporting (read model) leem de todos.
 ```
@@ -93,6 +96,9 @@ Score = (
 | Payment | Ordering | Evento de domínio `PaymentApproved`: o Ordering marca o pedido como pago |
 | Ordering | Fulfillment | Evento de domínio `OrderPaid`: o Fulfillment agenda a entrega |
 | Fulfillment | Ordering | Evento de domínio `OrderDelivered`: o Ordering encerra o pedido |
+| Fulfillment | Ordering | Evento de domínio `DeliveryScheduled`: o Ordering grava a data prevista, sem mudar o status |
+| Customers | Ordering | Inversão de dependência: o contrato `DeliveryAddressBook` é definido pelo Ordering e implementado pelo Customers; o Ordering recebe a cópia de um endereço do cliente |
+| Fulfillment | Ordering | Inversão de dependência: o contrato `ShippingQuoter` é definido pelo Ordering e implementado pelo Fulfillment; o Ordering recebe o preço e o prazo para uma UF |
 | Identity | todos | Conformist: os outros contextos referenciam apenas o `user_id` |
 | todos | Backoffice Reporting | Read model, somente leitura |
 
@@ -102,22 +108,25 @@ Score = (
 
 ### 1. Ordering / Checkout: Core Domain
 
-**Linguagem ubíqua:** carrinho, item, quantidade, checkout, pedido, total, snapshot de preço, ciclo de vida do pedido.
+**Linguagem ubíqua:** carrinho, item, quantidade, checkout, pedido, total, snapshot de preço, endereço de entrega, frete, prazo em dias úteis, data prevista, ciclo de vida do pedido.
 
 **Capacidade de negócio:** transformar um carrinho em um pedido válido, cobrando o preço correto e garantindo que o estoque vendido realmente existe, mesmo com compras concorrentes.
 
 **Conceitos principais:**
 
-- `Order` (Entity): pedido do cliente, com total e status.
+- `Order` (Entity): pedido do cliente, com total, status, a cópia do endereço de entrega, o frete (`shipping_cents`), o prazo prometido (`delivery_business_days`) e a data prevista (`estimated_delivery_on`, preenchida depois do pagamento). O total é a soma dos itens mais o frete.
 - `OrderItem` (Entity): item do pedido com snapshot de nome e preço.
 - `OrderStatus` (Enum): ciclo de vida `placed → awaiting_payment → payment_approved → delivered`.
 - `CartDTO` / `CartItemDTO` (DTOs): o carrinho carrega apenas ids e quantidades. O `CartDTO` é a lista tipada de `CartItemDTO` e entrega um `ProductQuantities`.
 - [`ValueObjects`](../backend/app/Modules/Ordering/ValueObjects/): `ProductQuantities`, `OrderLines`/`OrderLine`, `ValidatedCart`/`ValidatedCartLine`, `CustomerIds` e `OrderCountsByCustomer`, listas tipadas que calculam os próprios totais.
+- [`ValueObjects`](../backend/app/Modules/Ordering/ValueObjects/) do vocabulário que os contratos trocam: `DeliveryAddress` (a cópia de um endereço) e `ShippingQuote` (preço em centavos e prazo em dias úteis), e o enum `BrazilianState` (as 27 UFs).
+- [Contratos](../backend/app/Modules/Ordering/Contracts/) definidos pelo Ordering: `DeliveryAddressBook` (`find(customerId, addressId): ?DeliveryAddress`, implementado pelo Customers) e `ShippingQuoter` (`quote(BrazilianState): ShippingQuote`, implementado pelo Fulfillment).
 - `CheckoutService` (Service): valida o atendimento do pedido e monta os itens.
 - `CartValidationService` (Service): revalida o carrinho antes do checkout.
 - `PurchaseAvailabilityService` (Service): fonte única da regra "pode ser comprado" (produto ativo **e** com estoque).
 - `Customer` (Read model): o comprador visto pelo pedido, uma projeção somente leitura de `customers` (`id`, `name`, `email`). O pedido guarda `orders.customer_id`.
-- `PlaceOrderUseCase` (Use Case): checkout atômico.
+- `PlaceOrderUseCase` (Use Case): checkout atômico. Resolve o endereço e o frete antes da transação (um endereço que não é do cliente responde `422` sem tocar no estoque) e grava o pedido com a cópia, o frete e o total.
+- `RecordEstimatedDeliveryUseCase` (Use Case) e o listener `RecordEstimatedDelivery`: gravam a data prevista que o Fulfillment anunciou, só se o pedido ainda não tem uma.
 - `ValidateCartUseCase` (Use Case): validação do carrinho, só leitura.
 - `MarkOrderAsAwaitingPaymentUseCase` (Use Case): primeira transição de status.
 - `OrderPlaced` (Domain Event), `OrderPolicy`, `InsufficientStockException`.
@@ -129,13 +138,15 @@ Score = (
 - Os itens guardam um snapshot histórico de nome e preço.
 - As transições de status são idempotentes (`OrderRepository::transitionStatus`), o que torna seguros os retries das filas.
 - O evento só é disparado depois do commit (`ShouldDispatchAfterCommit`).
+- O pedido nasce com a cópia do endereço e o frete calculado no servidor: editar ou excluir o endereço, ou mudar a tabela de frete, nunca altera um pedido feito.
 
 **Dependências:**
 
 - → Catalog: preço, nome e status do produto.
 - → Inventory: bloqueio e débito de estoque.
-- → Identity: `user_id` do comprador.
-- ← Payment / Fulfillment: mudanças de status do pedido.
+- → Identity: `customer_id` do comprador.
+- → Customers e Fulfillment: só pelos contratos que o próprio Ordering define (`DeliveryAddressBook`, `ShippingQuoter`) e pelos eventos do Fulfillment. O `ModuleBoundariesTest` proíbe o Ordering de usar o Customers e qualquer namespace do Fulfillment além de `Events`, inclusive as classes da raiz do módulo (o `FulfillmentServiceProvider`).
+- ← Payment / Fulfillment: mudanças de status do pedido (`PaymentApproved`, `OrderDelivered`) e a data prevista (`DeliveryScheduled`).
 
 **Contexto sugerido:** `OrderingContext`
 
@@ -210,18 +221,21 @@ Score = (
 
 ### 5. Fulfillment / Delivery: Supporting Subdomain (simulado)
 
-**Linguagem ubíqua:** entrega, entregue, atraso de entrega.
+**Linguagem ubíqua:** entrega, entregue, frete, orçamento de frete, prazo em dias úteis, data prevista, atraso de entrega.
 
-**Capacidade de negócio:** levar um pedido pago até o estado "entregue". Hoje é simulado por um job com atraso.
+**Capacidade de negócio:** decidir quanto custa e quanto demora a entrega para cada UF, prometer a data prevista quando o pedido é pago e levar o pedido pago até o estado "entregue". A transportadora continua simulada por um job com atraso.
 
 **Conceitos principais:**
 
-- Listener `ScheduleOrderDelivery` (consome `OrderPaid`) e `ScheduleDeliveryUseCase`.
+- [`ShippingRateTable`](../backend/app/Modules/Fulfillment/Services/ShippingRateTable.php) (Service): a tabela de preço e prazo por UF, lida de `config('shop.shipping_rates')`. Implementa o contrato `ShippingQuoter` do Ordering, ligado no [`FulfillmentServiceProvider`](../backend/app/Modules/Fulfillment/FulfillmentServiceProvider.php), e responde `GET /api/shipping/quote` (público).
+- [`DeliveryCalendar`](../backend/app/Modules/Fulfillment/Services/DeliveryCalendar.php) (Service): a contagem de dias úteis (segunda a sexta, sem feriados) no fuso `America/Sao_Paulo`.
+- Listener `ScheduleOrderDelivery` (consome `OrderPaid`) e [`ScheduleDeliveryUseCase`](../backend/app/Modules/Fulfillment/UseCases/ScheduleDeliveryUseCase.php): calcula a data prevista, registra no log (só ids e data, nunca o endereço), publica `DeliveryScheduled` e agenda o `DeliverOrder`.
 - Job `DeliverOrder` e `DeliverOrderUseCase` (transportadora fake).
-- `OrderDelivered` (Domain Event), publicado pelo Fulfillment e consumido pelo Ordering.
+- `DeliveryScheduled` e `OrderDelivered` (Domain Events), publicados pelo Fulfillment e consumidos pelo Ordering.
+- `ShippingQuoteController` e `ShippingQuoteRequest` (a UF é normalizada antes de validar).
 - `config('shop.delivery_delay_seconds')`.
 
-**Coesão:** 7/10 ⚠️. Subiu de 5/10: o Fulfillment tem namespace, job e eventos próprios e não altera o status do pedido. Ele ainda não tem estado próprio (não existe, por exemplo, uma tabela de remessas).
+**Coesão:** 8/10 ✅. Subiu de 7/10: o Fulfillment ganhou regras próprias (a tabela de frete e o calendário de dias úteis) e deixou de ser só um job com atraso. Nenhum outro módulo calcula preço, prazo ou data. Ele continua sem estado próprio: não existe uma tabela de remessas, porque a data prevista é gravada no pedido pelo Ordering (só o Ordering escreve em `orders`). Uma remessa (`shipments`) só se paga com rastreio, etapa "Enviado", várias remessas por pedido ou tarifas que mudem entre o orçamento e a compra, e nada disso está no escopo.
 
 **Contexto sugerido:** `FulfillmentContext`
 
@@ -251,9 +265,9 @@ Score = (
 
 ### 7. Customer Account / Customer Management: Supporting Subdomain
 
-**Linguagem ubíqua:** cliente, perfil, minha conta, pedidos recentes, cadastro de clientes pela equipe.
+**Linguagem ubíqua:** cliente, perfil, minha conta, pedidos recentes, cadastro de clientes pela equipe, endereço, caderno de endereços.
 
-**Capacidade de negócio:** permitir que o cliente gerencie os próprios dados e que a equipe (admin e suporte) consulte, cadastre e edite clientes. Não há exclusão de cliente.
+**Capacidade de negócio:** permitir que o cliente gerencie os próprios dados e os seus endereços de entrega (até 10) e que a equipe (admin e suporte) consulte, cadastre e edite clientes. Não há exclusão de cliente.
 
 **Conceitos principais:**
 
@@ -261,10 +275,14 @@ Score = (
 - `UpdateOwnProfileUseCase`, `CreateCustomerUseCase`, `UpdateCustomerUseCase`, `ListCustomersUseCase`, `ShowCustomerUseCase`.
 - `CustomerSummaryDTO` / `CustomerSummaryResource`: a conta (Identity) ao lado do histórico de pedidos (Ordering).
 - `UserService::profileChanges` (Identity), `Admin\CustomerController`.
+- [`CustomerAddress`](../backend/app/Modules/Customers/Models/CustomerAddress.php) (Entity, tabela `customer_addresses`): o caderno do cliente, apagado junto com a conta (`cascadeOnDelete`; não há nada a preservar, porque o pedido guarda cópia). O banco garante o CEP com 8 dígitos e a UF entre as 27.
+- [`CustomerAddressRepository`](../backend/app/Modules/Customers/Repositories/CustomerAddressRepository.php): também implementa o contrato `DeliveryAddressBook` do Ordering, ligado no [`CustomersServiceProvider`](../backend/app/Modules/Customers/CustomersServiceProvider.php). Um endereço de outro cliente responde igual a um que não existe.
+- `CustomerAddressController` (`/api/account/addresses`), `CustomerAddressRequest` (um só para criar e editar; normaliza a UF), `CustomerAddressPolicy` (só o dono edita e exclui) e os casos de uso `CreateCustomerAddressUseCase`, `UpdateCustomerAddressUseCase` e `DeleteCustomerAddressUseCase`.
+- `CustomerAddressService` (Service): o limite de 10 endereços (`409`).
 
-**Observação:** este contexto **compõe** dois outros: os dados da conta vêm do Identity (`CustomerAccountRepository`) e as estatísticas de pedidos vêm do Ordering (`OrderRepository`). Os dois lados são lidos separadamente e só se encontram no `CustomerSummaryDTO`.
+**Observação:** este contexto **compõe** dois outros nas telas de clientes: os dados da conta vêm do Identity (`CustomerAccountRepository`) e as estatísticas de pedidos vêm do Ordering (`OrderRepository`). Os dois lados são lidos separadamente e só se encontram no `CustomerSummaryDTO`. O caderno de endereços é o primeiro dado que o Customers possui e grava por conta própria.
 
-**Coesão:** 7/10 ⚠️. Ela ainda cai porque o cadastro e a edição de clientes gravam no `CustomerAccount` (Identity) diretamente. Isso é aceitável enquanto não houver dados próprios de cliente (endereços, preferências etc.).
+**Coesão:** 8/10 ✅. Subiu de 7/10: a nota anterior dizia que ficava aceitável gravar tudo no `CustomerAccount` enquanto não houvesse dados próprios de cliente, e agora há (`customer_addresses`, com model, repository, policy e regras próprios). O cadastro e a edição de clientes pela equipe continuam gravando a conta pelo repositório do Identity, porque nome, e-mail e senha são dados da conta, não do cliente.
 
 **Contexto sugerido:** `CustomersContext`
 
@@ -292,6 +310,9 @@ Score = (
 | Payment | Fulfillment | Nenhum | ✅ Não se conhecem: o Fulfillment reage a `OrderPaid`, publicado pelo Ordering | Manter a integração por eventos |
 | Identity | Ordering | Baixo | ✅ O Ordering referencia o cliente só por id (`orders.customer_id`) e lê nome e e-mail pelo `Customer`. O `User` da equipe é proibido no Ordering, no Payment e no Fulfillment (`ModuleBoundariesTest`); só o `CustomerAccount` chega à `OrderPolicy` | Conformist: manter o `Customer` somente leitura |
 | Catalog | Ordering | Baixo | ✅ A exclusão pergunta pelo contrato `ProductOrderHistory`, definido pelo Catalog e implementado pelo Ordering | Manter a inversão de dependência |
+| Ordering | Customers | Baixo | ✅ O Ordering pede a cópia do endereço pelo contrato `DeliveryAddressBook`, que ele define e o Customers implementa. O `ModuleBoundariesTest` proíbe o Ordering de usar o Customers | Manter a inversão de dependência |
+| Ordering | Fulfillment | Baixo | ✅ O Ordering pede o orçamento pelo contrato `ShippingQuoter` (implementado pelo Fulfillment) e só conhece o Fulfillment pelos eventos. O `ModuleBoundariesTest` falha se o Ordering usar qualquer outro namespace dele (uma expectativa por namespace) | Manter a integração por contrato e eventos |
+| Fulfillment | Customers | Nenhum | ✅ O Fulfillment não conhece o caderno de endereços: o pedido carrega a cópia de que ele precisa (`ModuleBoundariesTest`) | Manter |
 
 ---
 
@@ -392,6 +413,24 @@ Score = (
   - **Sem migração de dados:** o banco é recriado por `make fresh`.
 - **Testes:** `Auth/AuthTest`, `Auth/StaffAuthTest`, `AuthorizationTest`, `Admin/CustomerTest`, `Admin/StaffTest`, `Admin/StaffRoleTest`, `Middleware/EnsureUserIsAdminTest`, `Models/CustomerAccountTest`, `UseCases/User/StaffUseCasesTest` e o `ModuleBoundariesTest`.
 
+#### 10. ✅ Resolvido: o pedido não tinha destino, e o Customers e o Fulfillment não tinham dados nem regras próprios
+
+- **Onde estava:** `POST /api/orders` recebia só os itens, `orders.total_cents` era a soma das linhas, e a entrega era um job que esperava `ORDER_DELIVERY_DELAY_SECONDS` e anunciava "entregue" para qualquer cliente. O Customers só tinha as telas da conta, e o Fulfillment, o job.
+- **Problema:** o cliente não tinha onde guardar um endereço, a loja não cobrava frete e ninguém dizia quando o pedido chegava. Os dois contextos ficavam em 7/10 pela mesma lacuna: sem dados próprios (Customers) e sem regra própria (Fulfillment).
+- **Solução aplicada** (feature `addresses-and-shipping`, [design](../.design/addresses-and-shipping.md)):
+  - **Customers:** o caderno de endereços ([`CustomerAddress`](../backend/app/Modules/Customers/Models/CustomerAddress.php), `/api/account/addresses`, até 10 por cliente).
+  - **Fulfillment:** a tabela de frete por UF ([`ShippingRateTable`](../backend/app/Modules/Fulfillment/Services/ShippingRateTable.php)), o calendário de dias úteis ([`DeliveryCalendar`](../backend/app/Modules/Fulfillment/Services/DeliveryCalendar.php)) e o evento [`DeliveryScheduled`](../backend/app/Modules/Fulfillment/Events/DeliveryScheduled.php), publicado ao agendar a entrega com a data prevista.
+  - **Ordering:** o [`PlaceOrderUseCase`](../backend/app/Modules/Ordering/UseCases/PlaceOrderUseCase.php) recebe o `address_id`, pede a cópia do endereço pelo contrato [`DeliveryAddressBook`](../backend/app/Modules/Ordering/Contracts/DeliveryAddressBook.php) e o frete pelo [`ShippingQuoter`](../backend/app/Modules/Ordering/Contracts/ShippingQuoter.php), e grava o pedido com a cópia, o frete, o prazo e o total (itens + frete). O listener [`RecordEstimatedDelivery`](../backend/app/Modules/Ordering/Listeners/RecordEstimatedDelivery.php) grava a data prevista, só a primeira, sem mexer no status.
+- **Decisões:**
+  - **Cópia em colunas `NOT NULL` de `orders`, sem chave para o caderno:** editar ou excluir um endereço nunca reescreve o histórico, e o banco garante que nenhum pedido existe sem destino. Uma tabela `order_delivery_addresses` não garantiria isso, e uma FK bloquearia a exclusão ou perderia a referência.
+  - **Contratos definidos pelo Ordering** (como o `ProductOrderHistory`): publicá-los no Customers ou no Fulfillment faria o Ordering depender de módulos que já dependem dele. O vocabulário que eles trocam (`DeliveryAddress`, `ShippingQuote`, `BrazilianState`) fica no Ordering; o `Shared` foi descartado porque é só infraestrutura.
+  - **O servidor calcula o frete e o total:** o cliente envia só os itens e o `address_id`; `shipping_cents`, `total_cents` e a UF enviados são ignorados. O frete mostrado no checkout é só exibição, e o pagamento cobra `orders.total_cents`.
+  - **A data prevista chega ao pedido por evento:** só o Ordering escreve em `orders`. O Fulfillment conta os dias úteis a partir do momento em que trata o `OrderPaid`, e a primeira gravação vale, então um retry não muda a data.
+  - **Sem tabela `shipments`:** não há ciclo de vida de remessa (rastreio, "Enviado") no escopo.
+  - **`BrazilianState` e a lista de UFs nos `CHECK`:** as duas migrations escrevem as 27 siglas por extenso, para não mudarem de sentido se o enum mudar. As colunas novas de `orders` entraram na migration original (`make fresh`, sem backfill).
+- **Fronteiras verificadas:** o `ModuleBoundariesTest` ganhou `fulfillment does not know customers`, `ordering does not know customers` e uma expectativa por namespace do Fulfillment para `ordering reaches fulfillment only through its events`, além de afirmar que os contratos do Ordering são interfaces. As regras foram conferidas introduzindo violações de propósito. A primeira versão da regra por namespace nunca falhava: dentro de aspas duplas, `\{$namespace}` não interpola e o alvo virava `...\{Services}`; só a violação de propósito mostrou o erro, e a regra passou a montar o alvo por concatenação.
+- **Testes:** `Account/CustomerAddressTest`, `Models/CustomerAddressTest`, `UseCases/Customer/CustomerAddressUseCasesTest`, `Unit/Services/ShippingRateTableTest`, `Feature/ShippingQuoteTest`, `Feature/CheckoutShippingTest`, `Models/OrderDeliveryTest`, `Repositories/CustomerAddressRepositoryTest`, `UseCases/Order/PlaceOrderUseCaseTest`, `Unit/Services/DeliveryCalendarTest`, `Feature/DeliveryEstimateTest`, os casos novos de `OrderStatusFlowTest` e `SeederTest`, e o `ModuleBoundariesTest`.
+
 ### Prioridade baixa
 
 #### 7. ✅ Resolvido: Catalog conhecia pedidos para bloquear a exclusão
@@ -427,12 +466,12 @@ Score = (
 
 ```txt
 backend/app/Modules/
-  Ordering/      Cart, Checkout, Order, OrderItem, OrderPlaced, OrderPaid ← Core
+  Ordering/      Cart, Checkout, Order, OrderItem, OrderPlaced, OrderPaid, DeliveryAddressBook, ShippingQuoter ← Core
   Catalog/       Product, Category, ProductStatus
   Inventory/     Stock, StockOperation, AdjustStock, StockInitializer, StockReservation
   Payment/       Payment, PaymentGateway, FakePaymentGateway, PayOrder, PaymentApproved
-  Fulfillment/   ScheduleDelivery, DeliverOrder, OrderDelivered
-  Customers/     Account, Profile, admin customer management
+  Fulfillment/   ShippingRateTable, DeliveryCalendar, ScheduleDelivery, DeliverOrder, DeliveryScheduled, OrderDelivered
+  Customers/     Account, Profile, admin customer management, CustomerAddress (address book)
   Identity/      User (staff), CustomerAccount, UserRole, Auth, Email, Password, EnsureUserIsAdmin
   Backoffice/    Dashboard (read model)
   Shared/        ApiErrorCode, BusinessRuleException, BaseRepository...
@@ -458,6 +497,10 @@ Cada módulo usa só as pastas de que precisa: `Contracts/`, `DTOs/`, `Enums/`, 
 | Pagamento recusado | Payment | Tentativa negada pelo gateway, com motivo; o pedido continua aguardando pagamento |
 | Pagamento aprovado | Payment | Pedido que pode seguir para a entrega |
 | Entregue | Fulfillment | Pedido concluído |
+| Endereço (`CustomerAddress`) | Customers | Um endereço do caderno do cliente (até 10), que ele escolhe no checkout |
+| Endereço de entrega (`DeliveryAddress`) | Ordering | A cópia de um endereço que o pedido guarda; editar ou excluir o endereço do caderno não a muda |
+| Orçamento de frete (`ShippingQuote`) | Ordering (calculado pelo Fulfillment) | Preço em centavos e prazo em dias úteis para uma UF |
+| Data prevista | Fulfillment (gravada pelo Ordering) | O dia da entrega, fixado quando o pagamento é aprovado: os dias úteis prometidos a partir de então, no fuso de São Paulo |
 | Usuário (`User`) | Identity | Membro da equipe, que entra no admin com o papel `admin` ou `support` (suporte) |
 | Conta do cliente (`CustomerAccount`) | Identity | A conta de quem compra na loja (tabela `customers`), sem papel |
 | Cliente (`Customer`) | Ordering | Quem fez o pedido: identificado pelo id da conta (`customer_id`), conhecido só por nome e e-mail |
@@ -478,6 +521,7 @@ A ordem abaixo prioriza o que reduz mais risco com o menor esforço:
 
 Depois do plano:
 
+- ✅ **Endereços de entrega e frete** (problema 10). Concluído em 07/10/2026: o caderno de endereços no Customers, a tabela de frete e a data prevista no Fulfillment, a cópia do endereço no pedido e os contratos `DeliveryAddressBook` e `ShippingQuoter`, com as regras novas no `ModuleBoundariesTest`. Ver o [design](../.design/addresses-and-shipping.md).
 - ✅ **Modelo `Payment` próprio e gateway fake atrás de uma porta** (recomendação da matriz Ordering × Payment). Concluído em 06/10/2026: tabela `payments`, porta `PaymentGateway` ligada ao `FakePaymentGateway` e recusa com `402`, com as regras da porta verificadas pelo `ModuleBoundariesTest`. Ver o [design](../.design/fake-payment-gateway.md).
 
 ## Pendências depois do plano
@@ -490,8 +534,7 @@ Os 5 passos organizaram o código e tornaram as fronteiras explícitas e verific
 | Estoque excluído por `cascadeOnDelete` | FK `stocks.product_id` | É a regra 1:1 garantida pelo banco |
 | Catalog usa uma regra do Ordering na vitrine (achado ao resolver o problema 7) | `ProductResource` e `ProductController` usam o `PurchaseAvailabilityService` | Gera dependência do Catalog para o Ordering, que por sua vez depende do Catalog. A regra de disponibilidade foi para o Ordering no passo 1 |
 | Tentativas de pagamento presas ao pedido por `restrictOnDelete` | FK `payments.order_id` | O Payment grava na própria tabela, mas referencia `orders`; pedidos nunca são apagados, então a FK só protege o histórico |
-| Eventos carregam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered` | Padrão do projeto com `SerializesModels`; só faz diferença com persistência separada |
+| Eventos carregam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered`, `DeliveryScheduled` | Padrão do projeto com `SerializesModels`; só faz diferença com persistência separada. O `ScheduleDeliveryUseCase` também lê `delivery_business_days` do model `Order` |
 | Dashboard lê os repositories de vários módulos | `GetAdminDashboardUseCase` | É um read model; a dependência é só de leitura |
-| Customers grava pelo repositório do `CustomerAccount` | `CreateCustomerUseCase`, `UpdateCustomerUseCase` | Não há dados próprios de cliente (endereço, preferências) que justifiquem um modelo separado |
 
 > As classificações e fronteiras desta análise foram derivadas do código. Elas devem ser validadas com quem conhece o negócio antes de qualquer refatoração estrutural.

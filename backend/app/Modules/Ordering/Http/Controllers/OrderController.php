@@ -32,7 +32,7 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request, PlaceOrderUseCase $placeOrder): JsonResponse
     {
-        $order = $placeOrder->execute($request->user('customer')->id, $request->toDto());
+        $order = $placeOrder->execute($request->user('customer')->id, $request->toDto(), $request->addressId());
 
         return OrderResource::make($order)
             ->additional(['message' => 'Pedido criado com sucesso.'])

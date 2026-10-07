@@ -15,6 +15,11 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+        // Faker reseeds PHP's global random generator whenever one of its generators is destroyed,
+        // and the garbage collector may destroy leftovers (from an earlier app) at any moment.
+        // Collecting them now keeps one from reseeding in the middle of this run.
+        gc_collect_cycles();
+
         fake()->seed(self::FAKER_SEED);
         fake()->unique(reset: true);
 
@@ -23,6 +28,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             ProductSeeder::class,
             StockSeeder::class,
+            CustomerAddressSeeder::class,
             OrderSeeder::class,
         ]);
     }

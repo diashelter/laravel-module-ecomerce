@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Catalog\Models\Category;
+use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Payment\Models\Payment;
@@ -27,6 +28,10 @@ dataset('store routes behind the customer login', [
     ['post', '/api/orders/{order}/payment'],
     ['get', '/api/account'],
     ['put', '/api/account/profile'],
+    ['get', '/api/account/addresses'],
+    ['post', '/api/account/addresses'],
+    ['put', '/api/account/addresses/{address}'],
+    ['delete', '/api/account/addresses/{address}'],
 ]);
 
 /**
@@ -89,13 +94,15 @@ it('answers 401 to a guest on every admin route', function () {
 
 it('answers 401 to a staff session on every store route', function (string $method, string $uri) {
     $order = Order::factory()->create();
+    $address = addressOf(customer());
     $statusBefore = $order->status;
-    $uri = str_replace('{order}', (string) $order->id, $uri);
+    $uri = str_replace(['{order}', '{address}'], [(string) $order->id, (string) $address->id], $uri);
 
     $this->actingAs(admin())->json($method, $uri)->assertUnauthorized();
 
     expect(Order::query()->count())->toBe(1)
         ->and(Payment::query()->count())->toBe(0)
+        ->and(CustomerAddress::query()->count())->toBe(1)
         ->and($order->fresh()->status)->toBe($statusBefore);
 })->with('store routes behind the customer login');
 

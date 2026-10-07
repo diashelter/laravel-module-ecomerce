@@ -1,12 +1,15 @@
 <?php
 
+use App\Modules\Ordering\Enums\BrazilianState;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\ValueObjects\CustomerIds;
+use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use Illuminate\Support\Carbon;
 
 beforeEach(fn () => $this->repository = app(OrderRepository::class));
@@ -66,13 +69,18 @@ it('creates an order with its items', function () {
     $user = customer();
     $product = productWithStock(5, ['name' => 'Fone', 'price_cents' => 5000]);
 
-    $order = $this->repository->createWithItems($user->id, OrderStatus::Placed, new OrderLines(
-        new OrderLine($product->id, 'Fone', 5000, 2),
-    ));
+    $order = $this->repository->createWithItems(
+        $user->id,
+        OrderStatus::Placed,
+        new OrderLines(new OrderLine($product->id, 'Fone', 5000, 2)),
+        new DeliveryAddress('Ana Souza', '01310100', 'Avenida Paulista', '1000', null, 'Bela Vista', 'São Paulo', BrazilianState::SP),
+        new ShippingQuote(1500, 2),
+    );
 
     expect($order->customer_id)->toBe($user->id)
         ->and($order->status)->toBe(OrderStatus::Placed)
-        ->and($order->total_cents)->toBe(10000)
+        ->and($order->total_cents)->toBe(10000 + 1500)
+        ->and($order->shipping_cents)->toBe(1500)
         ->and($order->items()->count())->toBe(1)
         ->and($order->items()->first()->subtotal_cents)->toBe(10000);
 });

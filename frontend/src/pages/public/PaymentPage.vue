@@ -63,7 +63,12 @@ onMounted(async () => {
       </div>
 
       <div class="card">
-        <OrderItemsTable :items="order.items ?? []" :total-cents="order.total_cents" />
+        <OrderItemsTable
+          :items="order.items ?? []"
+          :items-total-cents="order.items_total_cents"
+          :shipping-cents="order.shipping_cents"
+          :total-cents="order.total_cents"
+        />
       </div>
 
       <div class="card space-y-4 p-6 text-center">

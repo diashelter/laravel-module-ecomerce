@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Event;
 dataset('money columns', [
     'products.price_cents' => ['products', 'price_cents'],
     'orders.total_cents' => ['orders', 'total_cents'],
+    'orders.shipping_cents' => ['orders', 'shipping_cents'],
     'order_items.unit_price_cents' => ['order_items', 'unit_price_cents'],
     'order_items.subtotal_cents' => ['order_items', 'subtotal_cents'],
 ]);
@@ -187,12 +188,17 @@ it('ignores money fields sent by the client on checkout', function (string $fiel
     Event::fake([OrderPlaced::class]);
     $product = productWithStock(10, ['price_cents' => 1990]);
 
-    $this->actingAs(customer())->postJson('/api/orders', [
+    $account = customer();
+
+    $this->actingAs($account)->postJson('/api/orders', [
         'items' => [['product_id' => $product->id, 'quantity' => 3, $field => 1]],
+        'address_id' => addressOf($account)->id,
         $field => 1,
     ])
         ->assertCreated()
-        ->assertJsonPath('data.total_cents', 5970)
+        // The address is in SP: R$ 15,00 of shipping on top of the items.
+        ->assertJsonPath('data.items_total_cents', 5970)
+        ->assertJsonPath('data.total_cents', 5970 + 1500)
         ->assertJsonPath('data.items.0.unit_price_cents', 1990)
         ->assertJsonPath('data.items.0.subtotal_cents', 5970);
 })->with(['price', 'unit_price', 'total', 'unit_price_cents', 'total_cents']);
@@ -225,11 +231,11 @@ it('exposes order money in cents on every order route', function () {
     $assertOrder($this->getJson("/api/admin/customers/{$user->id}")->assertOk()->json('data.orders.0'));
 });
 
-it('seeds orders whose total_cents is the sum of their items', function () {
+it('seeds orders whose total_cents is the sum of their items plus the shipping', function () {
     $this->seed();
 
     foreach (Order::query()->with('items')->get() as $order) {
-        expect($order->total_cents)->toBe($order->items->sum('subtotal_cents'));
+        expect($order->total_cents)->toBe($order->items->sum('subtotal_cents') + $order->shipping_cents);
 
         foreach ($order->items as $item) {
             expect($item->subtotal_cents)->toBe($item->unit_price_cents * $item->quantity);

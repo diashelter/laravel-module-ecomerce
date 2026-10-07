@@ -1,6 +1,9 @@
 export type StaffRole = 'admin' | 'support'
 export type ProductStatus = 'active' | 'inactive'
 export type OrderStatus = 'placed' | 'awaiting_payment' | 'payment_approved' | 'delivered'
+export type BrazilianState =
+  | 'AC' | 'AL' | 'AM' | 'AP' | 'BA' | 'CE' | 'DF' | 'ES' | 'GO' | 'MA' | 'MG' | 'MS' | 'MT' | 'PA'
+  | 'PB' | 'PE' | 'PI' | 'PR' | 'RJ' | 'RN' | 'RO' | 'RR' | 'RS' | 'SC' | 'SE' | 'SP' | 'TO'
 
 /** A shopper account (`customers`). It has no role. */
 export interface Customer {
@@ -75,9 +78,48 @@ export interface TimelineStep {
   completed: boolean
 }
 
+/** The fields of an address, as an address of the book and as the copy an order keeps. `postal_code` is the 8 digits. */
+export interface AddressFields {
+  recipient_name: string
+  postal_code: string
+  street: string
+  number: string
+  complement: string | null
+  district: string
+  city: string
+  state: BrazilianState
+}
+
+/** An address of the customer's own book. */
+export interface CustomerAddress extends AddressFields {
+  id: number
+  created_at: string
+}
+
+/** What the address form sends: the postal code may carry the hyphen, and an empty complement becomes null. */
+export type AddressPayload = Omit<AddressFields, 'complement'> & { complement?: string | null }
+
+/** What the shipping costs and how long it takes to a state. */
+export interface ShippingQuote {
+  state: BrazilianState
+  price_cents: number
+  delivery_business_days: number
+}
+
+/** Where the order goes and when it is expected. `estimated_on` is a "YYYY-MM-DD" day, null until the payment is approved. */
+export interface OrderDelivery {
+  business_days: number
+  estimated_on: string | null
+  address: AddressFields
+}
+
 export interface Order {
   id: number
+  /** What is charged: the items plus the shipping. */
   total_cents: number
+  items_total_cents: number
+  shipping_cents: number
+  delivery: OrderDelivery
   status: OrderStatus
   status_label: string
   status_step: number

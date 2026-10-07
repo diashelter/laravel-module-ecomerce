@@ -9,6 +9,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 - Carrinho com **Pinia** e checkout validado no backend
 - **Transação atômica** + `lockForUpdate()` para controle de **concorrência** de estoque
 - **Eventos, listeners e jobs assíncronos** em fila **Redis**
+- Endereços de entrega, **frete por UF** calculado pelo servidor e **data prevista** de entrega
 - Dashboard administrativo com dados agregados no backend
 - Testes automatizados com **Pest**
 - Ambiente 100% **Docker** e automação com **Makefile**
@@ -81,7 +82,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
   - **Services** (`Services/`): regras de negócio **puras**, sem acesso a banco, transação ou eventos.
   - **Repositories** (`Repositories/`): única camada que lê e grava no banco.
   - **Value objects** (`ValueObjects/`): conceitos com invariante própria, `final readonly`, que lançam `InvalidArgumentException` se construídos com um valor inválido. Hoje existem no Identity: `Email` e `Password`. Os Form Requests os usam pelas regras `EmailRule` e `PasswordRule` (`Identity/Http/Rules`), e eles viram `string` só na gravação, nos casos de uso e no `UserService`.
-  - **Listas tipadas** (também em `ValueObjects/`): as listas de domínio que atravessam camadas não são `array`. Cada uma é `final readonly`, implementa `IteratorAggregate` e `Countable`, é construída com parâmetro variádico tipado (um elemento de outro tipo lança `TypeError`) e calcula os próprios totais. No Catalog: `ProductIds` e `CategoryIds` (ids positivos e sem repetição, senão `InvalidArgumentException`). No Ordering: `ProductQuantities` (quantidade por produto, em ordem de `product_id`), `OrderLines`/`OrderLine` (linhas do pedido novo e o total derivado), `ValidatedCart`/`ValidatedCartLine` (resultado da validação do carrinho, com `total_cents` e `is_valid` derivados), `CustomerIds` e `OrderCountsByCustomer` (responde zero para cliente sem pedidos). O `CartDTO` é a lista tipada de `CartItemDTO`. O `array` só aparece onde o Laravel o exige: `whereIn`, `sync`, `createMany` e o `ValidatedCartResource`.
+  - **Listas tipadas** (também em `ValueObjects/`): as listas de domínio que atravessam camadas não são `array`. Cada uma é `final readonly`, implementa `IteratorAggregate` e `Countable`, é construída com parâmetro variádico tipado (um elemento de outro tipo lança `TypeError`) e calcula os próprios totais. No Catalog: `ProductIds` e `CategoryIds` (ids positivos e sem repetição, senão `InvalidArgumentException`). No Ordering: `ProductQuantities` (quantidade por produto, em ordem de `product_id`), `OrderLines`/`OrderLine` (linhas do pedido novo e o total derivado), `ValidatedCart`/`ValidatedCartLine` (resultado da validação do carrinho, com `total_cents` e `is_valid` derivados), `CustomerIds` e `OrderCountsByCustomer` (responde zero para cliente sem pedidos). Também no Ordering, `DeliveryAddress` (a cópia de um endereço que o pedido guarda) e `ShippingQuote` (preço e prazo de uma UF) são o vocabulário dos contratos `DeliveryAddressBook` e `ShippingQuoter`. O `CartDTO` é a lista tipada de `CartItemDTO`. O `array` só aparece onde o Laravel o exige: `whereIn`, `sync`, `createMany` e o `ValidatedCartResource`.
 - **Fronteiras verificadas por teste**: o `ModuleBoundariesTest` (teste de arquitetura do Pest) falha se um módulo usar o que não devia de outro.
 - **Processamento assíncrono**: mudanças de status do pedido são feitas por listeners/jobs executados pelo container `queue-worker`.
 
@@ -96,15 +97,15 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 │   │   ├── Modules/
 │   │   │   ├── Catalog/             produtos e categorias (vitrine e cadastro)
 │   │   │   ├── Inventory/           estoque; publica Contracts/ (StockInitializer, StockReservation) e InventoryServiceProvider
-│   │   │   ├── Ordering/            carrinho, checkout, pedidos, Customer (comprador, somente leitura) — núcleo do negócio
+│   │   │   ├── Ordering/            carrinho, checkout, pedidos, Customer (comprador, somente leitura) — núcleo do negócio; define Contracts/ (DeliveryAddressBook, ShippingQuoter) e o vocabulário que eles trocam
 │   │   │   ├── Payment/             cobra pela porta PaymentGateway (gateway fake), grava as tentativas e publica PaymentApproved
-│   │   │   ├── Fulfillment/         entrega fake: agenda o DeliverOrder e publica OrderDelivered
+│   │   │   ├── Fulfillment/         tabela de frete por UF (ShippingRateTable), calendário de dias úteis, entrega fake: agenda o DeliverOrder e publica DeliveryScheduled e OrderDelivered; FulfillmentServiceProvider
 │   │   │   ├── Identity/            as duas contas (User = equipe, CustomerAccount = comprador), papéis, logins (Sanctum, um guard por área), Email e Password (ValueObjects), EnsureUserIsAdmin
-│   │   │   ├── Customers/           "Minha conta" e a tela Clientes do admin (CustomerSummaryDTO, sobre `customers`)
+│   │   │   ├── Customers/           "Minha conta", o caderno de endereços (`customer_addresses`) e a tela Clientes do admin (CustomerSummaryDTO, sobre `customers`); CustomersServiceProvider
 │   │   │   ├── Backoffice/          dashboard do admin (read model que lê todos os módulos)
 │   │   │   └── Shared/              infraestrutura comum: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID
 │   │   └── Providers/               AppServiceProvider (configurações globais)
-│   ├── config/shop.php              configurações da loja (delay da entrega, paginação)
+│   ├── config/shop.php              configurações da loja (delay da entrega, paginação, tabela de frete por UF)
 │   ├── database/
 │   │   ├── factories/
 │   │   ├── migrations/
@@ -116,14 +117,14 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 ├── frontend/                        Vue 3 + Vite
 │   └── src/
 │       ├── components/              componentes reutilizáveis (ProductCard, OrderTimeline, gráficos...)
-│       ├── composables/             usePolling, useFormErrors
+│       ├── composables/             usePolling, useFormErrors, usePayment, useAddressBook, useCheckout
 │       ├── layouts/                 PublicLayout, AuthLayout, CustomerLayout, AdminLayout
 │       ├── pages/                   public/, auth/, account/, admin/
 │       ├── router/                  rotas + guards de autenticação/autorização
 │       ├── services/                api.ts (Axios central) + serviços por recurso
 │       ├── stores/                  Pinia: auth (cliente), staff (equipe), cart, notifications
 │       ├── types/                   tipos TypeScript da API
-│       └── utils/                   dinheiro, datas, slug
+│       └── utils/                   dinheiro, datas, slug, CEP, UFs, menu da conta, texto de entrega
 │
 ├── docker/
 │   ├── nginx/default.conf
@@ -278,11 +279,13 @@ make artisan CMD="route:list --path=api"
 
 ```
 customers ──1:N── orders ──1:N── order_items ──N:1── products ──1:1── stocks
-                                                     │
-                                                     N:N (category_product)
-                                                     │
-                                                 categories
+    │                                                │
+    1:N                                              N:N (category_product)
+    │                                                │
+customer_addresses                               categories
 ```
+
+`orders` não aponta para `customer_addresses`: o endereço entra no pedido como **cópia** (colunas `delivery_*`).
 
 | Tabela | Destaques |
 | --- | --- |
@@ -292,7 +295,8 @@ customers ──1:N── orders ──1:N── order_items ──N:1── pro
 | `products` | `price_cents bigint` (centavos inteiros, nunca `float`) com `CHECK (price_cents >= 0)`, `status` (`active` / `inactive`). **Não** possui quantidade |
 | `stocks` | `product_id` **único** (garante o 1:1), `quantity` inteiro com `CHECK (quantity >= 0)` |
 | `category_product` | pivot com chave primária composta |
-| `orders` | `total_cents bigint` (centavos) com `CHECK (total_cents >= 0)`, `status` (`placed`, `awaiting_payment`, `payment_approved`, `delivered`) |
+| `customer_addresses` | o caderno do cliente: `customer_id` (FK `cascade`, indexada), `recipient_name`, `postal_code char(8)` com `CHECK customer_addresses_postal_code_digits` (8 dígitos), `street`, `number`, `complement` (opcional), `district`, `city` e `state char(2)` com `CHECK customer_addresses_state_known` (as 27 UFs). Até 10 por cliente (regra da aplicação) |
+| `orders` | `total_cents bigint` (centavos, itens + frete) com `CHECK (total_cents >= 0)`, `shipping_cents bigint` (`CHECK >= 0`), `delivery_business_days smallint` (`CHECK > 0`, o prazo prometido), `estimated_delivery_on date` (nula até o pagamento ser aprovado), a **cópia do endereço de entrega** em colunas `delivery_*` `NOT NULL` (exceto o complemento), com `CHECK` de CEP com 8 dígitos e de UF entre as 27, e `CHECK (total_cents >= shipping_cents)`. `status` (`placed`, `awaiting_payment`, `payment_approved`, `delivered`) |
 | `payments` | uma linha por **tentativa** de pagamento: `amount_cents` (cópia do total do pedido), `status` (`approved` / `declined`), `decline_reason`, `card_token`, `gateway`, `gateway_transaction_id`. Índice **único parcial** em `order_id` onde `status = 'approved'` (no máximo um aprovado por pedido) e `CHECK` de motivo só na recusa e de valor `>= 0` |
 | `order_items` | **snapshot** de `product_name` e `unit_price_cents`; `subtotal_cents bigint` (`unit_price_cents × quantity`), os dois com `CHECK >= 0`. Mudar o produto não altera pedidos antigos |
 
@@ -302,6 +306,7 @@ customers ──1:N── orders ──1:N── order_items ──N:1── pro
 - `order_items.product_id` e `orders.customer_id` (→ `customers.id`) usam `restrict`: **não é possível excluir um produto que já está em pedidos** (a API responde `409` e sugere desativar o produto), nem um cliente que tem pedidos.
 - `payments.order_id` também usa `restrict`: um pedido com tentativas de pagamento não pode ser apagado.
 - Categorias com produtos associados também não podem ser excluídas (`409`).
+- `customer_addresses.customer_id` usa `cascade`: o caderno some com a conta, e nenhum pedido sente, porque cada pedido guarda a própria cópia do endereço. Editar ou excluir um endereço nunca muda um pedido feito.
 
 ### Migrations e seeders
 
@@ -319,7 +324,8 @@ Seeders (chamados pelo `DatabaseSeeder` nesta ordem):
 | `CategorySeeder` | 8 categorias: Eletrônicos, Informática, Celulares, Acessórios, Casa, Escritório, Games, Periféricos |
 | `ProductSeeder` | 30 produtos (25 ativos, 5 inativos), cada um com 1 a 3 categorias e imagem `https://picsum.photos/seed/product-{n}/600/600` |
 | `StockSeeder` | Estoque para cada produto: 6 sem estoque, 6 com estoque baixo (1–5), 9 médio (6–20), 9 alto (21–150) |
-| `OrderSeeder` | 24 pedidos com itens, snapshots e totais; metade nos últimos 30 dias (todos os status) e metade nos últimos 12 meses (entregues) |
+| `CustomerAddressSeeder` | 1 endereço em SP para `cliente@example.com` (o frete mais curto, 2 dias úteis) e 1 ou 2 endereços em UFs variadas para os demais clientes |
+| `OrderSeeder` | 24 pedidos com itens, snapshots, cópia de um endereço do cliente, frete e prazo da tabela de frete, e totais (itens + frete); metade nos últimos 30 dias (todos os status) e metade nos últimos 12 meses (entregues). A data prevista só existe nos pedidos pagos |
 
 ### Como o Faker é utilizado
 
@@ -327,6 +333,7 @@ Seeders (chamados pelo `DatabaseSeeder` nesta ordem):
 - O `DatabaseSeeder` fixa a semente do Faker (`fake()->seed(2026)`): **toda execução de `make fresh` gera exatamente os mesmos dados**, o que deixa o ambiente previsível.
 - Os seeders são idempotentes onde faz sentido (admin via `firstOrNew`, categorias via `firstOrCreate`; produtos/pedidos só são criados se a tabela estiver vazia).
 - Os pedidos de demonstração **não decrementam estoque**: representam vendas passadas, anteriores à contagem atual de estoque.
+- O Faker reseta o gerador aleatório global do PHP sempre que um dos geradores dele é destruído, e o coletor de lixo pode destruir os de uma execução anterior a qualquer momento (na suíte de testes, em outra posição). Por isso o `DatabaseSeeder` chama `gc_collect_cycles()` antes de fixar a semente: sem isso, o teste de determinismo falhava conforme a ordem e o tamanho da suíte.
 
 Exemplo de uso das factories em testes ou no Tinker (`make artisan CMD=tinker`):
 
@@ -351,29 +358,32 @@ OrderItem::factory()->forProduct($product, 2)->create();
 
 As contas de equipe e de cliente são independentes: as credenciais de uma não entram na outra área, mesmo com o mesmo e-mail.
 
-Após o seed você terá: 2 membros da equipe, 10 clientes, 8 categorias, 30 produtos (com produtos sem estoque, com estoque baixo e inativos), 24 pedidos distribuídos entre todos os status e datas — o dashboard já mostra gráficos na primeira execução.
+Após o seed você terá: 2 membros da equipe, 10 clientes (todos com endereço), 8 categorias, 30 produtos (com produtos sem estoque, com estoque baixo e inativos), 24 pedidos distribuídos entre todos os status e datas — o dashboard já mostra gráficos na primeira execução.
 
 ---
 
 ## Fluxo de checkout
 
 1. O carrinho fica no **Pinia** (persistido no `localStorage` — apenas os dados do carrinho).
-2. Ao abrir `/checkout`, o frontend chama `POST /api/cart/validate`, que revalida **existência, status, estoque, quantidade e preço atual** de cada item. Problemas aparecem por item e bloqueiam a confirmação.
-3. Ao confirmar, o frontend envia **apenas `product_id` e `quantity`** para `POST /api/orders`. Preços e totais enviados pelo cliente são ignorados.
-4. O `PlaceOrderUseCase` (backend) orquestra o fluxo, usando o `CheckoutService` para as regras e os repositories para o banco:
+2. Ao abrir `/checkout`, o frontend chama `POST /api/cart/validate`, que revalida **existência, status, estoque, quantidade e preço atual** de cada item (problemas aparecem por item e bloqueiam a confirmação), e carrega o caderno de endereços (`GET /api/account/addresses`). Sem endereço, o formulário abre no próprio checkout; com endereços, o mais recente já vem escolhido, e "Adicionar outro endereço" abre o formulário.
+3. O frontend pede o frete da UF do endereço escolhido (`GET /api/shipping/quote?state=UF`, público) e mostra **Subtotal, Frete, Total** e "Entrega em até N dias úteis após a aprovação do pagamento". Trocar de endereço pede o frete de novo. Esses valores são só exibição; se o frete falhar, a confirmação fica bloqueada com "Tentar novamente".
+4. Ao confirmar, o frontend envia **apenas `product_id`, `quantity` e `address_id`** para `POST /api/orders`. Preços, frete, total e UF enviados pelo cliente são ignorados.
+5. O `PlaceOrderUseCase` (backend) orquestra o fluxo, usando o `CheckoutService` para as regras e os repositories para o banco:
    1. valida o cliente autenticado (guard `customer`; a equipe não compra — a rota responde `401` a uma sessão de equipe);
-   2. valida o formato dos itens (`StoreOrderRequest`);
-   3. **inicia a transação** (`DB::transaction()`);
-   4. **bloqueia os registros de estoque** envolvidos (`lockForUpdate()`);
-   5. verifica novamente status e estoque com os valores bloqueados;
-   6. **recalcula os preços** a partir do banco em centavos inteiros (`unit_price_cents × quantity`, soma em `int`), sem `float`;
-   7. **reduz o estoque**;
-   8. cria o pedido (`placed`) e os itens (snapshot de nome e preço);
-   9. **confirma a transação**;
-   10. dispara o evento `OrderPlaced` (somente após o commit).
-5. O frontend limpa o carrinho e redireciona para `/payment/{orderId}`.
+   2. valida o formato dos itens e do `address_id` (`StoreOrderRequest`);
+   3. busca a **cópia do endereço** pelo contrato `DeliveryAddressBook`, só no caderno do próprio cliente (outro cliente ou id inexistente: `422` em `address_id`, sem tocar no estoque), e o **frete** pelo contrato `ShippingQuoter`, a partir da UF da cópia;
+   4. **inicia a transação** (`DB::transaction()`);
+   5. **bloqueia os registros de estoque** envolvidos (`lockForUpdate()`);
+   6. verifica novamente status e estoque com os valores bloqueados;
+   7. **recalcula os preços** a partir do banco em centavos inteiros (`unit_price_cents × quantity`, soma em `int`), sem `float`;
+   8. **reduz o estoque**;
+   9. cria o pedido (`placed`) com a cópia do endereço, `shipping_cents`, `delivery_business_days` e `total_cents` = itens + frete, e os itens (snapshot de nome e preço);
+   10. **confirma a transação**;
+   11. dispara o evento `OrderPlaced` (somente após o commit).
+6. O frontend limpa o carrinho e redireciona para `/payment/{orderId}`, que mostra Subtotal, Frete e Total. O pagamento cobra o `total_cents` do pedido.
+7. Depois que o pagamento é aprovado, o Fulfillment calcula a data prevista e o pedido passa a mostrar "Entrega prevista: dd/mm/aaaa" (ver [Eventos, listeners, jobs e filas](#eventos-listeners-jobs-e-filas)).
 
-Respostas: `201` (pedido criado), `409` (estoque insuficiente / produto indisponível, com detalhes por item em `errors`), `422` (dados inválidos), `401`/`403`.
+Respostas: `201` (pedido criado), `409` (estoque insuficiente / produto indisponível, com detalhes por item em `errors`), `422` (dados inválidos, ou endereço fora do caderno do cliente), `401`/`403`/`429`.
 
 ---
 
@@ -404,6 +414,8 @@ DB::transaction(function () use ($customerId, $quantities) {
 | t3 | 5 ≥ 4 ✔ → estoque = 1, cria pedido, `COMMIT` | |
 | t4 | | obtém o lock, vê **1** → 1 < 3 ✘ → `ROLLBACK`, **409** |
 
+O endereço e o frete são resolvidos **antes** da transação: um endereço recusado nunca chega a bloquear o estoque. O `shipping_cents` e o `total_cents` gravados vêm do servidor, na mesma transação do estoque e dos itens.
+
 Sem o lock, os dois poderiam ler `5` ao mesmo tempo e o estoque ficaria negativo. Camadas de proteção:
 
 1. validação no checkout (antes de confirmar);
@@ -421,7 +433,7 @@ O ciclo de vida do pedido envolve três partes, que só conversam por eventos:
 
 - **Pedidos** (Ordering): é a única parte que muda o status do pedido.
 - **Pagamento** (Payment): cobra pelo gateway, grava cada tentativa e só anuncia que o pagamento foi aprovado.
-- **Entrega** (Fulfillment): só anuncia que a transportadora (fake) entregou.
+- **Entrega** (Fulfillment): decide o frete e a data prevista, e anuncia que a data foi calculada e que a transportadora (fake) entregou.
 
 ```
 POST /api/orders ──► OrderPlaced ──(fila)──► MarkOrderAsAwaitingPayment        placed → awaiting_payment
@@ -433,9 +445,13 @@ POST /api/orders/{id}/payment {card_token}
                                                 │
   Pedidos   ◄───────────────────────────────────┘──► OrderPaid
                                                        │
-  Entrega   ──(fila)──► ScheduleOrderDelivery ──► DeliverOrder (job, delay 10s) ──► OrderDelivered
-                                                                                    │
-  Pedidos   ──(fila)──► MarkOrderAsDelivered ◄──────────────────────────────────────┘   payment_approved → delivered
+  Entrega   ──(fila)──► ScheduleOrderDelivery ──► DeliveryScheduled (data prevista)
+                                │                       │
+                                │       Pedidos ──(fila)──► RecordEstimatedDelivery      grava orders.estimated_delivery_on, sem mudar o status
+                                ▼
+                         DeliverOrder (job, delay 10s) ──► OrderDelivered
+                                                            │
+  Pedidos   ──(fila)──► MarkOrderAsDelivered ◄──────────────┘   payment_approved → delivered
 ```
 
 | Classe | Parte | Tipo | O que faz |
@@ -445,13 +461,17 @@ POST /api/orders/{id}/payment {card_token}
 | `App\Modules\Payment\Events\PaymentApproved` | Pagamento | Evento (`ShouldDispatchAfterCommit`) | Disparado pelo `PayOrderUseCase` quando o gateway aprova e a tentativa é gravada |
 | `App\Modules\Ordering\Listeners\MarkOrderAsPaid` | Pedidos | Listener (`ShouldQueue`) | Move para `payment_approved` e dispara `OrderPaid` (`MarkOrderAsPaidUseCase`) |
 | `App\Modules\Ordering\Events\OrderPaid` | Pedidos | Evento | Disparado só pela transição que de fato marcou o pedido como pago |
-| `App\Modules\Fulfillment\Listeners\ScheduleOrderDelivery` | Entrega | Listener (`ShouldQueue`) | Agenda o job de entrega (`ScheduleDeliveryUseCase`) |
+| `App\Modules\Fulfillment\Listeners\ScheduleOrderDelivery` | Entrega | Listener (`ShouldQueue`) | Calcula a data prevista (`DeliveryCalendar`), registra no log, publica `DeliveryScheduled` e agenda o job de entrega (`ScheduleDeliveryUseCase`) |
+| `App\Modules\Fulfillment\Events\DeliveryScheduled` | Entrega | Evento (`ShouldDispatchAfterCommit`) | Carrega o pedido e a data prevista |
+| `App\Modules\Ordering\Listeners\RecordEstimatedDelivery` | Pedidos | Listener (`ShouldQueue`) | Grava `estimated_delivery_on`, **só se estiver vazia**, sem tocar no status (`RecordEstimatedDeliveryUseCase`) |
 | `App\Modules\Fulfillment\Jobs\DeliverOrder` | Entrega | Job (`ShouldQueue`) | Após `ORDER_DELIVERY_DELAY_SECONDS`, simula a entrega e dispara `OrderDelivered` (`DeliverOrderUseCase`) |
 | `App\Modules\Fulfillment\Events\OrderDelivered` | Entrega | Evento | Anuncia que a transportadora (fake) entregou o pedido |
 | `App\Modules\Ordering\Listeners\MarkOrderAsDelivered` | Pedidos | Listener (`ShouldQueue`) | Move para `delivered` (`MarkOrderAsDeliveredUseCase`) |
 
 - **A entrega escuta `OrderPaid`, não `PaymentApproved`.** Se escutasse direto o pagamento, o job de entrega correria em paralelo com a marcação de pago. Num retry ou atraso da fila, ele poderia rodar antes e o pedido ficaria preso em `payment_approved`.
-- Pagamento e entrega **nunca** alteram o status: quem faz isso são os listeners da parte de pedidos.
+- Pagamento e entrega **nunca** alteram o pedido: quem escreve em `orders` são os listeners da parte de pedidos (o status e a data prevista).
+- **A data prevista** conta os dias úteis prometidos no pedido (`delivery_business_days`) a partir do momento em que o Fulfillment trata o `OrderPaid`, em segunda a sexta e no fuso `America/Sao_Paulo` (uma compra às 23h30 de quarta, que já é quinta em UTC, conta a partir de quarta; sábado e domingo contam a partir de segunda). Feriados não são considerados. A primeira gravação vale: um retry ou um `DeliveryScheduled` repetido não muda a data, e um pedido que já foi entregue ainda recebe a sua data.
+- O `DeliverOrder` continua entregando depois do delay (`ORDER_DELIVERY_DELAY_SECONDS`), mesmo antes da data prevista: a entrega é simulada.
 - Os listeners são registrados automaticamente (event discovery do Laravel), procurando em `app/Modules/*/Listeners` (configurado em `bootstrap/app.php`).
 - Listeners e job são adaptadores finos: só delegam para o caso de uso correspondente.
 - Todas as transições usam `OrderRepository::transitionStatus($order, $from, $to)`, um `UPDATE ... WHERE status = :from`: se um job for executado duas vezes ou fora de ordem, ele simplesmente não faz nada (**idempotência**). Por isso um `PaymentApproved` duplicado gera um único `OrderPaid`, e um retry do `DeliverOrder` (que anuncia a entrega de novo) é ignorado.
@@ -516,13 +536,18 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. Erros segue
 | GET | `/api/products?category=&sort=&page=` | público | Listagem paginada; `sort`: `name`, `price_asc`, `price_desc` |
 | GET | `/api/products/{id}` | público | Detalhe (somente disponíveis) |
 | GET | `/api/categories` | público | Categorias |
+| GET | `/api/shipping/quote?state=UF` | público | Frete e prazo de uma UF: `data: { state, price_cents, delivery_business_days }`. A UF é normalizada (`sp` → `SP`); `422` se ausente ou desconhecida; `throttle:60,1` |
 | POST | `/api/cart/validate` | público | Revalida o carrinho |
-| POST | `/api/orders` | cliente | Checkout |
+| POST | `/api/orders` | cliente | Checkout: `items` e `address_id` (um endereço do próprio cliente). `201` com `items_total_cents`, `shipping_cents`, `total_cents` e `delivery`; `422` em `address_id` se faltar (`Escolha um endereço de entrega.`) ou não for do cliente (`Endereço de entrega não encontrado.`); `throttle:20,1` |
 | GET | `/api/orders` | cliente | Pedidos do cliente |
-| GET | `/api/orders/{id}` | dono | Detalhe do pedido |
+| GET | `/api/orders/{id}` | dono | Detalhe do pedido (com o bloco `delivery`) |
 | POST | `/api/orders/{id}/payment` | dono | Paga com `card_token` (gateway fake): `202` aprovado, `402 PAYMENT_DECLINED` recusado, `409` se não pode ser pago; `throttle:20,1` |
 | GET | `/api/account` | cliente | Resumo da área do cliente: `customer`, `orders_count`, `last_order`, `recent_orders` |
 | PUT | `/api/account/profile` | cliente | Atualiza nome, e-mail e senha |
+| GET | `/api/account/addresses` | cliente | O caderno do cliente, o mais recente primeiro |
+| POST | `/api/account/addresses` | cliente | Cadastra um endereço (`recipient_name`, `postal_code`, `street`, `number`, `complement?`, `district`, `city`, `state`): `201`, `409 BUSINESS_RULE_VIOLATION` no 11º endereço, `422` |
+| PUT | `/api/account/addresses/{id}` | dono | Substitui o endereço (mesmos campos do `POST`): `200`, `403`, `404`, `422` |
+| DELETE | `/api/account/addresses/{id}` | dono | Exclui o endereço: `204`, `403`, `404`. Pedidos já feitos não mudam |
 | POST | `/api/admin/auth/login` | público | Login da equipe (guard `staff`, contra `users`): `id`, `name`, `email`, `role`, `role_label`, `created_at`; `throttle:10,1` |
 | POST | `/api/admin/auth/logout` | equipe | Logout (encerra a sessão do navegador, as duas áreas) |
 | GET | `/api/admin/auth/me` | equipe | Membro da equipe autenticado |
@@ -547,6 +572,12 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. Erros segue
 
 Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `402`, `403`, `404`, `405`, `409`, `422`, `429`, `500`.
 
+**Endereços e frete na API**
+
+- O CEP é aceito como `12345678` ou `12345-678` e **sempre volta com 8 dígitos**, sem hífen (a formatação é da tela). A UF é normalizada antes de validar.
+- O recurso `Order` (loja e admin, detalhe e listagens) ganhou `items_total_cents`, `shipping_cents` (`total_cents` = os dois somados) e `delivery: { business_days, estimated_on, address }`. `estimated_on` é um dia (`"2026-10-09"`), `null` até o pagamento ser aprovado, e `address` é a cópia que o pedido guardou (`recipient_name`, `postal_code`, `street`, `number`, `complement`, `district`, `city`, `state`).
+- O frete vem da tabela de `config/shop.php` (`shipping_rates`), uma linha por UF: SP R$ 15,00 em 2 dias úteis; RJ, MG e ES R$ 22,00 em 4; PR, SC e RS R$ 25,00 em 5; DF, GO, MT e MS R$ 30,00 em 6; BA, SE, AL, PE, PB, RN, CE, PI e MA R$ 38,00 em 8; PA, AP, AM, RR, AC, RO e TO R$ 45,00 em 10. Mudar um valor é uma mudança de configuração com deploy.
+
 > **Nota:** a validação do carrinho usa `POST /api/cart/validate` (em vez de `GET`) porque envia uma lista de itens no corpo da requisição — um `GET` com corpo ou com arrays aninhados na query string seria frágil.
 
 Para listar as rotas: `make artisan CMD="route:list --path=api"`.
@@ -561,13 +592,14 @@ Para listar as rotas: `make artisan CMD="route:list --path=api"`.
 | `/checkout`, `/payment/:orderId` | PublicLayout | cliente |
 | `/login`, `/register` | AuthLayout | visitante da loja |
 | `/admin/login` | AuthLayout | visitante do admin |
-| `/account`, `/account/profile`, `/account/orders`, `/account/orders/:id` | CustomerLayout | cliente |
+| `/account`, `/account/profile`, `/account/orders`, `/account/orders/:id`, `/account/addresses` | CustomerLayout | cliente |
 | `/admin`, `/admin/products`, `/admin/categories`, `/admin/stocks`, `/admin/customers` (e `/new`, `/:id`, `/:id/edit`), `/admin/orders` | AdminLayout | equipe (admin ou suporte) |
 | `/admin/users` (e `/new`, `/:id/edit`) | AdminLayout | só o papel `admin` (o suporte vai para `/forbidden`) |
 
 - **`src/services/api.ts`**: instância central do Axios (`withCredentials` + `withXSRFToken`) com tratamento global de erros — `401` (limpa a sessão da área e vai para o login dela: `admin/*` vai para `/admin/login`, o resto para `/login`; `auth/*` e `admin/auth/*` não redirecionam, porque a checagem de sessão de um visitante falha por definição), `403` (aviso + página de acesso negado), `5xx`/rede (aviso). `404`, `409` e `422` são tratados pelas páginas (mensagens e erros por campo).
 - **Pinia**: `auth` (cliente autenticado), `staff` (membro da equipe autenticado, com `canDelete` e `canManageStaff` para o papel `admin`), ambos sem tokens, `cart` (carrinho persistido) e `notifications` (toasts).
 - **Router**: a decisão está em `router/guards.ts` (`guardRedirect`), por `meta.requiresShopper`, `guestOnly`, `requiresStaff`, `staffGuestOnly` e `requiresAdminRole`; as rotas ficam em `router/routes.ts`. Cada área carrega só a própria sessão (`auth/me` ou `admin/auth/me`). O menu do admin vem de `utils/adminMenu.ts`; o item "Usuários" e os botões "Excluir" só aparecem ao papel `admin`. É apenas experiência de uso — a API aplica as mesmas regras.
+- **Endereços e checkout**: o caderno ("Minha conta → Endereços", `AddressBookPage`) usa o composable `useAddressBook` (listar, salvar, excluir com `window.confirm`, erros por campo no `422` e a mensagem do `409` acima do formulário), e o checkout usa o `useCheckout` (endereço escolhido, frete, subtotal/frete/total exibidos, bloqueio da confirmação enquanto o frete é desconhecido, `422` em `address_id` que recarrega o caderno). O formulário (`AddressForm`) tem a UF como lista das 27 siglas. O detalhe do pedido da loja e do admin mostra o endereço (CEP como `01310-100`), Subtotal, Frete e Total e o texto de entrega (`utils/delivery`): o prazo em dias úteis antes do pagamento, "Entrega prevista: dd/mm/aaaa" depois dele e "Pedido entregue" no fim. O dia vem como `"YYYY-MM-DD"` e é formatado sem passar por `new Date()` (`formatDay`), porque o `Date` leria a data como meia-noite UTC e mostraria o dia anterior em São Paulo.
 - Filtros, ordenação e página da listagem ficam na URL (`/products?category=games&sort=price_desc&page=2`) e são processados pelo backend.
 
 ---
@@ -580,7 +612,7 @@ make test-filter FILTER=CheckoutTest   # apenas um arquivo/teste
 make test-frontend                     # testes do frontend (Vitest)
 ```
 
-O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento com cartão de teste (`composables/usePayment`) os erros tratados globalmente (`services/api`: `401` por área, `403`, `419`, `429` e `5xx`; os demais ficam com cada página), a decisão do guard do router e o menu do admin (`router/guards`, `utils/adminMenu`) e as permissões por papel (`stores/staff`, `stores/auth`). A lógica é testada sem DOM; o arranjo visual das telas é conferido no navegador. O CI roda só o backend; `make test-frontend` roda localmente.
+O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento com cartão de teste (`composables/usePayment`), o caderno de endereços (`composables/useAddressBook`), o checkout com endereço e frete (`composables/useCheckout`), o texto de entrega, a data só-dia, o CEP, as UFs e o menu da conta (`utils/delivery`, `utils/date`, `utils/postalCode`, `utils/states`, `utils/accountMenu`), os erros tratados globalmente (`services/api`: `401` por área, `403`, `419`, `429` e `5xx`; os demais ficam com cada página), a decisão do guard do router (inclusive a rota do caderno) e o menu do admin (`router/guards`, `utils/adminMenu`) e as permissões por papel (`stores/staff`, `stores/auth`). A lógica é testada sem DOM; o arranjo visual das telas é conferido no navegador. O CI roda só o backend; `make test-frontend` roda localmente.
 
 Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes.
 
@@ -615,11 +647,21 @@ O frontend ainda não é verificado no CI.
 | --- | --- |
 | `Auth/AuthTest` | cadastro em `customers` (sem `users`, ignorando `role`), e-mail igual ao da equipe, login só do cliente com as 4 chaves, credenciais da equipe recusadas, logout, `429` do cadastro e dos dois logins |
 | `Auth/StaffAuthTest` | login da equipe (`admin` e `support`, sessão lida de novo na próxima requisição), credenciais de cliente e senha errada recusadas, logout, `CHECK` do `role` direto no banco |
-| `AuthorizationTest` | `401` a visitante e a sessão de cliente em todas as 27 rotas `/api/admin/*` (percorrendo a tabela de rotas), `401` a sessão de equipe nas 7 rotas da loja, pedido de outro cliente, nenhuma rota com `auth:sanctum` |
+| `AuthorizationTest` | `401` a visitante e a sessão de cliente em todas as 27 rotas `/api/admin/*` (percorrendo a tabela de rotas), `401` a sessão de equipe nas 11 rotas da loja (inclui as 4 do caderno), pedido de outro cliente, nenhuma rota com `auth:sanctum` |
 | `ProductCatalogTest` | listagem com inativos, filtro, ordenações, paginação, detalhe indisponível |
 | `CartValidationTest` | preços recalculados, problemas por item |
-| `CheckoutTest` | pedido + decremento + snapshot, rollback com `409`, cenário 5/4/3, uso de `FOR UPDATE`, `CHECK` no banco |
-| `OrderStatusFlowTest` | listeners de cada evento, transições, entrega agendada só após `OrderPaid`, job com delay, idempotência, ciclo completo |
+| `CheckoutTest` | pedido + decremento + snapshot, total = itens + frete, rollback com `409`, cenário 5/4/3, uso de `FOR UPDATE`, `CHECK` no banco |
+| `CheckoutShippingTest` | pedido com a cópia do endereço e o frete da UF, colunas gravadas, valor cobrado com frete, `422` sem endereço / com endereço de outro cliente, frete e total do cliente ignorados, cópia intacta depois de editar ou excluir o endereço, `429`, `404` de pedido desconhecido |
+| `UseCases/Order/PlaceOrderUseCaseTest` | o caso de uso com o orçamento e o endereço simulados; endereço desconhecido recusado antes de tocar no estoque |
+| `Models/OrderDeliveryTest` | `CHECK`/`NOT NULL` da cópia do endereço, do frete, do prazo e do total direto no banco |
+| `OrderStatusFlowTest` | listeners de cada evento, transições, entrega agendada só após `OrderPaid`, job com delay, `DeliveryScheduled` com a data prevista, log sem o endereço, registro da data (primeira vale, status inalterado, pedido já entregue), idempotência, ciclo completo |
+| `DeliveryEstimateTest` | a data prevista chega à API depois do pagamento aprovado; admin e loja veem o mesmo bloco `delivery` |
+| `Unit/Services/DeliveryCalendarTest` | dias úteis em horário de São Paulo: meio de semana, sexta, sábado, 23h30 de Brasília e 10 dias |
+| `Account/CustomerAddressTest` | caderno: listagem, cadastro, normalização da UF e do complemento, CEP, campos obrigatórios e tamanhos, limite de 10 (`409`), edição, exclusão, `403`, `404`, `401` |
+| `Models/CustomerAddressTest` | `customer_addresses`: apagada com a conta, FK e `CHECK` de CEP e UF direto no banco |
+| `UseCases/Customer/CustomerAddressUseCasesTest` | o 10º endereço é aceito e o 11º recusado, na própria camada |
+| `Repositories/CustomerAddressRepositoryTest` | o `DeliveryAddressBook`: só o endereço do próprio cliente vira `DeliveryAddress` |
+| `Unit/Services/ShippingRateTableTest` e `ShippingQuoteTest` | as 27 linhas da tabela de frete, a rota pública, `422`, `429` e o contrato `ShippingQuoter` igual à rota |
 | `PaymentTest` | `202` + tentativa gravada + evento, `402` para cada cartão recusado, nova tentativa após recusa, `422` do `card_token`, `409` fora de `awaiting_payment` ou com aprovado, corrida perdida, valor sempre do pedido, `403`, garantias do banco, log sem o token, `429` |
 | `Unit/Gateways/FakePaymentGatewayTest` | resultado de cada cartão de teste, valor ignorado, id de transação novo |
 | `Admin/*` | categorias (slug), produtos, estoque, clientes (`CustomerTest`), equipe (`StaffTest`), papéis (`StaffRoleTest`: todo `DELETE` do admin só para `admin`, percorrendo a tabela de rotas; `404` dos ids desconhecidos), pedidos e dashboard |
@@ -628,12 +670,12 @@ O frontend ainda não é verificado no CI.
 | `Models/CustomerAccountTest` | `customers`: FK do pedido (`restrict`, id existente), `CHECK` do e-mail e unicidade direto no banco |
 | `Middleware/EnsureUserIsAdminTest` | o middleware `admin` deixa passar só o papel `admin` |
 | `UseCases/User/StaffUseCasesTest` | regras do admin sobre si mesmo: não muda o próprio papel, não remove a própria conta |
-| `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Ordering, Payment e Fulfillment sem o `User` da equipe, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Payment cobrando só pela porta `PaymentGateway`, Shared sem módulos de negócio |
+| `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Ordering, Payment e Fulfillment sem o `User` da equipe, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Payment cobrando só pela porta `PaymentGateway`, Ordering sem o Customers e só com os eventos do Fulfillment (uma expectativa por namespace), Fulfillment sem o Customers, contratos do Ordering só interfaces, Shared sem módulos de negócio |
 | `Auth/EmailAndPasswordTest` | e-mail como conta única (caixa, `CHECK` do banco em `users` e `customers`, login, perfil, admin), política de senha só ao escolher uma |
 | `Unit/ValueObjects/*` | `Email` (normalização e recusas), `Password` (política, sem vazar o texto em dumps, serialização e traces) e as listas tipadas (`TypedListsTest`: agrupamento, totais derivados, recusa de tipo e de id inválido) |
 | `Unit/Architecture/TypedListSignaturesTest` | nenhum `array` nas assinaturas de domínio que carregam as listas tipadas |
 | `Requests/AccountRequestRulesTest` | os Form Requests de conta usam `EmailRule` e `PasswordRule` e não repetem as regras |
-| `SeederTest` | quantidades mínimas exigidas, as 2 contas da equipe e os 10 clientes (em `customers`) e determinismo dos seeders |
+| `SeederTest` | quantidades mínimas exigidas, as 2 contas da equipe e os 10 clientes (em `customers`), endereço para todo cliente, pedidos com cópia e frete da tabela, data prevista só nos pedidos pagos e determinismo dos seeders |
 
 ---
 
@@ -659,10 +701,10 @@ O código do backend e do frontend é montado como volume: alterações aparecem
 3. **Produtos → Novo produto** → preencha os dados, selecione a categoria e defina o estoque inicial.
 4. Abra a loja (`/products`): o produto aparece; filtre pela categoria e ordene por preço.
 5. Saia e **crie uma conta** de cliente em `/register` (ou use `cliente@example.com`).
-6. Adicione produtos ao carrinho e vá para o **checkout**: o backend valida o estoque.
-7. **Confirme a compra**: a transação bloqueia e reduz o estoque e cria o pedido.
+6. Adicione produtos ao carrinho e vá para o **checkout**: o backend valida o estoque e o endereço de entrega já vem escolhido (`cliente@example.com` tem um endereço em SP; uma conta nova abre o formulário no próprio checkout). O frete da UF aparece junto com o total e o prazo.
+7. **Confirme a compra**: a transação bloqueia e reduz o estoque e cria o pedido, com a cópia do endereço e o frete. Em **Minha conta → Endereços** dá para cadastrar outros endereços, editar e excluir; os pedidos já feitos não mudam.
 8. Na página de pagamento, o status passa de *Pedido efetuado* para *Aguardando pagamento* (listener na fila).
-9. Escolha **Recusado: saldo insuficiente** e clique em **Pagar**: a recusa aparece na página e o pedido continua aguardando pagamento. Escolha **Cartão aprovado** e clique em **Pagar**: o pedido vai para *Pagamento aprovado* e, após ~10 s, para *Pedido entregue* (job com delay). A timeline atualiza sozinha.
+9. Escolha **Recusado: saldo insuficiente** e clique em **Pagar**: a recusa aparece na página e o pedido continua aguardando pagamento. Escolha **Cartão aprovado** e clique em **Pagar**: o pedido vai para *Pagamento aprovado* e, após ~10 s, para *Pedido entregue* (job com delay). A timeline atualiza sozinha, e o pedido mostra "Entrega prevista: dd/mm/aaaa" (ou "Pedido entregue" no fim).
 10. Veja o histórico em **Minha conta → Meus pedidos**.
 11. Entre novamente em `/admin/login` como admin: o pedido aparece em **Pedidos** e as métricas do dashboard foram atualizadas.
 
@@ -672,13 +714,21 @@ Dica: deixe `make logs-worker` aberto em outro terminal para ver os jobs sendo p
 
 ## Escopo e decisões
 
-Fora do escopo por definição: frete, cupons, descontos, endereços, gateway de pagamento real, nota fiscal, wishlist, avaliações, chat, marketplace, multi-tenant, Elasticsearch, microsserviços e Kubernetes. Também não há upload de imagens: os produtos guardam apenas uma URL fake do `picsum.photos`.
+Fora do escopo por definição: cupons, descontos, gateway de pagamento real, transportadora real ou serviço de frete pronto (o frete é uma tabela fixa por UF, sem peso, dimensões, CEP, modalidades, frete grátis ou feriados, e muda só com deploy), rastreio e etapa "Enviado", nota fiscal, wishlist, avaliações, chat, marketplace, multi-tenant, Elasticsearch, microsserviços e Kubernetes. Também não há upload de imagens: os produtos guardam apenas uma URL fake do `picsum.photos`.
 
 Decisões relevantes:
 
-- **Dinheiro**: centavos inteiros do banco à tela. As colunas são `bigint` (`price_cents`, `unit_price_cents`, `subtotal_cents`, `total_cents`) com `CHECK >= 0`, a API trafega inteiros com o sufixo `_cents` (sem alias para os nomes antigos) e o estado do frontend também guarda centavos. A conversão para reais existe só no frontend (`utils/money`): para exibir (`formatCents`) e para ler o preço que o admin digita (`parseReaisInput`, aceita `199,90`, `199.90`, `199,9` e `199`). O carrinho persiste em `localStorage` na chave `cart-v2`; a chave antiga `cart` é descartada. As migrations originais foram editadas no lugar: quem tem banco local roda `make fresh`, e dumps antigos de `storage-dumps/` deixam de ser compatíveis.
+- **Dinheiro**: centavos inteiros do banco à tela. As colunas são `bigint` (`price_cents`, `unit_price_cents`, `subtotal_cents`, `total_cents`) com `CHECK >= 0`, a API trafega inteiros com o sufixo `_cents` (sem alias para os nomes antigos) e o estado do frontend também guarda centavos. `shipping_cents` segue a mesma regra (`bigint`, `CHECK >= 0`), e `total_cents` passou a ser a soma dos itens mais o frete. A conversão para reais existe só no frontend (`utils/money`): para exibir (`formatCents`) e para ler o preço que o admin digita (`parseReaisInput`, aceita `199,90`, `199.90`, `199,9` e `199`). O carrinho persiste em `localStorage` na chave `cart-v2`; a chave antiga `cart` é descartada. As migrations originais foram editadas no lugar: quem tem banco local roda `make fresh`, e dumps antigos de `storage-dumps/` deixam de ser compatíveis.
 - **E-mail e senha como value objects**: e-mails que só diferem na caixa são a mesma conta. O `Email` (`Identity/ValueObjects`) remove os espaços das pontas, coloca em minúsculas, valida o formato (RFC) e limita a 255 caracteres. Os Form Requests normalizam o `email` antes de validar (`NormalizesEmailInput`), então o `unique`, o login e a resposta (`data.email`) usam a forma canônica. As colunas `users.email` e `customers.email` têm o `CHECK ..._email_normalized (email = lower(btrim(email)))`, na migration original: quem tem banco local roda `make fresh`. O `Password` aplica a política (mínimo de 8 caracteres) só quando alguém escolhe uma senha (cadastro, admin e perfil); o login aceita senhas antigas. O texto da senha não aparece em `json_encode`, `serialize`, `var_export`, `print_r`, `var_dump` nem em stack traces enquanto estiver no value object. Ele só sai por `reveal()`, usado ao montar os atributos que vão para o `UserRepository` e o `CustomerAccountRepository`, e dali em diante é uma string comum.
-- **Listas de domínio tipadas**: o carrinho, as linhas do pedido, o resultado da validação, os ids de produto, categoria e cliente e a contagem de pedidos por cliente são classes, não `array`. O total do pedido (`OrderLines::totalCents()`) e o do carrinho (`ValidatedCart::totalCents()`) são calculados a partir das linhas, então não divergem delas; o `OrderRepository::createWithItems()` grava o total que as linhas calculam. A resposta da API não mudou. O contrato `StockReservation::lockForProducts()` recebe `ProductIds`.
+- **Listas de domínio tipadas**: o carrinho, as linhas do pedido, o resultado da validação, os ids de produto, categoria e cliente e a contagem de pedidos por cliente são classes, não `array`. O total do pedido (`OrderLines::totalCents()`) e o do carrinho (`ValidatedCart::totalCents()`) são calculados a partir das linhas, então não divergem delas; o `OrderRepository::createWithItems()` grava o total que as linhas calculam mais o frete. A resposta da API não mudou. O contrato `StockReservation::lockForProducts()` recebe `ProductIds`.
+- **Endereços e frete** (feature `addresses-and-shipping`, design em [.design/addresses-and-shipping.md](.design/addresses-and-shipping.md)):
+  - **O pedido guarda uma cópia do endereço**, do frete e do prazo prometido, em colunas `NOT NULL` de `orders` e sem referência ao caderno. Editar ou excluir um endereço, ou mudar a tabela de frete, nunca altera um pedido feito, e o banco garante que nenhum pedido existe sem destino.
+  - **O servidor calcula o frete e o total.** O cliente envia só os itens e o `address_id`; `shipping_cents`, `total_cents` e a UF enviados são ignorados. O frete do checkout é só exibição: o pedido usa a tabela vigente na criação, e o Payment cobra o `total_cents` do pedido.
+  - **Contratos definidos pelo Ordering**, como o `ProductOrderHistory`: `DeliveryAddressBook::find(customerId, addressId): ?DeliveryAddress` (implementado pelo `CustomerAddressRepository`, ligado no `CustomersServiceProvider`) e `ShippingQuoter::quote(BrazilianState): ShippingQuote` (implementado pelo `ShippingRateTable`, ligado no `FulfillmentServiceProvider`). O vocabulário que eles trocam (`DeliveryAddress`, `ShippingQuote`, `BrazilianState`) fica no Ordering, porque o Customers e o Fulfillment já dependem dele. O `ModuleBoundariesTest` proíbe o Ordering de usar o Customers e qualquer namespace do Fulfillment além dos eventos. Pelo mesmo motivo (o vocabulário é do Ordering), os Form Requests do Customers e do Fulfillment reaproveitam o trait `NormalizesStateInput` de `Ordering/Http/Requests/Concerns`, que normaliza o `state` com `BrazilianState::normalize`; a dependência segue o sentido permitido (eles dependem do Ordering) e é só de vocabulário.
+  - **A tabela de frete é do Fulfillment** (`config/shop.php`, `shipping_rates`) e nenhum outro lugar calcula preço, prazo ou data: o frontend mostra o que a API devolve.
+  - **A data prevista** é calculada pelo Fulfillment ao tratar o `OrderPaid` e chega ao pedido pelo evento `DeliveryScheduled`; só o Ordering escreve em `orders`. Sem tabela de remessas: não há rastreio nem etapa "Enviado".
+  - **Limite de 10 endereços** por cliente, sem trava de concorrência: dois cadastros simultâneos podem deixar o cliente com 11, e isso é aceito.
+  - **Sem migração de dados**: a tabela nova e as colunas novas de `orders` entraram nas migrations originais, então quem tem banco local roda `make fresh`, e dumps antigos de `storage-dumps/` deixam de ser compatíveis.
 - **Estoque separado do produto**: a edição de produto (`PUT /api/admin/products/{id}`) não altera estoque; ajustes passam por `/api/admin/stocks/{id}`.
 - **Equipe e clientes são contas separadas** (feature `staff-and-customer-accounts`, design em [.design/staff-and-customer-accounts.md](.design/staff-and-customer-accounts.md)): a equipe (admin e suporte) vive em `users`, o comprador em `customers`, e o mesmo e-mail pode existir nas duas. Um e-mail continua único dentro de cada tabela. Não há migração de dados: o banco é recriado por `make fresh` (as migrations originais foram editadas no lugar).
 - **Um guard de sessão por área**: `config/auth.php` define `customer` (provider `customers` → `CustomerAccount`, o padrão) e `staff` (provider `users` → `User`). As rotas da loja usam `auth:customer` e as do admin `auth:staff`; **nenhuma rota usa `auth:sanctum`** (o Sanctum fica só no `statefulApi()`, para sessão e CSRF), e um teste confere isso. Com `auth:sanctum` e uma lista de guards, a primeira sessão que autenticasse valeria, e uma sessão de equipe passaria nas rotas da loja. Código novo deve seguir o mesmo precedente. O browser tem **um cookie de sessão**, então `POST /api/auth/logout` e `POST /api/admin/auth/logout` encerram as duas áreas.
