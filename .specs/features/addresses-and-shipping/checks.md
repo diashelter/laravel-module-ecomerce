@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/addresses-and-shipping/plan.md`
 
-80 checks in 5 slices · 5 one-way doors · 0 open
+81 checks in 5 slices · 5 one-way doors · 0 open
 
 Comandos: o backend roda via `docker compose exec -T api ./vendor/bin/pest --filter="<nome do teste>"`, no mesmo container do `make test` que o CI executa. O frontend roda via `docker compose exec -T frontend npx vitest run -t "<nome do teste>"`, o mesmo Vitest do `make test-frontend`, e a checagem de tipos via `docker compose exec -T frontend npm run type-check`. O CI não roda o frontend, então essas provas precisam rodar localmente antes do PR. Os nomes de teste não usam parênteses, colchetes nem barras, porque o `--filter` do Pest e o `-t` do Vitest são expressões regulares.
 
@@ -261,6 +261,9 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="ordering reaches 
 **C80** - O `ScheduleOrderDelivery` despacha o `DeliverOrder` com o delay exatamente igual a `shop.delivery_delay_seconds` (90 no teste) a partir de `now()` (AC 55; precisão que o C64 deixou aberta)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="schedules the delivery job with a delay when the order is paid"`
 
+**C81** - No caderno de endereços, um `409` ao salvar deixa `formMessage` preenchida e uma exclusão bem-sucedida em seguida a deixa `null`; uma exclusão que falha deixa o endereço na lista e põe a mensagem da API em `formMessage` (AC 23, 24; rodada 2 da verificação)
+Proof: `docker compose exec -T frontend npx vitest run -t "clears a previous form message when a delete succeeds|keeps the address and reports a failed delete"`
+
 ### S5 - Dados de demonstração · ~4 arquivos · ~12 KB · ~3k
 
 **C74** - Depois do `db:seed`, todo cliente semeado tem ao menos 1 endereço, e `cliente@example.com` tem um endereço com `state` `SP` (AC 66)
@@ -313,6 +316,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="seeds the deliver
 | `NOT NULL` do banco sem caso direto (9) | `customer_addresses.customer_id` C78 · `recipient_name` C78 · `postal_code` C78 · `street` C78 · `number` C78 · `district` C78 · `city` C78 · `state` C78 · `orders.delivery_business_days` C78 | - |
 | namespace raiz do Fulfillment proibido ao Ordering (1) | `FulfillmentServiceProvider` C79 | - |
 | valor do delay do `DeliverOrder` (1) | `shop.delivery_delay_seconds` C80 | - |
+| mensagem do formulário do caderno em exclusões (2) | exclusão que falha mostra a mensagem C81 · exclusão que dá certo limpa a mensagem C81 | - |
 | textos de entrega no pedido (3) | prazo em dias C72 · data prevista C72, C73 · entregue C72 | - |
 | decisões do composable do checkout (8) | sem endereço C53 · salvo no checkout C54 · pré-seleção C55 · subtotal, frete e total C56 · troca de endereço C57 · orçamento pendente ou com falha C58 · confirmação C59 · `422` em `address_id` C60 | - |
 | decisões do composable do caderno (5) | carregando e falha C23 · vazio C24 · ordem da API C24 · erros do formulário C27 · confirmação de exclusão C28 | - |

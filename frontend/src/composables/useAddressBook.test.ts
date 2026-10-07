@@ -135,4 +135,21 @@ describe('useAddressBook', () => {
 
     vi.unstubAllGlobals()
   })
+
+  it('clears a previous form message when a delete succeeds', async () => {
+    vi.stubGlobal('window', { confirm: vi.fn().mockReturnValue(true) })
+    vi.mocked(addressService.list).mockResolvedValue([address(1)])
+    vi.mocked(addressService.create).mockRejectedValueOnce(new ApiError(409, 'Você pode cadastrar até 10 endereços.'))
+    vi.mocked(addressService.remove).mockResolvedValue()
+    const book = useAddressBook()
+    await book.load()
+
+    await book.save(payload)
+    expect(book.formMessage.value).toBe('Você pode cadastrar até 10 endereços.')
+
+    expect(await book.remove(address(1))).toBe(true)
+    expect(book.formMessage.value).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
 })
