@@ -116,7 +116,7 @@ it('runs the whole lifecycle with a synchronous queue', function () {
     // QUEUE_CONNECTION=sync in tests: the listener already ran.
     expect(Order::find($orderId)->status)->toBe(OrderStatus::AwaitingPayment);
 
-    $this->postJson("/api/orders/{$orderId}/payment")->assertAccepted();
+    $this->postJson("/api/orders/{$orderId}/payment", ['card_token' => 'fake_card_approved'])->assertAccepted();
 
     // PaymentApproved -> OrderPaid -> DeliverOrder -> OrderDelivered, all synchronous
     // (the sync queue ignores the delivery delay).

@@ -181,3 +181,4 @@ Cost: 5 provas na própria camada (C1 a C3, C21 e C22) em 3 arquivos do backend,
 - S1 = ~2k, S2 entra em ~10k, S3 em ~13k; a atualização do README e da análise de domínio (79 KB, lidos em partes) leva a ~33k, abaixo do budget de 150k - one builder
 - Mechanism: one builder (cabe no orçamento, sem pergunta)
 - **Boundary:** C1-C6 closed no commit `feat(payment): add the payment gateway port and the fake gateway`; cada regra de C5 foi vista falhando com um `use` proposital do fake no próprio namespace (UseCases, Services e Http, uma de cada vez)
+- **Boundary:** C7-C22 closed no commit `feat(payment): charge orders through the gateway and record every attempt`. `MoneyInCentsTest` e `OrderStatusFlowTest` passaram a enviar `card_token` nas chamadas de pagamento (contrato novo), sem mudar nenhuma asserção. O teste antigo "approves the fake payment of an order awaiting payment" virou C7, que afirma o mesmo `202` e `data.id` e acrescenta a mensagem
