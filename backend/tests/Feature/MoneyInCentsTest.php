@@ -231,11 +231,11 @@ it('exposes order money in cents on every order route', function () {
     $assertOrder($this->getJson("/api/admin/customers/{$user->id}")->assertOk()->json('data.orders.0'));
 });
 
-it('seeds orders whose total_cents is the sum of their items', function () {
+it('seeds orders whose total_cents is the sum of their items plus the shipping', function () {
     $this->seed();
 
     foreach (Order::query()->with('items')->get() as $order) {
-        expect($order->total_cents)->toBe($order->items->sum('subtotal_cents'));
+        expect($order->total_cents)->toBe($order->items->sum('subtotal_cents') + $order->shipping_cents);
 
         foreach ($order->items as $item) {
             expect($item->subtotal_cents)->toBe($item->unit_price_cents * $item->quantity);

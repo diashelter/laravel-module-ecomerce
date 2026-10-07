@@ -2,10 +2,12 @@
 
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
 use App\Modules\Inventory\Models\Stock;
+use App\Modules\Ordering\Contracts\ShippingQuoter;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use Database\Seeders\UserSeeder;
@@ -61,4 +63,52 @@ it('produces the same data on every run', function () {
     $this->artisan('migrate:fresh', ['--seed' => true, '--force' => true]);
 
     expect(Product::query()->orderBy('id')->pluck('name')->all())->toBe($first);
+});
+
+it('seeds an address for every customer', function () {
+    $this->seed();
+
+    $demo = CustomerAccount::query()->where('email', 'cliente@example.com')->sole();
+
+    expect(CustomerAccount::query()->whereNotIn('id', CustomerAddress::query()->select('customer_id'))->count())->toBe(0)
+        ->and(CustomerAddress::query()->where('customer_id', $demo->id)->where('state', 'SP')->exists())->toBeTrue();
+});
+
+it('seeds orders with the delivery copy and the shipping of the rate table', function () {
+    $this->seed();
+
+    $quoter = app(ShippingQuoter::class);
+
+    foreach (Order::query()->with('items')->get() as $order) {
+        $quote = $quoter->quote($order->delivery_state);
+
+        expect(CustomerAddress::query()
+            ->where('customer_id', $order->customer_id)
+            ->where('recipient_name', $order->delivery_recipient_name)
+            ->where('postal_code', $order->delivery_postal_code)
+            ->where('street', $order->delivery_street)
+            ->where('number', $order->delivery_number)
+            ->where('complement', $order->delivery_complement)
+            ->where('district', $order->delivery_district)
+            ->where('city', $order->delivery_city)
+            ->where('state', $order->delivery_state)
+            ->exists())->toBeTrue()
+            ->and($order->shipping_cents)->toBe($quote->priceCents)
+            ->and($order->delivery_business_days)->toBe($quote->deliveryBusinessDays)
+            ->and($order->total_cents)->toBe($order->items->sum('subtotal_cents') + $order->shipping_cents);
+    }
+});
+
+it('seeds the delivery estimate only for paid orders', function () {
+    $this->seed();
+
+    foreach ([OrderStatus::PaymentApproved, OrderStatus::Delivered] as $paid) {
+        expect(Order::query()->where('status', $paid)->exists())->toBeTrue()
+            ->and(Order::query()->where('status', $paid)->whereNull('estimated_delivery_on')->count())->toBe(0);
+    }
+
+    foreach ([OrderStatus::Placed, OrderStatus::AwaitingPayment] as $unpaid) {
+        expect(Order::query()->where('status', $unpaid)->exists())->toBeTrue()
+            ->and(Order::query()->where('status', $unpaid)->whereNotNull('estimated_delivery_on')->count())->toBe(0);
+    }
 });
