@@ -18,8 +18,9 @@ export const orderService = {
     return data.data
   },
 
-  async approvePayment(id: number): Promise<{ order: Order; message: string }> {
-    const { data } = await api.post<{ data: Order; message: string }>(`orders/${id}/payment`)
+  /** Pays with a test card token; the amount is always the order total, set by the backend. */
+  async pay(id: number, cardToken: string): Promise<{ order: Order; message: string }> {
+    const { data } = await api.post<{ data: Order; message: string }>(`orders/${id}/payment`, { card_token: cardToken })
     return { order: data.data, message: data.message }
   },
 }
