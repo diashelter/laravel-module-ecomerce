@@ -200,4 +200,23 @@ describe('useAddressBook', () => {
     expect(await book.save(payload, 3)).toBeNull()
     expect(book.formMessage.value).toBe('Registro não encontrado.')
   })
+
+  it('flags the form as saving only while a save is in flight', async () => {
+    let resolve!: (saved: CustomerAddress) => void
+    vi.mocked(addressService.create)
+      .mockReturnValueOnce(new Promise((r) => (resolve = r)))
+      .mockRejectedValueOnce(new ApiError(422, 'Dados inválidos.', { city: ['O campo cidade é obrigatório.'] }))
+    const book = useAddressBook()
+    expect(book.saving.value).toBe(false)
+
+    const pending = book.save(payload)
+    expect(book.saving.value).toBe(true)
+
+    resolve(address(5))
+    await pending
+    expect(book.saving.value).toBe(false)
+
+    await book.save(payload)
+    expect(book.saving.value).toBe(false)
+  })
 })
