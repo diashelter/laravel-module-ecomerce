@@ -15,6 +15,7 @@ use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use App\Modules\Shared\Repositories\BaseRepository;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -139,6 +140,28 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
 
         if ($updated === 1) {
             $order->status = $to;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Records the estimated delivery day only when the order has none yet.
+     *
+     * The conditional UPDATE keeps the first date: a retried or repeated DeliveryScheduled does
+     * nothing. It does not look at the status, so an order already delivered still gets its date.
+     */
+    public function recordEstimatedDelivery(Order $order, CarbonInterface $estimatedOn): bool
+    {
+        $updated = $this->query()
+            ->whereKey($order->getKey())
+            ->whereNull('estimated_delivery_on')
+            ->update(['estimated_delivery_on' => $estimatedOn->toDateString(), 'updated_at' => now()]);
+
+        if ($updated === 1) {
+            $order->estimated_delivery_on = $estimatedOn;
 
             return true;
         }
