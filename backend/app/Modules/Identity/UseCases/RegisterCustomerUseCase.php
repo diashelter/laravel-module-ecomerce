@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace App\Modules\Identity\UseCases;
 
 use App\Modules\Identity\DTOs\CreateUserDTO;
-use App\Modules\Identity\Models\User;
-use App\Modules\Identity\Repositories\UserRepository;
+use App\Modules\Identity\Models\CustomerAccount;
+use App\Modules\Identity\Repositories\CustomerAccountRepository;
 
 /**
- * Visitor: creates their own account. `role` is not fillable and defaults to "customer".
+ * Visitor: creates their own shopper account.
  */
 final class RegisterCustomerUseCase
 {
-    public function __construct(private readonly UserRepository $users) {}
+    public function __construct(private readonly CustomerAccountRepository $accounts) {}
 
-    public function execute(CreateUserDTO $data): User
+    public function execute(CreateUserDTO $data): CustomerAccount
     {
-        return $this->users->create($data->toArray());
+        return $this->accounts->create($data->toArray());
     }
 }

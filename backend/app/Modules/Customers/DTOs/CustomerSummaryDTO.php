@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Customers\DTOs;
 
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Models\Order;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -18,7 +18,7 @@ final readonly class CustomerSummaryDTO
      * @param  Collection<int, Order>|null  $recentOrders  null when the screen does not show them (listing)
      */
     public function __construct(
-        public User $account,
+        public CustomerAccount $account,
         public int $ordersCount,
         public ?Collection $recentOrders = null,
     ) {}

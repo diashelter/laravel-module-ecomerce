@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Customers\UseCases;
 
 use App\Modules\Customers\DTOs\CustomerSummaryDTO;
-use App\Modules\Identity\Models\User;
-use App\Modules\Identity\Repositories\UserRepository;
+use App\Modules\Identity\Models\CustomerAccount;
+use App\Modules\Identity\Repositories\CustomerAccountRepository;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\ValueObjects\CustomerIds;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -18,16 +18,16 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 final class ListCustomersUseCase
 {
     public function __construct(
-        private readonly UserRepository $users,
+        private readonly CustomerAccountRepository $accounts,
         private readonly OrderRepository $orders,
     ) {}
 
     /** @return LengthAwarePaginator<int, CustomerSummaryDTO> */
     public function execute(int $perPage): LengthAwarePaginator
     {
-        $page = $this->users->paginateNewestFirst($perPage);
+        $page = $this->accounts->paginateNewestFirst($perPage);
         $counts = $this->orders->countPerCustomer(new CustomerIds(...$page->getCollection()->modelKeys()));
 
-        return $page->through(fn (User $account) => new CustomerSummaryDTO($account, $counts->countFor($account->id)));
+        return $page->through(fn (CustomerAccount $account) => new CustomerSummaryDTO($account, $counts->countFor($account->id)));
     }
 }

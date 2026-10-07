@@ -3,19 +3,18 @@
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Identity\Enums\UserRole;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
+use Database\Seeders\UserSeeder;
 use Illuminate\Support\Facades\Hash;
 
 it('seeds a complete demo environment', function () {
     $this->seed();
 
-    $admin = User::query()->where('email', 'admin@example.com')->sole();
-    expect($admin->role)->toBe(UserRole::Admin)
-        ->and(Hash::check('password', $admin->password))->toBeTrue()
-        ->and(User::query()->customers()->count())->toBeGreaterThanOrEqual(10)
+    expect(CustomerAccount::query()->count())->toBeGreaterThanOrEqual(10)
         ->and(Category::query()->count())->toBeGreaterThanOrEqual(8)
         ->and(Product::query()->count())->toBeGreaterThanOrEqual(30)
         ->and(Product::query()->doesntHave('stock')->count())->toBe(0)
@@ -33,6 +32,26 @@ it('seeds a complete demo environment', function () {
     }
 
     expect(Product::query()->orderBy('id')->first()->image_url)->toBe('https://picsum.photos/seed/product-1/600/600');
+});
+
+it('seeds the admin and the support staff members', function () {
+    $this->seed();
+
+    $staff = User::query()->orderBy('email')->get();
+
+    expect($staff)->toHaveCount(2)
+        ->and($staff->pluck('role', 'email')->all())->toBe(['admin@example.com' => UserRole::Admin, 'suporte@example.com' => UserRole::Support])
+        ->and($staff->every(fn (User $member) => Hash::check('password', $member->password)))->toBeTrue();
+});
+
+it('seeds the demo customers into the customers table', function () {
+    $this->seed();
+
+    $demo = CustomerAccount::query()->where('email', 'cliente@example.com')->sole();
+
+    expect(CustomerAccount::query()->count())->toBe(UserSeeder::CUSTOMERS)
+        ->and(Hash::check('password', $demo->password))->toBeTrue()
+        ->and(User::query()->where('email', 'cliente@example.com')->exists())->toBeFalse();
 });
 
 it('produces the same data on every run', function () {

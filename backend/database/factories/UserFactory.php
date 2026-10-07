@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
+ * Staff members (`users`). Shoppers come from CustomerAccountFactory.
+ *
  * @extends Factory<User>
  */
 class UserFactory extends Factory
@@ -18,7 +20,7 @@ class UserFactory extends Factory
     protected $model = User::class;
 
     /**
-     * Default password for every fake user (development/test only).
+     * Default password for every fake account (development/test only).
      */
     public const DEFAULT_PASSWORD = 'password';
 
@@ -31,7 +33,7 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make(self::DEFAULT_PASSWORD),
-            'role' => UserRole::Customer,
+            'role' => UserRole::Support,
             'remember_token' => Str::random(10),
         ];
     }
@@ -41,8 +43,8 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => UserRole::Admin]);
     }
 
-    public function customer(): static
+    public function support(): static
     {
-        return $this->state(fn () => ['role' => UserRole::Customer]);
+        return $this->state(fn () => ['role' => UserRole::Support]);
     }
 }

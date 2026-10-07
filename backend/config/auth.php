@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
 
 return [
@@ -16,7 +17,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => env('AUTH_GUARD', 'customer'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -38,7 +39,12 @@ return [
     */
 
     'guards' => [
-        'web' => [
+        // One session guard per area: a staff session never authenticates the store and vice versa.
+        'customer' => [
+            'driver' => 'session',
+            'provider' => 'customers',
+        ],
+        'staff' => [
             'driver' => 'session',
             'provider' => 'users',
         ],
@@ -62,6 +68,11 @@ return [
     */
 
     'providers' => [
+        'customers' => [
+            'driver' => 'eloquent',
+            'model' => CustomerAccount::class,
+        ],
+
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),

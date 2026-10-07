@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             // restrictOnDelete: a customer with orders cannot be removed (order history must be kept).
-            $table->foreignId('user_id')->constrained()->restrictOnDelete();
+            $table->foreignId('customer_id')->constrained()->restrictOnDelete();
             // Money is stored as an integer amount of cents.
             $table->bigInteger('total_cents');
             $table->string('status', 30)->index();

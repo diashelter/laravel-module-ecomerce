@@ -10,6 +10,6 @@ class StoreOrderRequest extends ValidateCartRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('create', Order::class);
+        return $this->user('customer')->can('create', Order::class);
     }
 }

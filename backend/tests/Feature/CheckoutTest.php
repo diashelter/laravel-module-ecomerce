@@ -39,7 +39,7 @@ it('places an order with every value in cents, decrements stock and stores a sna
         ->and($keyboard->stock->fresh()->quantity)->toBe(0);
 
     $order = Order::query()->with('items')->sole();
-    expect($order->user_id)->toBe($user->id)
+    expect($order->customer_id)->toBe($user->id)
         ->and($order->items->firstWhere('product_id', $mouse->id))
         ->product_name->toBe('Mouse')
         ->unit_price_cents->toBe(9990)
@@ -181,4 +181,15 @@ it('shows an order with items and timeline', function () {
         ->assertJsonPath('data.status_label', 'Pagamento aprovado')
         ->assertJsonPath('data.timeline.2.completed', true)
         ->assertJsonPath('data.timeline.3.completed', false);
+});
+
+it('stores the customer id on the placed order', function () {
+    $product = productWithStock(5);
+    $account = customer();
+
+    $this->actingAs($account)
+        ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]]])
+        ->assertCreated();
+
+    expect(Order::query()->sole()->customer_id)->toBe($account->id);
 });

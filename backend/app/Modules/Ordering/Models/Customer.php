@@ -8,15 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use LogicException;
 
 /**
- * The buyer, as seen by the ordering side: a read-only projection of the `users` table.
+ * The buyer, as seen by the ordering side: a read-only projection of the `customers` table.
  *
- * Login, password and role belong to User (identity). An order only needs to know who placed
- * it (`orders.user_id`) and that person's name and e-mail, so this model never writes:
- * accounts are created and changed through User.
+ * Login and password belong to CustomerAccount (identity). An order only needs to know who placed
+ * it (`orders.customer_id`) and that person's name and e-mail, so this model never writes:
+ * accounts are created and changed through CustomerAccount.
  */
 class Customer extends Model
 {
-    protected $table = 'users';
+    protected $table = 'customers';
 
     /** Only the data the ordering side needs, never credentials. */
     protected $visible = ['id', 'name', 'email'];
@@ -24,7 +24,7 @@ class Customer extends Model
     protected static function booted(): void
     {
         $preventWrites = function (): never {
-            throw new LogicException('Customer is read-only. Change the account through User.');
+            throw new LogicException('Customer is read-only. Change the account through CustomerAccount.');
         };
 
         static::saving($preventWrites);

@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -29,12 +29,12 @@ function accountRoutes(): array
         'admin create' => function ($test, array $data) {
             $test->actingAs(admin());
 
-            return $test->postJson('/api/admin/users', registerPayload($data));
+            return $test->postJson('/api/admin/customers', registerPayload($data));
         },
         'admin update' => function ($test, array $data) {
             $test->actingAs(admin());
 
-            return $test->putJson('/api/admin/users/'.customer()->id, ['name' => 'Ana', ...$data]);
+            return $test->putJson('/api/admin/customers/'.customer()->id, ['name' => 'Ana', ...$data]);
         },
         'profile' => fn ($test, array $data) => $test->actingAs(customer())->putJson('/api/account/profile', ['name' => 'Ana', ...$data]),
     ];
@@ -42,21 +42,22 @@ function accountRoutes(): array
 
 // S1 - e-mail as a single account
 
-it('keeps the users email normalized constraint', function () {
+it('keeps the email normalized constraint on both account tables', function (string $table) {
     $definition = DB::selectOne(
-        "select pg_get_constraintdef(oid) as definition from pg_constraint where conname = 'users_email_normalized' and conrelid = 'users'::regclass"
+        'select pg_get_constraintdef(oid) as definition from pg_constraint where conname = ? and conrelid = ?::regclass',
+        ["{$table}_email_normalized", $table],
     );
 
     expect($definition->definition)->toBe('CHECK (((email)::text = lower(btrim((email)::text))))');
-});
+})->with(['users', 'customers']);
 
 it('rejects a non normalized email written directly', function () {
     // The nested transaction is a savepoint: Postgres aborts the test transaction after a failed statement.
-    expect(fn () => DB::transaction(fn () => DB::table('users')->insert([
-        'name' => 'Ana', 'email' => 'Ana@x.com', 'password' => 'x', 'role' => 'customer',
-    ])))->toThrow(QueryException::class, 'users_email_normalized');
+    expect(fn () => DB::transaction(fn () => DB::table('customers')->insert([
+        'name' => 'Ana', 'email' => 'Ana@x.com', 'password' => 'x',
+    ])))->toThrow(QueryException::class, 'customers_email_normalized');
 
-    expect(DB::table('users')->whereRaw('lower(email) = ?', ['ana@x.com'])->count())->toBe(0);
+    expect(DB::table('customers')->whereRaw('lower(email) = ?', ['ana@x.com'])->count())->toBe(0);
 });
 
 it('registers with the email normalized', function () {
@@ -64,18 +65,18 @@ it('registers with the email normalized', function () {
         ->assertCreated()
         ->assertJsonPath('data.email', 'ana@x.com');
 
-    expect(User::query()->where('email', 'ana@x.com')->count())->toBe(1);
+    expect(CustomerAccount::query()->where('email', 'ana@x.com')->count())->toBe(1);
 });
 
 it('rejects registering an email that differs only in case', function () {
     customer(['email' => 'ana@x.com']);
-    $before = User::query()->count();
+    $before = CustomerAccount::query()->count();
 
     $this->postJson('/api/auth/register', registerPayload(['email' => 'ANA@x.com']))
         ->assertUnprocessable()
         ->assertJsonPath('errors.email', EMAIL_IN_USE);
 
-    expect(User::query()->count())->toBe($before);
+    expect(CustomerAccount::query()->count())->toBe($before);
 });
 
 it('logs in with the email in any case', function () {
@@ -85,7 +86,7 @@ it('logs in with the email in any case', function () {
         ->assertOk()
         ->assertJsonPath('data.email', 'ana@x.com');
 
-    $this->assertAuthenticatedAs($user, 'web');
+    $this->assertAuthenticatedAs($user, 'customer');
 });
 
 it('rejects invalid credentials with the generic message', function () {
@@ -93,7 +94,7 @@ it('rejects invalid credentials with the generic message', function () {
         ->assertUnprocessable()
         ->assertJsonPath('errors.email', ['E-mail ou senha inválidos.']);
 
-    $this->assertGuest('web');
+    $this->assertGuest('customer');
 });
 
 it('keeps the own email when only its case changes', function () {
@@ -118,18 +119,18 @@ it('does not allow taking another user email in another case', function () {
 });
 
 it('creates a customer with the email normalized', function () {
-    $this->actingAs(admin())->postJson('/api/admin/users', registerPayload(['name' => 'Carla', 'email' => 'Carla@X.com']))
+    $this->actingAs(admin())->postJson('/api/admin/customers', registerPayload(['name' => 'Carla', 'email' => 'Carla@X.com']))
         ->assertCreated()
         ->assertJsonPath('data.email', 'carla@x.com');
 
-    expect(User::query()->where('email', 'carla@x.com')->exists())->toBeTrue();
+    expect(CustomerAccount::query()->where('email', 'carla@x.com')->exists())->toBeTrue();
 });
 
 it('does not let the admin reuse another email in another case', function () {
     customer(['email' => 'bruno@x.com']);
     $target = customer(['email' => 'ana@x.com']);
 
-    $this->actingAs(admin())->putJson("/api/admin/users/{$target->id}", ['name' => 'Ana', 'email' => 'Bruno@X.com'])
+    $this->actingAs(admin())->putJson("/api/admin/customers/{$target->id}", ['name' => 'Ana', 'email' => 'Bruno@X.com'])
         ->assertUnprocessable()
         ->assertJsonPath('errors.email', EMAIL_IN_USE);
 
@@ -173,7 +174,7 @@ it('rejects a password shorter than 8 characters on every route that chooses one
 it('stores the hash of a chosen password', function () {
     $this->postJson('/api/auth/register', registerPayload())->assertCreated();
 
-    expect(Hash::check('abcd1234', User::query()->where('email', 'ana@x.com')->sole()->password))->toBeTrue();
+    expect(Hash::check('abcd1234', CustomerAccount::query()->where('email', 'ana@x.com')->sole()->password))->toBeTrue();
 });
 
 it('logs in with a password shorter than the current policy', function () {
@@ -189,6 +190,6 @@ it('keeps the password when none is sent on profile and admin updates', function
     $this->actingAs($user)->putJson('/api/account/profile', ['name' => 'Ana 2', 'email' => 'ana@x.com'])->assertOk();
     expect($user->fresh()->password)->toBe($hash);
 
-    $this->actingAs(admin())->putJson("/api/admin/users/{$user->id}", ['name' => 'Ana 3', 'email' => 'ana@x.com'])->assertOk();
+    $this->actingAs(admin())->putJson("/api/admin/customers/{$user->id}", ['name' => 'Ana 3', 'email' => 'ana@x.com'])->assertOk();
     expect($user->fresh()->password)->toBe($hash);
 });

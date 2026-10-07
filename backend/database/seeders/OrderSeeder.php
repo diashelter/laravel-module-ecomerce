@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Modules\Catalog\Models\Product;
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
@@ -27,7 +27,7 @@ class OrderSeeder extends Seeder
             return;
         }
 
-        $customers = User::query()->customers()->get();
+        $customers = CustomerAccount::query()->get();
         $products = Product::query()->get();
         $statuses = OrderStatus::cases();
 

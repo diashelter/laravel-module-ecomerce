@@ -11,14 +11,13 @@ use App\Modules\Customers\UseCases\CreateCustomerUseCase;
 use App\Modules\Customers\UseCases\ListCustomersUseCase;
 use App\Modules\Customers\UseCases\ShowCustomerUseCase;
 use App\Modules\Customers\UseCases\UpdateCustomerUseCase;
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Gate;
 
-class UserController extends Controller
+class CustomerController extends Controller
 {
     public function index(ListCustomersUseCase $listCustomers): AnonymousResourceCollection
     {
@@ -26,7 +25,7 @@ class UserController extends Controller
     }
 
     /**
-     * Admins can only create customers here; administrators come from the seeder.
+     * Both staff roles can create customers.
      */
     public function store(StoreCustomerRequest $request, CreateCustomerUseCase $createCustomer): JsonResponse
     {
@@ -37,15 +36,13 @@ class UserController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(User $user, ShowCustomerUseCase $showCustomer): CustomerSummaryResource
+    public function show(CustomerAccount $customer, ShowCustomerUseCase $showCustomer): CustomerSummaryResource
     {
-        return CustomerSummaryResource::make($showCustomer->execute($user, 10));
+        return CustomerSummaryResource::make($showCustomer->execute($customer, 10));
     }
 
-    public function update(UpdateCustomerRequest $request, User $user, UpdateCustomerUseCase $updateCustomer): CustomerSummaryResource
+    public function update(UpdateCustomerRequest $request, CustomerAccount $customer, UpdateCustomerUseCase $updateCustomer): CustomerSummaryResource
     {
-        Gate::authorize('update', $user);
-
-        return CustomerSummaryResource::make($updateCustomer->execute($user, $request->toDto()));
+        return CustomerSummaryResource::make($updateCustomer->execute($customer, $request->toDto()));
     }
 }

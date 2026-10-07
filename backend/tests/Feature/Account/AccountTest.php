@@ -9,7 +9,7 @@ it('shows the account summary', function () {
 
     $this->actingAs($user)->getJson('/api/account')
         ->assertOk()
-        ->assertJsonPath('data.user.email', $user->email)
+        ->assertJsonPath('data.customer.email', $user->email)
         ->assertJsonPath('data.orders_count', 6)
         ->assertJsonCount(5, 'data.recent_orders')
         ->assertJsonStructure(['data' => ['last_order' => ['id', 'status']]]);
@@ -48,4 +48,33 @@ it('does not allow taking another user email', function () {
     $this->actingAs(customer())->putJson('/api/account/profile', ['name' => 'X', 'email' => 'taken@example.com'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('email');
+});
+
+it('lets a customer take an e-mail used by a staff member', function () {
+    admin(['email' => 'equipe@example.com']);
+    $account = customer();
+
+    $this->actingAs($account)->putJson('/api/account/profile', ['name' => 'Ana', 'email' => 'equipe@example.com'])->assertOk();
+
+    expect($account->fresh()->email)->toBe('equipe@example.com');
+});
+
+it('rejects a profile e-mail already used by another customer', function () {
+    customer(['email' => 'taken@example.com']);
+    $account = customer(['email' => 'mine@example.com']);
+
+    $this->actingAs($account)->putJson('/api/account/profile', ['name' => 'Ana', 'email' => 'taken@example.com'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('email');
+
+    expect($account->fresh()->email)->toBe('mine@example.com');
+});
+
+it('returns the account summary under the customer key without a role', function () {
+    $account = customer();
+
+    $response = $this->actingAs($account)->getJson('/api/account')->assertOk();
+
+    expect(array_keys($response->json('data')))->toEqualCanonicalizing(['customer', 'last_order', 'orders_count', 'recent_orders'])
+        ->and(array_keys($response->json('data.customer')))->toEqualCanonicalizing(['created_at', 'email', 'id', 'name']);
 });

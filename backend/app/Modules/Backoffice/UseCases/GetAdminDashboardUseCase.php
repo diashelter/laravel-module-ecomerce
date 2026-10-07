@@ -6,7 +6,7 @@ namespace App\Modules\Backoffice\UseCases;
 
 use App\Modules\Backoffice\Services\DashboardService;
 use App\Modules\Catalog\Repositories\ProductRepository;
-use App\Modules\Identity\Repositories\UserRepository;
+use App\Modules\Identity\Repositories\CustomerAccountRepository;
 use App\Modules\Inventory\Repositories\StockRepository;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use Illuminate\Support\Carbon;
@@ -19,7 +19,7 @@ final class GetAdminDashboardUseCase
     public function __construct(
         private readonly ProductRepository $products,
         private readonly StockRepository $stocks,
-        private readonly UserRepository $users,
+        private readonly CustomerAccountRepository $customers,
         private readonly OrderRepository $orders,
         private readonly DashboardService $dashboard,
     ) {}
@@ -33,7 +33,7 @@ final class GetAdminDashboardUseCase
             productsByStatus: $this->products->countByStatus(),
             productsInStock: $this->stocks->countInStock(),
             totalStockUnits: $this->stocks->totalUnits(),
-            totalCustomers: $this->users->countCustomers(),
+            totalCustomers: $this->customers->count(),
             totalOrders: $this->orders->count(),
             ordersPerDay: $this->orders->countPerDaySince($this->dashboard->dailySeriesStart($today)),
             ordersPerMonth: $this->orders->countPerMonthSince($this->dashboard->monthlySeriesStart($today)),
