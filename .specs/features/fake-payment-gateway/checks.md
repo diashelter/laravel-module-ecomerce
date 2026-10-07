@@ -190,3 +190,10 @@ Cost: 5 provas na própria camada (C1 a C3, C21 e C22) em 3 arquivos do backend,
 - **Boundary:** C7-C22 closed no commit `feat(payment): charge orders through the gateway and record every attempt`. `MoneyInCentsTest` e `OrderStatusFlowTest` passaram a enviar `card_token` nas chamadas de pagamento (contrato novo), sem mudar nenhuma asserção. O teste antigo "approves the fake payment of an order awaiting payment" virou C7, que afirma o mesmo `202` e `data.id` e acrescenta a mensagem
 - **Boundary:** C23-C28 closed no commit `feat(frontend): pay with a test card and retry after a decline`. Os estados visuais foram conferidos no navegador contra o ambiente local, com o worker real: três cartões sem seleção e "Pagar" desabilitado, recusa com saldo insuficiente mostrada na página com o cartão mantido, nova tentativa aprovada levando ao pedido em `payment_approved`, e duas linhas em `payments` (`declined` / `insufficient_funds` e `approved`)
 - **Boundary:** a verificação 1 deu FAIL, com 28/28 checks provados e 5/5 mutantes mortos, e apontou duas lacunas: a FK `payments.order_id` sem prova e a corrida perdida sem prova na camada do use case. C29 e C30 foram acrescentados sem mudar nenhum check aprovado. Os dois foram fechados no commit `test(payment): prove the payments foreign key and the lost race`, junto com o índice em `order_id` que o design pedia e as correções no README e na análise de domínio
+- **Review fixes:** o review do PR #9 apontou quatro pontos, todos corrigidos depois da verificação, sem mudar nenhum check:
+  - F1 e F4: o `429` agora é tratado globalmente em `services/api` (`reportGlobalError`), com teste novo em `services/api.test.ts`;
+  - F2: o comentário do `DB::transaction` agora dá o motivo certo, o savepoint;
+  - F3: a corrida perdida lança `PaymentService::notPayable()` de forma explícita;
+  - os códigos HTTP listados no README agora incluem o `402`.
+
+  As provas de C7 a C22, C30 e C23 a C28 rodaram de novo e passaram

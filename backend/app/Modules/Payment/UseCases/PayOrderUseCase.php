@@ -45,11 +45,12 @@ final class PayOrderUseCase
         $result = $this->gateway->charge($request);
 
         try {
-            // Committed before the decline becomes an error, so the declined attempt is kept.
+            // A savepoint when a transaction is already open: the unique violation then rolls back
+            // only this insert instead of aborting the caller's transaction (PostgreSQL).
             $payment = DB::transaction(fn (): Payment => $this->payments->record($request, $result));
         } catch (UniqueConstraintViolationException) {
             // A concurrent request recorded the approval first: this order is no longer payable.
-            $this->rules->ensureCanBePaid($order, hasApprovedPayment: true);
+            throw $this->rules->notPayable();
         }
 
         Log::info('Payment attempt recorded.', [
@@ -59,6 +60,7 @@ final class PayOrderUseCase
             'decline_reason' => $payment->decline_reason?->value,
         ]);
 
+        // Thrown only now, after the declined attempt was recorded, so the record survives the 402.
         if ($result->status === PaymentStatus::Declined) {
             throw new PaymentDeclinedException($result->declineReason);
         }

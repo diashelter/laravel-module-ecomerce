@@ -531,7 +531,7 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. Erros segue
 | GET | `/api/admin/orders` | admin | Lista pedidos |
 | GET | `/api/admin/orders/{id}` | admin | Detalhe do pedido |
 
-Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `403`, `404`, `409`, `422`, `429`, `500`.
+Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `402`, `403`, `404`, `409`, `422`, `429`, `500`.
 
 > **Nota:** a validação do carrinho usa `POST /api/cart/validate` (em vez de `GET`) porque envia uma lista de itens no corpo da requisição — um `GET` com corpo ou com arrays aninhados na query string seria frágil.
 
@@ -564,7 +564,7 @@ make test-filter FILTER=CheckoutTest   # apenas um arquivo/teste
 make test-frontend                     # testes do frontend (Vitest)
 ```
 
-O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho e o pagamento com cartão de teste (`composables/usePayment`). O CI roda só o backend; `make test-frontend` roda localmente.
+O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento com cartão de teste (`composables/usePayment`) e os erros tratados globalmente (`services/api`: `401`, `403`, `419`, `429` e `5xx`; os demais ficam com cada página). O CI roda só o backend; `make test-frontend` roda localmente.
 
 Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes.
 
