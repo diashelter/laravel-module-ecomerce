@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/fake-payment-gateway/plan.md`
 
-28 checks in 3 slices · 3 one-way doors · 0 open
+30 checks in 3 slices · 3 one-way doors · 0 open
 
 Comandos: o backend roda via `docker compose exec -T api ./vendor/bin/pest --filter="<nome do teste>"`, no mesmo container do `make test` que o CI executa. O frontend roda via `docker compose exec -T frontend npx vitest run -t "<nome do teste>"`, o mesmo Vitest do `make test-frontend`, e a checagem de tipos via `docker compose exec -T frontend npm run type-check`. Os nomes de teste não usam parênteses nem colchetes, porque o `--filter` do Pest e o `-t` do Vitest são expressões regulares.
 
@@ -89,6 +89,12 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="decides whether a
 **C22** - Na camada do `PayOrderUseCase`, com um gateway que devolve `declined` / `card_declined`, a execução lança a exceção de recusa com o status `402`. Depois dela, a linha `declined` está gravada em `payments`: a exceção não desfez a escrita. `PaymentApproved` não é despachado (AC 10)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="keeps the declined payment after raising the decline"`
 
+**C29** - Acrescentado após a verificação 1, que achou a FK sem prova (plano, Relations). O banco recusa com `QueryException` um `payments` com `order_id` `999999` e o `DELETE` de um pedido que tem tentativa. Um pedido sem tentativa é apagado (door 1)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="ties payments to existing orders and keeps orders that have payments"`
+
+**C30** - Acrescentado após a verificação 1 (Test policy: a terceira saída do use case só tinha prova de borda). Na camada do `PayOrderUseCase`, quando outra aprovação é gravada durante a cobrança, a execução lança `BusinessRuleException` com `"Este pedido não está aguardando pagamento."`. Sobra exatamente 1 linha `approved` e `PaymentApproved` não é despachado (AC 17)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="raises a conflict when a concurrent approval wins the race"`
+
 ### S3 - PaymentPage · 5 files · 11 KB · ~3k
 
 **C23** - O composable da página de pagamento expõe os 3 cartões de teste, nesta ordem: "Cartão aprovado" → `fake_card_approved`, "Recusado: saldo insuficiente" → `fake_card_insufficient_funds` e "Recusado pelo emissor" → `fake_card_declined`. Começa sem cartão selecionado e com o envio bloqueado (`canSubmit` `false`) para um pedido em `awaiting_payment` (AC 24)
@@ -126,8 +132,8 @@ Proof: `! grep -rn "approvePayment" frontend/src`
 | entradas inválidas de `card_token` (4 bordas) | ausente C11 · não texto C11 · 65 caracteres C11 · 64 caracteres aceito C11 | - |
 | status do pedido × "pode ser pago" (5) | `awaiting_payment` sem aprovado C21, C7 · `awaiting_payment` com aprovado C21, C13 · `placed` C21, C12 · `payment_approved` C21, C12 · `delivered` C21, C12 | - |
 | caminhos que não chamam o gateway (4) | `422` C11 · `409` de status C12 · `409` com aprovado C13 · `403` C16 | - |
-| garantias da tabela `payments`, door 1 (5) | único aprovado por pedido C17 · recusado repetido aceito C17 · `declined` exige motivo C18 · `approved` sem motivo C18 · `amount_cents >= 0` C18 | - |
-| doors do `Landing` (3) | door 1 C8, C17, C18 · door 2 C1, C4, C5, C6 · door 3 C9 | - |
+| garantias da tabela `payments`, door 1 (7) | único aprovado por pedido C17 · recusado repetido aceito C17 · `declined` exige motivo C18 · `approved` sem motivo C18 · `amount_cents >= 0` C18 · `order_id` existente C29 · pedido com tentativa não é apagado C29 | - |
+| doors do `Landing` (3) | door 1 C8, C17, C18, C29 · door 2 C1, C4, C5, C6 · door 3 C9 | - |
 | namespaces proibidos de usar o fake (3) | `Payment\UseCases` C5 · `Payment\Services` C5 · `Payment\Http` C5 | - |
 | chaves do erro `402` (4) | `code` C9 · `message` C9 · `errors` C9 · `request_id` C9 | - |
 | chaves do log de tentativa (4) | `order_id` C19 · `payment_id` C19 · `status` C19 · `decline_reason` C19 | - |
@@ -137,8 +143,8 @@ Proof: `! grep -rn "approvePayment" frontend/src`
 | startup config: ligação de `PaymentGateway` (2 assemblies) | aplicação via `bootstrap/providers.php` C4 · testes de feature, que sobem a mesma aplicação C7 | - |
 
 - As afirmações sobre status, rota ou formato de resposta (C7 a C16 e C20) têm prova que atravessa o HTTP.
-- C1 a C3, C21 e C22 provam as decisões na camada da própria classe, além das provas de borda.
-- C17 e C18 provam as garantias no banco, sem passar pela aplicação.
+- C1 a C3, C21, C22 e C30 provam as decisões na camada da própria classe, além das provas de borda.
+- C17, C18 e C29 provam as garantias no banco, sem passar pela aplicação.
 - C12 e C16 reaproveitam testes que já existem em `PaymentTest`. Eles passam a enviar `card_token` e ganham as asserções de "sem linha" e "sem chamada", sem afrouxar nenhuma das atuais. Os demais nomes são testes novos.
 - C23 a C27 provam a lógica da página no composable. A ligação do composable ao template é provada só pela checagem de tipos (C28), como registra a assumption do plano. O que fica sem prova automática é o arranjo visual.
 
@@ -183,3 +189,4 @@ Cost: 5 provas na própria camada (C1 a C3, C21 e C22) em 3 arquivos do backend,
 - **Boundary:** C1-C6 closed no commit `feat(payment): add the payment gateway port and the fake gateway`; cada regra de C5 foi vista falhando com um `use` proposital do fake no próprio namespace (UseCases, Services e Http, uma de cada vez)
 - **Boundary:** C7-C22 closed no commit `feat(payment): charge orders through the gateway and record every attempt`. `MoneyInCentsTest` e `OrderStatusFlowTest` passaram a enviar `card_token` nas chamadas de pagamento (contrato novo), sem mudar nenhuma asserção. O teste antigo "approves the fake payment of an order awaiting payment" virou C7, que afirma o mesmo `202` e `data.id` e acrescenta a mensagem
 - **Boundary:** C23-C28 closed no commit `feat(frontend): pay with a test card and retry after a decline`. Os estados visuais foram conferidos no navegador contra o ambiente local, com o worker real: três cartões sem seleção e "Pagar" desabilitado, recusa com saldo insuficiente mostrada na página com o cartão mantido, nova tentativa aprovada levando ao pedido em `payment_approved`, e duas linhas em `payments` (`declined` / `insufficient_funds` e `approved`)
+- **Boundary:** a verificação 1 deu FAIL, com 28/28 checks provados e 5/5 mutantes mortos, e apontou duas lacunas: a FK `payments.order_id` sem prova e a corrida perdida sem prova na camada do use case. C29 e C30 foram acrescentados sem mudar nenhum check aprovado. Os dois foram fechados no commit `test(payment): prove the payments foreign key and the lost race`, junto com o índice em `order_id` que o design pedia e as correções no README e na análise de domínio

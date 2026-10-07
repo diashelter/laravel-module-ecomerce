@@ -8,6 +8,7 @@ use App\Modules\Payment\Enums\DeclineReason;
 use App\Modules\Payment\Enums\PaymentStatus;
 use App\Modules\Payment\Events\PaymentApproved;
 use App\Modules\Payment\Exceptions\PaymentDeclinedException;
+use App\Modules\Payment\Models\Payment;
 use App\Modules\Payment\UseCases\PayOrderUseCase;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
 use Illuminate\Support\Facades\DB;
@@ -51,5 +52,20 @@ it('keeps the declined payment after raising the decline', function () {
     expect($rows)->toHaveCount(1)
         ->and($rows[0]->status)->toBe('declined')
         ->and($rows[0]->decline_reason)->toBe('card_declined');
+    Event::assertNotDispatched(PaymentApproved::class);
+});
+
+it('raises a conflict when a concurrent approval wins the race', function () {
+    $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 5000]);
+    spyPaymentGateway(function () use ($order): ChargeResult {
+        Payment::factory()->for($order)->approved()->create();
+
+        return new ChargeResult(PaymentStatus::Approved, null, 'fake_loser', 'fake');
+    });
+
+    expect(fn () => app(PayOrderUseCase::class)->execute($order, new PayOrderDTO('fake_card_approved')))
+        ->toThrow(BusinessRuleException::class, 'Este pedido não está aguardando pagamento.');
+
+    expect(DB::table('payments')->where('order_id', $order->id)->where('status', 'approved')->count())->toBe(1);
     Event::assertNotDispatched(PaymentApproved::class);
 });

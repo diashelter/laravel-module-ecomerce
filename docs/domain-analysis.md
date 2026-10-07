@@ -468,6 +468,7 @@ Os 5 passos organizaram o código e tornaram as fronteiras explícitas e verific
 | Leituras do estoque pela relação `Product::stock()` | Catálogo, carrinho, `ProductResource` | São o read model da vitrine; trocar por consulta ao Inventory exigiria montar a vitrine em duas etapas |
 | Estoque excluído por `cascadeOnDelete` | FK `stocks.product_id` | É a regra 1:1 garantida pelo banco |
 | Catalog usa uma regra do Ordering na vitrine (achado ao resolver o problema 7) | `ProductResource` e `ProductController` usam o `PurchaseAvailabilityService` | Gera dependência do Catalog para o Ordering, que por sua vez depende do Catalog. A regra de disponibilidade foi para o Ordering no passo 1 |
+| Tentativas de pagamento presas ao pedido por `restrictOnDelete` | FK `payments.order_id` | O Payment grava na própria tabela, mas referencia `orders`; pedidos nunca são apagados, então a FK só protege o histórico |
 | Eventos carregam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered` | Padrão do projeto com `SerializesModels`; só faz diferença com persistência separada |
 | Dashboard lê os repositories de vários módulos | `GetAdminDashboardUseCase` | É um read model; a dependência é só de leitura |
 | Customers grava pelo `UserRepository` | `CreateCustomerUseCase`, `UpdateCustomerUseCase` | Não há dados próprios de cliente (endereço, preferências) que justifiquem um modelo separado |

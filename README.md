@@ -298,7 +298,8 @@ users ──1:N── orders ──1:N── order_items ──N:1── product
 **Integridade:**
 
 - `stocks` e `category_product` usam `cascade` (são dependentes do produto).
-- `order_items.product_id`, `orders.user_id` e `payments.order_id` usam `restrict`: **não é possível excluir um produto que já está em pedidos** (a API responde `409` e sugere desativar o produto).
+- `order_items.product_id` e `orders.user_id` usam `restrict`: **não é possível excluir um produto que já está em pedidos** (a API responde `409` e sugere desativar o produto).
+- `payments.order_id` também usa `restrict`: um pedido com tentativas de pagamento não pode ser apagado.
 - Categorias com produtos associados também não podem ser excluídas (`409`).
 
 ### Migrations e seeders

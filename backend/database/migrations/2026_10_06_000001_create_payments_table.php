@@ -27,6 +27,8 @@ return new class extends Migration
             $table->string('gateway', 30);
             $table->string('gateway_transaction_id', 100);
             $table->timestamps();
+
+            $table->index('order_id');
         });
 
         DB::statement('ALTER TABLE payments ADD CONSTRAINT payments_amount_cents_non_negative CHECK (amount_cents >= 0)');

@@ -233,6 +233,22 @@ it('rejects inconsistent payment rows in the database', function (array $attribu
     'negative amount' => [['status' => 'approved', 'decline_reason' => null, 'amount_cents' => -1]],
 ]);
 
+it('ties payments to existing orders and keeps orders that have payments', function () {
+    $paid = Order::factory()->create();
+    Payment::factory()->for($paid)->declined()->create();
+    $unpaid = Order::factory()->create();
+
+    expect(fn () => DB::transaction(fn () => Payment::factory()->create(['order_id' => 999999])))
+        ->toThrow(QueryException::class);
+    expect(fn () => DB::transaction(fn () => DB::table('orders')->where('id', $paid->id)->delete()))
+        ->toThrow(QueryException::class);
+
+    DB::table('orders')->where('id', $unpaid->id)->delete();
+
+    expect(Order::query()->whereKey($unpaid->id)->exists())->toBeFalse()
+        ->and(Order::query()->whereKey($paid->id)->exists())->toBeTrue();
+});
+
 it('logs each payment attempt without the card token', function (string $cardToken) {
     $user = customer();
     $order = orderAwaitingPayment($user);
