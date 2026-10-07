@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Controllers\Admin;
 
+use App\Modules\Identity\Http\Controllers\Concerns\EndsBrowserSession;
 use App\Modules\Identity\Http\Requests\LoginRequest;
 use App\Modules\Identity\Http\Resources\StaffMemberResource;
 use App\Modules\Shared\Http\Controllers\Controller;
@@ -18,6 +19,8 @@ use Illuminate\Validation\ValidationException;
  */
 class StaffAuthController extends Controller
 {
+    use EndsBrowserSession;
+
     public function login(LoginRequest $request): StaffMemberResource
     {
         if (! Auth::guard('staff')->attempt($request->toDto()->toArray())) {
@@ -37,13 +40,7 @@ class StaffAuthController extends Controller
      */
     public function logout(Request $request): Response
     {
-        Auth::guard('staff')->logout();
-        Auth::guard('customer')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return response()->noContent();
+        return $this->endBrowserSession($request);
     }
 
     public function me(Request $request): StaffMemberResource

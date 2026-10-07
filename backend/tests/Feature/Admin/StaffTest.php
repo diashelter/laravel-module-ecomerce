@@ -57,9 +57,10 @@ it('creates a support member from the admin', function () {
 it('rejects a staff role other than admin or support', function (?string $role) {
     $this->actingAs(admin());
     $payload = staffPayload();
-    $role === null ? $payload['role'] = null : $payload['role'] = $role;
     if ($role === null) {
         unset($payload['role']);
+    } else {
+        $payload['role'] = $role;
     }
 
     $this->postJson('/api/admin/users', $payload)->assertUnprocessable()->assertJsonValidationErrors('role');

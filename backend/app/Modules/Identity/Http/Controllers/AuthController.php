@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Controllers;
 
+use App\Modules\Identity\Http\Controllers\Concerns\EndsBrowserSession;
 use App\Modules\Identity\Http\Requests\LoginRequest;
 use App\Modules\Identity\Http\Requests\RegisterRequest;
 use App\Modules\Identity\Http\Resources\CustomerAccountResource;
@@ -21,6 +22,8 @@ use Illuminate\Validation\ValidationException;
  */
 class AuthController extends Controller
 {
+    use EndsBrowserSession;
+
     public function register(RegisterRequest $request, RegisterCustomerUseCase $registerCustomer): JsonResponse
     {
         $account = $registerCustomer->execute($request->toDto());
@@ -50,13 +53,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request): Response
     {
-        Auth::guard('customer')->logout();
-        Auth::guard('staff')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return response()->noContent();
+        return $this->endBrowserSession($request);
     }
 
     public function me(Request $request): CustomerAccountResource
