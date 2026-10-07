@@ -564,6 +564,19 @@ O Vitest cobre a conversão de dinheiro (`utils/money`) e o carrinho. O CI roda 
 
 Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes.
 
+### Em que nível testar
+
+O nível de um teste depende do formato do código, não do nome da camada. Código que **decide** muda um resultado: uma tabela de casos, uma validação, uma guarda, uma transição de status. Código de **instrumentação** só repassa argumentos ou converte um formato em outro, sem condição própria.
+
+| Código | Provas exigidas | Cobertura esperada |
+| --- | --- | --- |
+| Decide e é alcançado pelo HTTP (services, use cases, adaptadores) | uma na borda (teste de feature) **e** uma na própria camada | na borda: o contrato de cada status; na camada: um caso afirmado por linha da tabela de decisão |
+| Decide no frontend (composables, stores, utils) | uma na própria camada, com Vitest e os services simulados | um caso por resposta tratada e por estado relevante |
+| Garantia do banco (índice único, `CHECK`) | uma direto no banco | um caso por restrição, aceito e recusado |
+| Instrumentação (controllers, Form Requests, service providers, renderização de exceções) | nenhuma própria | coberta pelas provas de borda |
+
+Um teste prova a camada em que ele **afirma**, não as camadas por onde ele passa. Um teste de feature que atravessa uma tabela de decisão exercita um caminho dela e não falha quando outra linha está errada. Por isso a tabela também é provada na própria camada, como já fazem `Unit/Services/PaymentServiceTest` e `Feature/UseCases/*`.
+
 ### Integração contínua (GitHub Actions)
 
 O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em todo pull request e em todo push na `main`. Ele usa os **mesmos serviços do Docker Compose e os mesmos alvos do `Makefile`** do ambiente local, então o CI testa na mesma imagem PHP e na mesma versão do PostgreSQL que o `make test`:
