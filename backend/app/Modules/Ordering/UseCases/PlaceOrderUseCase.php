@@ -6,6 +6,8 @@ namespace App\Modules\Ordering\UseCases;
 
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Inventory\Contracts\StockReservation;
+use App\Modules\Ordering\Contracts\DeliveryAddressBook;
+use App\Modules\Ordering\Contracts\ShippingQuoter;
 use App\Modules\Ordering\DTOs\CartDTO;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Events\OrderPlaced;
@@ -14,10 +16,12 @@ use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\Services\CheckoutService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Customer: places an order atomically. Stock check, stock decrement and order creation
- * happen inside a single database transaction with the stock rows locked.
+ * happen inside a single database transaction with the stock rows locked. The order keeps a copy
+ * of the chosen delivery address and the shipping quoted for its state.
  */
 final class PlaceOrderUseCase
 {
@@ -26,16 +30,26 @@ final class PlaceOrderUseCase
         private readonly StockReservation $stockReservation,
         private readonly OrderRepository $orders,
         private readonly CheckoutService $checkout,
+        private readonly DeliveryAddressBook $addressBook,
+        private readonly ShippingQuoter $shippingQuoter,
     ) {}
 
     /**
      * @throws InsufficientStockException
+     * @throws ValidationException when the address is not in the customer's own address book
      */
-    public function execute(int $customerId, CartDTO $cart): Order
+    public function execute(int $customerId, CartDTO $cart, int $addressId): Order
     {
+        // The address comes first: an unknown one must never lock or touch the stock.
+        $address = $this->addressBook->find($customerId, $addressId)
+            ?? throw ValidationException::withMessages(['address_id' => ['Endereço de entrega não encontrado.']]);
+
+        // The server quotes the shipping from the address state: the client never sends it.
+        $shipping = $this->shippingQuoter->quote($address->state);
+
         $quantities = $cart->quantities();
 
-        $order = DB::transaction(function () use ($customerId, $quantities): Order {
+        $order = DB::transaction(function () use ($customerId, $quantities, $address, $shipping): Order {
             $productIds = $quantities->productIds();
 
             // 1. Lock the stock rows (SELECT ... FOR UPDATE). Any concurrent checkout touching
@@ -61,8 +75,9 @@ final class PlaceOrderUseCase
                 $this->stockReservation->decrement($stocks->get($productId), $quantity);
             }
 
-            // 5. Create the order and its items (snapshot of name and price).
-            return $this->orders->createWithItems($customerId, OrderStatus::Placed, $lines);
+            // 5. Create the order and its items (snapshot of name and price), with the address copy and
+            //    the shipping, so the total is the items plus the shipping.
+            return $this->orders->createWithItems($customerId, OrderStatus::Placed, $lines, $address, $shipping);
         });
 
         // 6. Only after COMMIT: the queued listener moves the order to "awaiting_payment".

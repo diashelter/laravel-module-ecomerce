@@ -1,10 +1,12 @@
 <?php
 
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
+use App\Modules\Customers\Repositories\CustomerAddressRepository;
 use App\Modules\Identity\Models\User;
 use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Repositories\StockRepository;
+use App\Modules\Ordering\Contracts\DeliveryAddressBook;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\Gateways\FakePaymentGateway;
@@ -67,6 +69,32 @@ arch('fulfillment does not know payment')
     ->expect('App\Modules\Fulfillment')
     ->not->toUse('App\Modules\Payment');
 
+// Ordering: it does not know the address book, and reaches fulfillment only through its events.
+// The customers module and the fulfillment module implement the contracts ordering defines.
+arch('ordering does not know customers')
+    ->expect('App\Modules\Ordering')
+    ->not->toUse('App\Modules\Customers');
+
+$fulfillmentNamespaces = array_values(array_diff(
+    array_map('basename', glob(__DIR__.'/../../../app/Modules/Fulfillment/*', GLOB_ONLYDIR)),
+    ['Events'],
+));
+
+foreach ($fulfillmentNamespaces as $namespace) {
+    arch("ordering reaches fulfillment only through its events: {$namespace}")
+        ->expect('App\\Modules\\Ordering')
+        ->not->toUse('App\\Modules\\Fulfillment\\'.$namespace);
+}
+
+it('ordering reaches fulfillment only through its events: every namespace but Events is covered', function () use ($fulfillmentNamespaces) {
+    expect(count($fulfillmentNamespaces))->toBeGreaterThanOrEqual(4)
+        ->and($fulfillmentNamespaces)->not->toContain('Events');
+});
+
+arch('the ordering contracts are interfaces')
+    ->expect('App\Modules\Ordering\Contracts')
+    ->toBeInterfaces();
+
 // Fulfillment answers the ordering side through the contracts ordering defines, and never reads
 // the customer's address book: the order carries the address copy it needs.
 arch('fulfillment does not know customers')
@@ -94,6 +122,10 @@ foreach (array_diff(MODULES, ['Shared']) as $module) {
 
 it('resolves the catalog order history to the order repository', function () {
     expect(app(ProductOrderHistory::class))->toBeInstanceOf(OrderRepository::class);
+});
+
+it('resolves the delivery address book to the customers module', function () {
+    expect(app(DeliveryAddressBook::class))->toBeInstanceOf(CustomerAddressRepository::class);
 });
 
 it('resolves the inventory contracts to the stock repository', function (string $contract) {

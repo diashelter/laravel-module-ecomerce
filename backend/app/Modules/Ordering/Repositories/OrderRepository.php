@@ -9,9 +9,11 @@ use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Ordering\ValueObjects\CustomerIds;
+use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\OrderCountsByCustomer;
 use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -85,14 +87,30 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
     }
 
     /**
-     * Creates the order and its items (snapshot of name and price). The order total is the one
-     * the lines calculate, so it cannot diverge from the items.
+     * Creates the order and its items (snapshot of name and price) together with the copy of the
+     * delivery address and the shipping quoted for it. The order total is the one the lines and
+     * the shipping calculate, so it cannot diverge from them.
      */
-    public function createWithItems(int $customerId, OrderStatus $status, OrderLines $lines): Order
-    {
+    public function createWithItems(
+        int $customerId,
+        OrderStatus $status,
+        OrderLines $lines,
+        DeliveryAddress $address,
+        ShippingQuote $shipping,
+    ): Order {
         $order = $this->query()->create([
             'customer_id' => $customerId,
-            'total_cents' => $lines->totalCents(),
+            'total_cents' => $lines->totalCents() + $shipping->priceCents,
+            'shipping_cents' => $shipping->priceCents,
+            'delivery_business_days' => $shipping->deliveryBusinessDays,
+            'delivery_recipient_name' => $address->recipientName,
+            'delivery_postal_code' => $address->postalCode,
+            'delivery_street' => $address->street,
+            'delivery_number' => $address->number,
+            'delivery_complement' => $address->complement,
+            'delivery_district' => $address->district,
+            'delivery_city' => $address->city,
+            'delivery_state' => $address->state,
             'status' => $status,
         ]);
         $order->items()->createMany(array_map(fn (OrderLine $line) => [

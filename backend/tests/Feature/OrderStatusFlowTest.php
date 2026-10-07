@@ -109,7 +109,7 @@ it('runs the whole lifecycle with a synchronous queue', function () {
     $product = productWithStock(3);
 
     $orderId = $this->actingAs($user)
-        ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]]])
+        ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]], 'address_id' => addressOf($user)->id])
         ->assertCreated()
         ->json('data.id');
 

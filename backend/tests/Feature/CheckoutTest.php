@@ -12,7 +12,10 @@ beforeEach(fn () => Event::fake([OrderPlaced::class]));
 
 function checkout(array $items)
 {
-    return test()->postJson('/api/orders', ['items' => $items]);
+    // The delivery address is one of the signed-in customer's own (a guest has none to send).
+    $account = auth('customer')->user();
+
+    return test()->postJson('/api/orders', ['items' => $items, 'address_id' => $account === null ? null : addressOf($account)->id]);
 }
 
 it('places an order with every value in cents, decrements stock and stores a snapshot of the items', function () {
@@ -26,13 +29,17 @@ it('places an order with every value in cents, decrements stock and stores a sna
             ['product_id' => $mouse->id, 'quantity' => 2, 'unit_price' => 1, 'unit_price_cents' => 1],
             ['product_id' => $keyboard->id, 'quantity' => 3],
         ],
+        'address_id' => addressOf($user)->id,
         'total' => 100,
         'total_cents' => 1,
     ]);
 
+    // The address is in SP, so the shipping is R$ 15,00 on top of the items.
     $response->assertCreated()
         ->assertJsonPath('data.status', 'placed')
-        ->assertJsonPath('data.total_cents', 94980)
+        ->assertJsonPath('data.items_total_cents', 94980)
+        ->assertJsonPath('data.shipping_cents', 1500)
+        ->assertJsonPath('data.total_cents', 96480)
         ->assertJsonCount(2, 'data.items');
 
     expect($mouse->stock->fresh()->quantity)->toBe(8)
@@ -62,19 +69,23 @@ it('keeps the historical snapshot when the product changes later', function () {
     expect($item->product_name)->toBe('Old name')->and($item->unit_price_cents)->toBe(1000);
 });
 
-it('stores an order total equal to the sum of its item subtotals', function () {
+it('stores an order total equal to the items plus the shipping', function () {
     $first = productWithStock(10, ['price_cents' => 1990]);
     $second = productWithStock(10, ['price_cents' => 350]);
+    $third = productWithStock(10, ['price_cents' => 12000]);
     $this->actingAs(customer());
 
     checkout([
         ['product_id' => $first->id, 'quantity' => 3],
         ['product_id' => $second->id, 'quantity' => 2],
+        ['product_id' => $third->id, 'quantity' => 1],
     ])->assertCreated();
 
+    // The address is in SP: R$ 15,00 of shipping.
     $order = Order::query()->sole();
-    expect($order->total_cents)->toBe(3 * 1990 + 2 * 350)
-        ->and($order->total_cents)->toBe((int) $order->items()->sum('subtotal_cents'))
+    expect($order->shipping_cents)->toBe(1500)
+        ->and($order->total_cents)->toBe(3 * 1990 + 2 * 350 + 12000 + 1500)
+        ->and($order->total_cents)->toBe((int) $order->items()->sum('subtotal_cents') + $order->shipping_cents)
         ->and($order->items->every(fn ($item) => $item->subtotal_cents === $item->unit_price_cents * $item->quantity))->toBeTrue();
 });
 
@@ -188,7 +199,7 @@ it('stores the customer id on the placed order', function () {
     $account = customer();
 
     $this->actingAs($account)
-        ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]]])
+        ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]], 'address_id' => addressOf($account)->id])
         ->assertCreated();
 
     expect(Order::query()->sole()->customer_id)->toBe($account->id);

@@ -46,6 +46,29 @@ function addressPayload(array $overrides = []): array
     ], $overrides);
 }
 
+/** A complete row for `orders`, written straight to the table with no model in between. */
+function orderRow(int $customerId, array $overrides = []): array
+{
+    return array_merge([
+        'customer_id' => $customerId,
+        'total_cents' => 0,
+        'shipping_cents' => 0,
+        'delivery_business_days' => 2,
+        'estimated_delivery_on' => null,
+        'delivery_recipient_name' => 'Ana Souza',
+        'delivery_postal_code' => '01310100',
+        'delivery_street' => 'Avenida Paulista',
+        'delivery_number' => '1000',
+        'delivery_complement' => null,
+        'delivery_district' => 'Bela Vista',
+        'delivery_city' => 'São Paulo',
+        'delivery_state' => 'SP',
+        'status' => 'placed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ], $overrides);
+}
+
 function admin(array $attributes = []): User
 {
     return User::factory()->admin()->create($attributes);
