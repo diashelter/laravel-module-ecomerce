@@ -179,3 +179,5 @@ Cost: 5 provas na própria camada (C1 a C3, C21 e C22) em 3 arquivos do backend,
 ## Handoff
 
 - S1 = ~2k, S2 entra em ~10k, S3 em ~13k; a atualização do README e da análise de domínio (79 KB, lidos em partes) leva a ~33k, abaixo do budget de 150k - one builder
+- Mechanism: one builder (cabe no orçamento, sem pergunta)
+- **Boundary:** C1-C6 closed no commit `feat(payment): add the payment gateway port and the fake gateway`; cada regra de C5 foi vista falhando com um `use` proposital do fake no próprio namespace (UseCases, Services e Http, uma de cada vez)

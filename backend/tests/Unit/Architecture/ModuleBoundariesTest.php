@@ -5,6 +5,8 @@ use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Repositories\StockRepository;
 use App\Modules\Ordering\Repositories\OrderRepository;
+use App\Modules\Payment\Contracts\PaymentGateway;
+use App\Modules\Payment\Gateways\FakePaymentGateway;
 
 /*
  * Boundaries between the modules (see docs/domain-analysis.md).
@@ -56,6 +58,18 @@ arch('fulfillment does not know payment')
     ->expect('App\Modules\Fulfillment')
     ->not->toUse('App\Modules\Payment');
 
+// Payment charges through its own PaymentGateway port: only the module's service provider
+// names the adapter, so swapping the gateway is a new class and one binding.
+foreach (['UseCases', 'Services', 'Http'] as $layer) {
+    arch("payment {$layer} reaches the payment gateway only through its contract")
+        ->expect("App\\Modules\\Payment\\{$layer}")
+        ->not->toUse(FakePaymentGateway::class);
+}
+
+arch('the payment contracts are interfaces')
+    ->expect('App\Modules\Payment\Contracts')
+    ->toBeInterfaces();
+
 // Shared kernel: infrastructure only, no business module.
 foreach (array_diff(MODULES, ['Shared']) as $module) {
     arch("the shared kernel does not depend on {$module}")
@@ -70,6 +84,10 @@ it('resolves the catalog order history to the order repository', function () {
 it('resolves the inventory contracts to the stock repository', function (string $contract) {
     expect(app($contract))->toBeInstanceOf(StockRepository::class);
 })->with([StockInitializer::class, StockReservation::class]);
+
+it('resolves the payment gateway to the fake gateway', function () {
+    expect(app(PaymentGateway::class))->toBeInstanceOf(FakePaymentGateway::class);
+});
 
 it('keeps every module named by these rules', function (string $module) {
     expect(glob(app_path("Modules/{$module}/*")))->not->toBeEmpty();
