@@ -22,6 +22,7 @@ it('guards the delivery copy and the shipping in the orders table', function (ar
         yield "{$column} null" => [["delivery_{$column}" => null], false];
     }
 
+    yield 'business days null' => [['delivery_business_days' => null], false];
     yield 'negative shipping' => [['shipping_cents' => -1], false];
     yield 'zero business days' => [['delivery_business_days' => 0], false];
     yield 'total below the shipping' => [['total_cents' => 100, 'shipping_cents' => 200], false];

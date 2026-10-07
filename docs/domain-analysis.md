@@ -145,7 +145,7 @@ Score = (
 - → Catalog: preço, nome e status do produto.
 - → Inventory: bloqueio e débito de estoque.
 - → Identity: `customer_id` do comprador.
-- → Customers e Fulfillment: só pelos contratos que o próprio Ordering define (`DeliveryAddressBook`, `ShippingQuote`) e pelos eventos do Fulfillment. O `ModuleBoundariesTest` proíbe o Ordering de usar o Customers e qualquer namespace do Fulfillment além de `Events`.
+- → Customers e Fulfillment: só pelos contratos que o próprio Ordering define (`DeliveryAddressBook`, `ShippingQuoter`) e pelos eventos do Fulfillment. O `ModuleBoundariesTest` proíbe o Ordering de usar o Customers e qualquer namespace do Fulfillment além de `Events`, inclusive as classes da raiz do módulo (o `FulfillmentServiceProvider`).
 - ← Payment / Fulfillment: mudanças de status do pedido (`PaymentApproved`, `OrderDelivered`) e a data prevista (`DeliveryScheduled`).
 
 **Contexto sugerido:** `OrderingContext`

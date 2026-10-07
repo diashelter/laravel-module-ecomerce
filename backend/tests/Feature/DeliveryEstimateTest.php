@@ -43,3 +43,27 @@ it('shows the same delivery block to the admin', function () {
         ->and($store['shipping_cents'])->toBe(2200)
         ->and($store['delivery']['address']['state'])->toBe('RJ');
 });
+
+it('shows the delivery block in the store and admin order lists', function () {
+    $user = customer();
+    $product = productWithStock(5);
+    $this->actingAs($user);
+    $orderId = $this->postJson('/api/orders', [
+        'items' => [['product_id' => $product->id, 'quantity' => 2]],
+        'address_id' => addressOf($user, ['state' => 'RJ', 'complement' => 'Sala 5'])->id,
+    ])->assertCreated()->json('data.id');
+
+    $detail = $this->getJson("/api/orders/{$orderId}")->assertOk()->json('data');
+    $storeList = $this->getJson('/api/orders')->assertOk()->json('data.0');
+    $adminList = $this->actingAs(admin())->getJson('/api/admin/orders')->assertOk()->json('data.0');
+
+    foreach ([$storeList, $adminList] as $listed) {
+        expect($listed['id'])->toBe($orderId)
+            ->and($listed['items_total_cents'])->toBe($detail['items_total_cents'])
+            ->and($listed['shipping_cents'])->toBe(2200)
+            ->and($listed['total_cents'])->toBe($listed['items_total_cents'] + 2200)
+            ->and($listed['delivery'])->toBe($detail['delivery'])
+            ->and($listed['delivery']['business_days'])->toBe(4)
+            ->and($listed['delivery']['address']['state'])->toBe('RJ');
+    }
+});

@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/addresses-and-shipping/plan.md`
 
-76 checks in 5 slices · 5 one-way doors · 0 open
+80 checks in 5 slices · 5 one-way doors · 0 open
 
 Comandos: o backend roda via `docker compose exec -T api ./vendor/bin/pest --filter="<nome do teste>"`, no mesmo container do `make test` que o CI executa. O frontend roda via `docker compose exec -T frontend npx vitest run -t "<nome do teste>"`, o mesmo Vitest do `make test-frontend`, e a checagem de tipos via `docker compose exec -T frontend npm run type-check`. O CI não roda o frontend, então essas provas precisam rodar localmente antes do PR. Os nomes de teste não usam parênteses, colchetes nem barras, porque o `--filter` do Pest e o `-t` do Vitest são expressões regulares.
 
@@ -249,6 +249,18 @@ Proof: `docker compose exec -T frontend npx vitest run -t "describes the deliver
 **C73** - Com `process.env.TZ` em `America/Sao_Paulo`, a formatação de data só-dia transforma `"2026-10-09"` em `"09/10/2026"` (AC 63)
 Proof: `docker compose exec -T frontend npx vitest run -t "formats a date without shifting it to the previous day"`
 
+**C77** - Para um pedido para o RJ, `GET /api/orders` e `GET /api/admin/orders` devolvem na listagem `items_total_cents`, `shipping_cents` `2200`, `total_cents` igual às linhas mais `2200` e `delivery` (com `business_days` `4` e `address.state` `RJ`) iguais aos do detalhe (rodada 1 da verificação; plano, Impact e Surface)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="shows the delivery block in the store and admin order lists"`
+
+**C78** - Direto no banco, a escrita com nulo é recusada com `QueryException` em cada uma das 8 colunas obrigatórias de `customer_addresses` (`customer_id`, `recipient_name`, `postal_code`, `street`, `number`, `district`, `city`, `state`) e em `orders.delivery_business_days` (rodada 1 da verificação; Test policy "Garantia do banco")
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="requires every column of the address book table but the complement|guards the delivery copy and the shipping in the orders table"`
+
+**C79** - O `ModuleBoundariesTest` afirma, com uma expectativa por classe, que `App\Modules\Ordering` não usa as classes da raiz de `App\Modules\Fulfillment` (hoje o `FulfillmentServiceProvider`), e afirma que a lista contém o `FulfillmentServiceProvider`. Uma classe do Ordering que usa o provider faz a regra falhar (AC 42, rodada 1 da verificação)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="ordering reaches fulfillment only through its events: FulfillmentServiceProvider|ordering reaches fulfillment only through its events: the module root is covered"`
+
+**C80** - O `ScheduleOrderDelivery` despacha o `DeliverOrder` com o delay exatamente igual a `shop.delivery_delay_seconds` (90 no teste) a partir de `now()` (AC 55; precisão que o C64 deixou aberta)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="schedules the delivery job with a delay when the order is paid"`
+
 ### S5 - Dados de demonstração · ~4 arquivos · ~12 KB · ~3k
 
 **C74** - Depois do `db:seed`, todo cliente semeado tem ao menos 1 endereço, e `cliente@example.com` tem um endereço com `state` `SP` (AC 66)
@@ -297,6 +309,10 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="seeds the deliver
 | contratos e ligações (2) | `ShippingQuoter` → Fulfillment C34 · `DeliveryAddressBook` → Customers C46 | - |
 | regras de fronteira (3) | `Fulfillment` sem `Customers` C35 · `Ordering` sem `Customers` C48 · `Ordering` só com `Fulfillment\Events` C48, uma expectativa por namespace, afirmando ao menos 4 | - |
 | doors do `Landing` (5) | door 1 C2, C19, C20 · door 2 C37, C38, C43, C45 · door 3 C34, C46, C47, C48 · door 4 C63, C65, C66, C67 · door 5 C2, C30, C36, C71 | - |
+| listagens que devolvem os campos novos de `Order` (2) | `GET /api/orders` C77 · `GET /api/admin/orders` C77 | - |
+| `NOT NULL` do banco sem caso direto (9) | `customer_addresses.customer_id` C78 · `recipient_name` C78 · `postal_code` C78 · `street` C78 · `number` C78 · `district` C78 · `city` C78 · `state` C78 · `orders.delivery_business_days` C78 | - |
+| namespace raiz do Fulfillment proibido ao Ordering (1) | `FulfillmentServiceProvider` C79 | - |
+| valor do delay do `DeliverOrder` (1) | `shop.delivery_delay_seconds` C80 | - |
 | textos de entrega no pedido (3) | prazo em dias C72 · data prevista C72, C73 · entregue C72 | - |
 | decisões do composable do checkout (8) | sem endereço C53 · salvo no checkout C54 · pré-seleção C55 · subtotal, frete e total C56 · troca de endereço C57 · orçamento pendente ou com falha C58 · confirmação C59 · `422` em `address_id` C60 | - |
 | decisões do composable do caderno (5) | carregando e falha C23 · vazio C24 · ordem da API C24 · erros do formulário C27 · confirmação de exclusão C28 | - |

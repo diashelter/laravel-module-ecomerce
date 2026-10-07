@@ -57,3 +57,11 @@ it('rejects invalid postal codes and states in the address book table', function
     'lower case state' => [['state' => 'sp'], false],
     'valid postal code and state' => [['postal_code' => '01310100', 'state' => 'SP'], true],
 ]);
+
+it('requires every column of the address book table but the complement', function (string $column) {
+    $user = customer();
+    $write = fn () => DB::transaction(fn () => DB::table('customer_addresses')->insert(addressRow($user->id, [$column => null])));
+
+    expect($write)->toThrow(QueryException::class);
+    expect(DB::table('customer_addresses')->count())->toBe(0);
+})->with(['customer_id', 'recipient_name', 'postal_code', 'street', 'number', 'district', 'city', 'state']);

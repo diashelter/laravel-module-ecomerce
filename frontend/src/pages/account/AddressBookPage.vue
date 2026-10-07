@@ -11,6 +11,7 @@ import type { AddressPayload, CustomerAddress } from '@/types'
 const notifications = useNotificationStore()
 const book = useAddressBook()
 
+const loaded = ref(false)
 const formOpen = ref(false)
 const editing = ref<CustomerAddress | null>(null)
 
@@ -39,7 +40,10 @@ async function remove(address: CustomerAddress): Promise<void> {
   if (await book.remove(address)) notifications.success('Endereço excluído.')
 }
 
-onMounted(book.load)
+onMounted(async () => {
+  await book.load()
+  loaded.value = true
+})
 </script>
 
 <template>
@@ -50,14 +54,16 @@ onMounted(book.load)
     </div>
 
     <p v-if="book.loadError.value" class="card p-6 text-center text-red-600">{{ book.loadError.value }}</p>
-    <LoadingState v-else-if="book.loading.value && book.isEmpty.value" />
+    <LoadingState v-else-if="!loaded" />
 
     <template v-else>
+      <!-- Above the form, and also shown when no form is open (a failed delete). -->
+      <p v-if="book.formMessage.value" class="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">
+        {{ book.formMessage.value }}
+      </p>
+
       <section v-if="formOpen" class="card space-y-4 p-6">
         <h2 class="font-semibold">{{ editing ? 'Editar endereço' : 'Novo endereço' }}</h2>
-        <p v-if="book.formMessage.value" class="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">
-          {{ book.formMessage.value }}
-        </p>
         <AddressForm
           :key="editing?.id ?? 'new'"
           :initial="editing"

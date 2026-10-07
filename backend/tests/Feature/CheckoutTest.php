@@ -111,6 +111,7 @@ it('returns 409 and changes nothing when stock is insufficient', function () {
         ['product_id' => $low->id, 'quantity' => 3],
     ])
         ->assertConflict()
+        ->assertJsonPath('code', 'INSUFFICIENT_STOCK')
         ->assertJsonPath('message', 'Estoque insuficiente para um ou mais produtos.');
 
     expect($response->json('errors'))->toBe(["items.{$low->id}" => ['Estoque insuficiente. Disponível: 2.']]);

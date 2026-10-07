@@ -121,4 +121,18 @@ describe('useAddressBook', () => {
 
     vi.unstubAllGlobals()
   })
+
+  it('keeps the address and reports a failed delete', async () => {
+    vi.stubGlobal('window', { confirm: vi.fn().mockReturnValue(true) })
+    vi.mocked(addressService.list).mockResolvedValue([address(1)])
+    vi.mocked(addressService.remove).mockRejectedValue(new ApiError(404, 'Registro não encontrado.', {}))
+    const book = useAddressBook()
+    await book.load()
+
+    expect(await book.remove(address(1))).toBe(false)
+    expect(book.formMessage.value).toBe('Registro não encontrado.')
+    expect(book.addresses.value.map((current) => current.id)).toEqual([1])
+
+    vi.unstubAllGlobals()
+  })
 })

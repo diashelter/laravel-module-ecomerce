@@ -65,6 +65,7 @@ export function useAddressBook() {
   async function remove(address: CustomerAddress): Promise<boolean> {
     if (!window.confirm(`Excluir o endereço de "${address.recipient_name}"?`)) return false
 
+    formMessage.value = null
     try {
       await addressService.remove(address.id)
     } catch (error) {

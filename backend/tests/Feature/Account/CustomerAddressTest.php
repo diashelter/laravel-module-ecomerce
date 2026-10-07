@@ -30,10 +30,15 @@ it('creates an address in the customer address book', function () {
         ->and(CustomerAddress::query()->sole()->customer_id)->toBe($user->id);
 });
 
-it('normalizes the state and an empty complement', function (array $override, string $state, ?string $complement) {
+it('normalizes the state and an empty complement', function (array $override, string $state, ?string $complement, bool $omitComplement = false) {
     $user = customer();
+    $payload = addressPayload($override);
 
-    $this->actingAs($user)->postJson('/api/account/addresses', addressPayload($override))
+    if ($omitComplement) {
+        unset($payload['complement']);
+    }
+
+    $this->actingAs($user)->postJson('/api/account/addresses', $payload)
         ->assertCreated()
         ->assertJsonPath('data.state', $state)
         ->assertJsonPath('data.complement', $complement);
@@ -42,7 +47,8 @@ it('normalizes the state and an empty complement', function (array $override, st
     expect($stored->state->value)->toBe($state)->and($stored->complement)->toBe($complement);
 })->with([
     'state typed in lower case with spaces' => [['state' => ' sp '], 'SP', 'Apto 12'],
-    'complement omitted' => [['complement' => null], 'SP', null],
+    'complement omitted' => [[], 'SP', null, true],
+    'complement null' => [['complement' => null], 'SP', null],
     'complement empty' => [['complement' => ''], 'SP', null],
 ]);
 

@@ -86,6 +86,22 @@ foreach ($fulfillmentNamespaces as $namespace) {
         ->not->toUse('App\\Modules\\Fulfillment\\'.$namespace);
 }
 
+// The classes that sit directly in `App\Modules\Fulfillment` (its service provider) are a namespace too.
+$fulfillmentRootClasses = array_map(
+    fn (string $file) => 'App\\Modules\\Fulfillment\\'.basename($file, '.php'),
+    glob(__DIR__.'/../../../app/Modules/Fulfillment/*.php'),
+);
+
+foreach ($fulfillmentRootClasses as $class) {
+    arch('ordering reaches fulfillment only through its events: '.class_basename($class))
+        ->expect('App\\Modules\\Ordering')
+        ->not->toUse($class);
+}
+
+it('ordering reaches fulfillment only through its events: the module root is covered', function () use ($fulfillmentRootClasses) {
+    expect($fulfillmentRootClasses)->toContain('App\\Modules\\Fulfillment\\FulfillmentServiceProvider');
+});
+
 it('ordering reaches fulfillment only through its events: every namespace but Events is covered', function () use ($fulfillmentNamespaces) {
     expect(count($fulfillmentNamespaces))->toBeGreaterThanOrEqual(4)
         ->and($fulfillmentNamespaces)->not->toContain('Events');

@@ -67,11 +67,14 @@ it('marks the order as paid and announces it, without scheduling the delivery it
 
 it('schedules the delivery job with a delay when the order is paid', function () {
     Bus::fake([DeliverOrder::class]);
+    config(['shop.delivery_delay_seconds' => 90]);
+    $this->travelTo(CarbonImmutable::parse('2026-10-07 10:00', 'America/Sao_Paulo'));
     $order = Order::factory()->status(OrderStatus::PaymentApproved)->create();
 
     (new ScheduleOrderDelivery)->handle(new OrderPaid($order));
 
-    Bus::assertDispatched(DeliverOrder::class, fn (DeliverOrder $job) => $job->order->is($order) && $job->delay !== null);
+    Bus::assertDispatched(DeliverOrder::class, fn (DeliverOrder $job) => $job->order->is($order)
+        && CarbonImmutable::instance($job->delay)->equalTo(now()->addSeconds(90)));
 });
 
 it('announces the delivery estimate when the order is paid', function () {
