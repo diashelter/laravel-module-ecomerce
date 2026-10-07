@@ -9,6 +9,7 @@ use App\Modules\Customers\Http\Controllers\AccountController;
 use App\Modules\Customers\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Modules\Customers\Http\Controllers\CustomerAddressController;
 use App\Modules\Customers\Http\Controllers\ProfileController;
+use App\Modules\Fulfillment\Http\Controllers\ShippingQuoteController;
 use App\Modules\Identity\Http\Controllers\Admin\StaffAuthController;
 use App\Modules\Identity\Http\Controllers\Admin\StaffMemberController as AdminStaffMemberController;
 use App\Modules\Identity\Http\Controllers\AuthController;
@@ -40,6 +41,7 @@ Route::get('products', [ProductController::class, 'index']);
 Route::get('products/{product}', [ProductController::class, 'show']);
 Route::get('categories', [CategoryController::class, 'index']);
 Route::post('cart/validate', [CartController::class, 'validate'])->middleware('throttle:60,1');
+Route::get('shipping/quote', [ShippingQuoteController::class, 'show'])->middleware('throttle:60,1');
 
 // Store, logged-in shopper (guard `customer`)
 Route::middleware('auth:customer')->group(function (): void {

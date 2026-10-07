@@ -67,6 +67,12 @@ arch('fulfillment does not know payment')
     ->expect('App\Modules\Fulfillment')
     ->not->toUse('App\Modules\Payment');
 
+// Fulfillment answers the ordering side through the contracts ordering defines, and never reads
+// the customer's address book: the order carries the address copy it needs.
+arch('fulfillment does not know customers')
+    ->expect('App\Modules\Fulfillment')
+    ->not->toUse('App\Modules\Customers');
+
 // Payment charges through its own PaymentGateway port: only the module's service provider
 // names the adapter, so swapping the gateway is a new class and one binding.
 foreach (['UseCases', 'Services', 'Http'] as $layer) {
