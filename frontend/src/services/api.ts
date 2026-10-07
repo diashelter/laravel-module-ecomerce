@@ -54,7 +54,10 @@ export class ApiError extends Error {
 }
 
 interface ApiErrorHandlers {
+  /** 401 on a store route: the shopper session ended. */
   onUnauthorized?: () => void
+  /** 401 on an admin route: the staff session ended. */
+  onStaffUnauthorized?: () => void
   onForbidden?: (message: string) => void
   onServerError?: (message: string) => void
 }
@@ -77,9 +80,14 @@ function toApiError(error: AxiosError<ApiErrorBody>): ApiError {
 /** Handles the errors every page reacts to the same way; the others are left to each page. */
 export function reportGlobalError(apiError: ApiError, url: string): void {
   switch (true) {
-    // 401: session expired or not logged in ("me" is expected to fail for guests).
-    case apiError.status === 401 && !url.startsWith('auth/'):
-      handlers.onUnauthorized?.()
+    // 401: session expired or not logged in. Each area has its own login, and the session
+    // checks ("auth/me", "admin/auth/me") are expected to fail for visitors.
+    case apiError.status === 401 && !url.startsWith('auth/') && !url.startsWith('admin/auth/'):
+      if (url.startsWith('admin/')) {
+        handlers.onStaffUnauthorized?.()
+      } else {
+        handlers.onUnauthorized?.()
+      }
       break
     // 403: authenticated, but not allowed.
     case apiError.status === 403:

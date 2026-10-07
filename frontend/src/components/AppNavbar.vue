@@ -4,14 +4,18 @@ import { useRouter } from 'vue-router'
 import AppLogo from '@/components/AppLogo.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
+import { useStaffStore } from '@/stores/staff'
 
 const auth = useAuthStore()
 const cart = useCartStore()
+const staff = useStaffStore()
 const router = useRouter()
 const open = ref(false)
 
 async function logout(): Promise<void> {
+  // The browser has a single session cookie, so leaving the store ends the admin session too.
   await auth.logout()
+  staff.clear()
   await router.push({ name: 'products' })
 }
 </script>
@@ -38,10 +42,7 @@ async function logout(): Promise<void> {
         </RouterLink>
 
         <template v-if="auth.isAuthenticated">
-          <RouterLink v-if="auth.isAdmin" :to="{ name: 'admin.dashboard' }" class="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">
-            Painel admin
-          </RouterLink>
-          <RouterLink v-else :to="{ name: 'account' }" class="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100" active-class="font-semibold text-indigo-700">
+          <RouterLink :to="{ name: 'account' }" class="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100" active-class="font-semibold text-indigo-700">
             Minha conta
           </RouterLink>
           <button type="button" class="rounded-lg px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-100" @click="logout">Sair</button>

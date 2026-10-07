@@ -6,10 +6,12 @@ import { useFormErrors } from '@/composables/useFormErrors'
 import { ApiError } from '@/services/api'
 import { adminCategoryService } from '@/services/admin/categoryService'
 import { useNotificationStore } from '@/stores/notifications'
+import { useStaffStore } from '@/stores/staff'
 import type { Category } from '@/types'
 import { slugify } from '@/utils/slug'
 
 const notifications = useNotificationStore()
+const staff = useStaffStore()
 const { first, handle, reset } = useFormErrors()
 
 const categories = ref<Category[] | null>(null)
@@ -105,7 +107,7 @@ onMounted(load)
             <td>
               <div class="flex justify-end gap-2">
                 <button type="button" class="btn btn-secondary btn-sm" @click="edit(category)">Editar</button>
-                <button type="button" class="btn btn-danger btn-sm" @click="remove(category)">Excluir</button>
+                <button v-if="staff.canDelete" type="button" class="btn btn-danger btn-sm" @click="remove(category)">Excluir</button>
               </div>
             </td>
           </tr>

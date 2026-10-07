@@ -3,9 +3,9 @@ import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FieldError from '@/components/FieldError.vue'
 import { useFormErrors } from '@/composables/useFormErrors'
-import { useAuthStore } from '@/stores/auth'
+import { useStaffStore } from '@/stores/staff'
 
-const auth = useAuthStore()
+const staff = useStaffStore()
 const router = useRouter()
 const route = useRoute()
 const { first, handle, reset } = useFormErrors()
@@ -17,9 +17,9 @@ async function submit(): Promise<void> {
   submitting.value = true
   reset()
   try {
-    await auth.login(form)
+    await staff.login(form)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
-    await router.push(redirect ?? { name: 'account' })
+    await router.push(redirect ?? { name: 'admin.dashboard' })
   } catch (error) {
     handle(error)
   } finally {
@@ -29,8 +29,8 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <h1 class="mb-1 text-2xl font-bold">Entrar</h1>
-  <p class="mb-6 text-sm text-slate-500">Acesse sua conta para comprar e acompanhar pedidos.</p>
+  <h1 class="mb-1 text-2xl font-bold">Painel administrativo</h1>
+  <p class="mb-6 text-sm text-slate-500">Acesso restrito à equipe da loja.</p>
 
   <form class="space-y-4" novalidate @submit.prevent="submit">
     <div>
@@ -47,7 +47,6 @@ async function submit(): Promise<void> {
   </form>
 
   <p class="mt-6 text-center text-sm text-slate-500">
-    Não tem conta?
-    <RouterLink :to="{ name: 'register' }" class="font-medium text-indigo-600 hover:underline">Criar conta</RouterLink>
+    <RouterLink :to="{ name: 'products' }" class="font-medium text-indigo-600 hover:underline">Voltar para a loja</RouterLink>
   </p>
 </template>

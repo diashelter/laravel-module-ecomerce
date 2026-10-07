@@ -5,10 +5,12 @@ import PaginationNav from '@/components/PaginationNav.vue'
 import { ApiError } from '@/services/api'
 import { adminProductService } from '@/services/admin/productService'
 import { useNotificationStore } from '@/stores/notifications'
+import { useStaffStore } from '@/stores/staff'
 import type { Paginated, Product } from '@/types'
 import { formatCents } from '@/utils/money'
 
 const notifications = useNotificationStore()
+const staff = useStaffStore()
 const result = ref<Paginated<Product> | null>(null)
 const page = ref(1)
 
@@ -74,7 +76,7 @@ onMounted(() => load())
                 <button type="button" class="btn btn-secondary btn-sm" @click="toggleStatus(product)">
                   {{ product.status === 'active' ? 'Desativar' : 'Ativar' }}
                 </button>
-                <button type="button" class="btn btn-danger btn-sm" @click="remove(product)">Excluir</button>
+                <button v-if="staff.canDelete" type="button" class="btn btn-danger btn-sm" @click="remove(product)">Excluir</button>
               </div>
             </td>
           </tr>

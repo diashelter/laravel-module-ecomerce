@@ -1,25 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLogo from '@/components/AppLogo.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useStaffStore } from '@/stores/staff'
+import { adminMenuLinks } from '@/utils/adminMenu'
 
 const auth = useAuthStore()
+const staff = useStaffStore()
 const router = useRouter()
 const menuOpen = ref(false)
 
-const links = [
-  { to: { name: 'admin.dashboard' }, label: 'Dashboard', exact: true },
-  { to: { name: 'admin.products' }, label: 'Produtos', exact: false },
-  { to: { name: 'admin.categories' }, label: 'Categorias', exact: false },
-  { to: { name: 'admin.stocks' }, label: 'Estoque', exact: false },
-  { to: { name: 'admin.users' }, label: 'Clientes', exact: false },
-  { to: { name: 'admin.orders' }, label: 'Pedidos', exact: false },
-]
+const links = computed(() => adminMenuLinks(staff.canManageStaff))
 
+// The browser has a single session cookie, so leaving the admin ends the store session too.
 async function logout(): Promise<void> {
-  await auth.logout()
-  await router.push({ name: 'login' })
+  await staff.logout()
+  auth.clear()
+  await router.push({ name: 'admin.login' })
 }
 </script>
 
@@ -51,7 +49,7 @@ async function logout(): Promise<void> {
     </aside>
     <div class="min-w-0 flex-1 md:ml-60">
       <header class="border-b border-slate-200 bg-white px-6 py-4 text-sm text-slate-500">
-        Painel administrativo · <span class="font-medium text-slate-700">{{ auth.user?.name }}</span>
+        Painel administrativo · <span class="font-medium text-slate-700">{{ staff.member?.name }}</span>
       </header>
       <main class="p-4 sm:p-6">
         <RouterView />

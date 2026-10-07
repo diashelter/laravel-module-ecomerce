@@ -1,15 +1,24 @@
-export type UserRole = 'admin' | 'customer'
+export type StaffRole = 'admin' | 'support'
 export type ProductStatus = 'active' | 'inactive'
 export type OrderStatus = 'placed' | 'awaiting_payment' | 'payment_approved' | 'delivered'
 
-export interface User {
+/** A shopper account (`customers`). It has no role. */
+export interface Customer {
   id: number
   name: string
   email: string
-  role: UserRole
-  role_label: string
   orders_count?: number
   orders?: Order[]
+  created_at: string
+}
+
+/** A staff member (`users`) of the admin area. */
+export interface StaffMember {
+  id: number
+  name: string
+  email: string
+  role: StaffRole
+  role_label: string
   created_at: string
 }
 
@@ -118,7 +127,7 @@ export interface CartValidation {
 }
 
 export interface AccountSummary {
-  user: User
+  customer: Customer
   orders_count: number
   last_order: Order | null
   recent_orders: Order[]

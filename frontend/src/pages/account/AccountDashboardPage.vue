@@ -17,13 +17,13 @@ onMounted(async () => {
 <template>
   <LoadingState v-if="!summary" />
   <div v-else class="space-y-6">
-    <h1 class="page-title">Olá, {{ summary.user.name }}!</h1>
+    <h1 class="page-title">Olá, {{ summary.customer.name }}!</h1>
 
     <div class="grid gap-4 sm:grid-cols-3">
       <div class="card p-5">
         <p class="text-sm text-slate-500">Nome</p>
-        <p class="mt-1 font-semibold">{{ summary.user.name }}</p>
-        <p class="text-sm text-slate-500">{{ summary.user.email }}</p>
+        <p class="mt-1 font-semibold">{{ summary.customer.name }}</p>
+        <p class="text-sm text-slate-500">{{ summary.customer.email }}</p>
       </div>
       <div class="card p-5">
         <p class="text-sm text-slate-500">Pedidos realizados</p>
