@@ -1,7 +1,7 @@
 # Análise de Domínio: Contextos Delimitados do Backend
 
 > Análise estratégica (DDD) do código em [`backend/`](../backend), feita em 06/10/2026.
-> Última atualização: 06/10/2026 (todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas).
+> Última atualização: 06/10/2026 (todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
 > O objetivo é identificar subdomínios (Core, Supporting, Generic), mapear os contextos delimitados (bounded contexts) e apontar problemas de coesão e acoplamento.
 
 ## Sumário
@@ -30,7 +30,7 @@ Desde o passo 5 do [plano de evolução](#plano-de-evolução), cada um deles é
 | Ordering / Checkout | **Core Domain** | 8/10 ✅ |
 | Catalog | Supporting | 9/10 ✅ |
 | Inventory | Supporting | 9/10 ✅ |
-| Payment | Supporting (simulado) | 7/10 ⚠️ |
+| Payment | Supporting (simulado) | 8/10 ✅ |
 | Fulfillment / Delivery | Supporting (simulado) | 7/10 ⚠️ |
 | Identity & Access | Generic | 8/10 ✅ |
 | Customer Account | Supporting | 7/10 ⚠️ |
@@ -184,20 +184,24 @@ Score = (
 
 ### 4. Payment: Supporting Subdomain (simulado)
 
-**Linguagem ubíqua:** pagar, aguardando pagamento, pagamento aprovado.
+**Linguagem ubíqua:** pagar, aguardando pagamento, tentativa de pagamento, cartão de teste, pagamento aprovado, pagamento recusado, motivo da recusa.
 
-**Capacidade de negócio:** registrar o pagamento de um pedido. Hoje ele é aprovado na hora, sem gateway.
+**Capacidade de negócio:** cobrar um pedido por um gateway e registrar cada tentativa. O gateway atual é fake: aprova ou recusa pelo cartão de teste, e a recusa permite tentar de novo.
 
 **Conceitos principais:**
 
-- `PaymentService`: define quais pedidos podem ser pagos.
-- `PayOrderUseCase`: valida e publica a aprovação.
+- [`Payment`](../backend/app/Modules/Payment/Models/Payment.php) (Entity): uma tentativa de cobrança, `approved` ou `declined`, final depois de gravada. O banco garante no máximo uma aprovada por pedido.
+- [`PaymentGateway`](../backend/app/Modules/Payment/Contracts/PaymentGateway.php) (porta): recebe `ChargeRequest` (pedido, valor em centavos, token do cartão) e devolve `ChargeResult`. Não conhece o model `Order`.
+- [`FakePaymentGateway`](../backend/app/Modules/Payment/Gateways/FakePaymentGateway.php) (adaptador): decide pelo token; ligado no `PaymentServiceProvider`.
+- `PaymentStatus` e `DeclineReason` (Enums).
+- `PaymentService`: define quais pedidos podem ser pagos (`awaiting_payment` e sem pagamento aprovado).
+- [`PayOrderUseCase`](../backend/app/Modules/Payment/UseCases/PayOrderUseCase.php): cobra pela porta, grava a tentativa e publica a aprovação ou lança `PaymentDeclinedException` (`402`).
 - `PaymentApproved` (Domain Event), publicado pelo Payment e consumido pelo Ordering.
-- `PaymentController`.
+- `PaymentController` e `PayOrderRequest`.
 
-**Coesão:** 7/10 ⚠️. Subiu de 6/10: o Payment tem módulo próprio (`app/Modules/Payment`) e só publica `PaymentApproved`, sem mexer no status do pedido. O que ainda pesa é não haver um modelo próprio (nem `Payment`, nem transação).
+**Coesão:** 8/10 ✅. Subiu de 7/10: o Payment passou a ter modelo próprio (`Payment`, tabela `payments`) e a sua regra de "pode ser pago" olha os próprios registros. Continua só publicando `PaymentApproved`, sem mexer no status do pedido. O que ainda pesa é ler o model `Order` do Ordering para saber o status e o total.
 
-**Observação:** quando houver integração com um gateway real, a parte de comunicação com o gateway vira um subdomínio **Generic**, protegido por uma Anti-Corruption Layer.
+**Observação:** a comunicação com o gateway já fica atrás da porta `PaymentGateway`, que é o lugar da Anti-Corruption Layer: um gateway real será um adaptador novo que traduz os códigos dele para `PaymentStatus` e `DeclineReason`. A cobrança é síncrona; um gateway que confirme depois (Pix, webhook) exigirá um estado pendente ([design](../.design/fake-payment-gateway.md)).
 
 **Contexto sugerido:** `PaymentContext`
 
@@ -281,7 +285,7 @@ Score = (
 | Catalog | Inventory | Baixo | ✅ O estoque é criado pelo contrato `StockInitializer`; restam leituras por `Product::stock()` | Manter as leituras como read model |
 | Ordering | Inventory | Alto (necessário) | ✅ O checkout usa só o contrato `StockReservation`, na mesma transação | Manter: a consistência sob concorrência exige a transação única |
 | Ordering | Catalog | Médio | ✅ O snapshot de nome e preço está correto | Customer/Supplier: o Catalog publica preço e status |
-| Ordering | Payment | Baixo | ✅ O Payment só publica `PaymentApproved`; o Ordering muda o status | Evoluir para um modelo `Payment` próprio quando houver gateway |
+| Ordering | Payment | Baixo | ✅ O Payment só publica `PaymentApproved`; o Ordering muda o status. O Payment tem modelo próprio (`Payment`) e cobra pela porta `PaymentGateway` | Manter a integração por eventos |
 | Payment | Fulfillment | Nenhum | ✅ Não se conhecem: o Fulfillment reage a `OrderPaid`, publicado pelo Ordering | Manter a integração por eventos |
 | Identity | Ordering | Baixo | ✅ O Ordering referencia o cliente só por id e lê nome e e-mail pelo `Customer` | Conformist: manter o `Customer` somente leitura |
 | Catalog | Ordering | Baixo | ✅ A exclusão pergunta pelo contrato `ProductOrderHistory`, definido pelo Catalog e implementado pelo Ordering | Manter a inversão de dependência |
@@ -407,7 +411,7 @@ backend/app/Modules/
   Ordering/      Cart, Checkout, Order, OrderItem, OrderPlaced, OrderPaid ← Core
   Catalog/       Product, Category, ProductStatus
   Inventory/     Stock, StockOperation, AdjustStock, StockInitializer, StockReservation
-  Payment/       PayOrder, PaymentApproved
+  Payment/       Payment, PaymentGateway, FakePaymentGateway, PayOrder, PaymentApproved
   Fulfillment/   ScheduleDelivery, DeliverOrder, OrderDelivered
   Customers/     Account, Profile, admin customer management
   Identity/      User, UserRole, Auth, Email, Password, EnsureUserIsAdmin
@@ -431,6 +435,8 @@ Cada módulo usa só as pastas de que precisa: `Contracts/`, `DTOs/`, `Enums/`, 
 | Disponível | Ordering | Produto ativo **e** com estoque suficiente para a quantidade pedida |
 | Estoque | Inventory | Quantidade de unidades de um produto, nunca negativa |
 | Pedido | Ordering | Compra confirmada, com itens congelados (snapshot) |
+| Tentativa de pagamento (`Payment`) | Payment | Uma cobrança de um pedido pelo gateway, aprovada ou recusada |
+| Pagamento recusado | Payment | Tentativa negada pelo gateway, com motivo; o pedido continua aguardando pagamento |
 | Pagamento aprovado | Payment | Pedido que pode seguir para a entrega |
 | Entregue | Fulfillment | Pedido concluído |
 | Usuário | Identity | Quem se autentica, com papel `admin` ou `customer` |
@@ -448,6 +454,10 @@ A ordem abaixo prioriza o que reduz mais risco com o menor esforço:
 3. ✅ **Separar Payment e Fulfillment por eventos** (problema 5). Concluído em 06/10/2026 com os eventos `OrderPaid` e `OrderDelivered`.
 4. ✅ **Expor interfaces do Inventory** (problemas 4 e 6). Concluído em 06/10/2026 com os contratos `StockInitializer` e `StockReservation`, sem mudar o comportamento transacional.
 5. ✅ **Migrar para `app/Modules`** (problema 8). Concluído em 06/10/2026: 9 módulos, um contexto por vez, começando pelo Inventory, com as fronteiras verificadas pelo `ModuleBoundariesTest`.
+
+Depois do plano:
+
+- ✅ **Modelo `Payment` próprio e gateway fake atrás de uma porta** (recomendação da matriz Ordering × Payment). Concluído em 06/10/2026: tabela `payments`, porta `PaymentGateway` ligada ao `FakePaymentGateway` e recusa com `402`, com as regras da porta verificadas pelo `ModuleBoundariesTest`. Ver o [design](../.design/fake-payment-gateway.md).
 
 ## Pendências depois do plano
 
