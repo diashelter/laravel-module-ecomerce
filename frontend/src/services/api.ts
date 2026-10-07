@@ -74,31 +74,37 @@ function toApiError(error: AxiosError<ApiErrorBody>): ApiError {
   return new ApiError(status, data?.message ?? fallback, data?.errors ?? {}, data?.code ?? null, data?.request_id ?? null)
 }
 
+/** Handles the errors every page reacts to the same way; the others are left to each page. */
+export function reportGlobalError(apiError: ApiError, url: string): void {
+  switch (true) {
+    // 401: session expired or not logged in ("me" is expected to fail for guests).
+    case apiError.status === 401 && !url.startsWith('auth/'):
+      handlers.onUnauthorized?.()
+      break
+    // 403: authenticated, but not allowed.
+    case apiError.status === 403:
+      handlers.onForbidden?.(apiError.message)
+      break
+    // 419: CSRF token mismatch (usually an expired session).
+    case apiError.status === 419:
+      handlers.onServerError?.('Sua sessão expirou. Recarregue a página.')
+      break
+    // 429: a throttled route (checkout, payment); the page would otherwise show nothing.
+    case apiError.status === 429:
+      handlers.onServerError?.('Muitas tentativas em pouco tempo. Aguarde um minuto e tente novamente.')
+      break
+    case apiError.status >= 500 || apiError.status === 0:
+      handlers.onServerError?.(apiError.status === 0 ? apiError.message : 'Erro no servidor. Tente novamente em instantes.')
+      break
+    // 402, 404, 409 and 422 are handled by each page (messages / field errors).
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorBody>) => {
     const apiError = toApiError(error)
-    const url = error.config?.url ?? ''
-
-    switch (true) {
-      // 401: session expired or not logged in ("me" is expected to fail for guests).
-      case apiError.status === 401 && !url.startsWith('auth/'):
-        handlers.onUnauthorized?.()
-        break
-      // 403: authenticated, but not allowed.
-      case apiError.status === 403:
-        handlers.onForbidden?.(apiError.message)
-        break
-      // 419: CSRF token mismatch (usually an expired session).
-      case apiError.status === 419:
-        handlers.onServerError?.('Sua sessão expirou. Recarregue a página.')
-        break
-      case apiError.status >= 500 || apiError.status === 0:
-        handlers.onServerError?.(apiError.status === 0 ? apiError.message : 'Erro no servidor. Tente novamente em instantes.')
-        break
-      // 404, 409 and 422 are handled by each page (messages / field errors).
-    }
-
+    reportGlobalError(apiError, error.config?.url ?? '')
     return Promise.reject(apiError)
   },
 )

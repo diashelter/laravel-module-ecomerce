@@ -97,7 +97,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 │   │   │   ├── Catalog/             produtos e categorias (vitrine e cadastro)
 │   │   │   ├── Inventory/           estoque; publica Contracts/ (StockInitializer, StockReservation) e InventoryServiceProvider
 │   │   │   ├── Ordering/            carrinho, checkout, pedidos, Customer (comprador, somente leitura) — núcleo do negócio
-│   │   │   ├── Payment/             pagamento fake: só publica PaymentApproved
+│   │   │   ├── Payment/             cobra pela porta PaymentGateway (gateway fake), grava as tentativas e publica PaymentApproved
 │   │   │   ├── Fulfillment/         entrega fake: agenda o DeliverOrder e publica OrderDelivered
 │   │   │   ├── Identity/            User, papéis, login (Sanctum), Email e Password (ValueObjects), EnsureUserIsAdmin, UserPolicy
 │   │   │   ├── Customers/           "Minha conta" e a tela Clientes do admin (CustomerSummaryDTO)
@@ -292,12 +292,14 @@ users ──1:N── orders ──1:N── order_items ──N:1── product
 | `stocks` | `product_id` **único** (garante o 1:1), `quantity` inteiro com `CHECK (quantity >= 0)` |
 | `category_product` | pivot com chave primária composta |
 | `orders` | `total_cents bigint` (centavos) com `CHECK (total_cents >= 0)`, `status` (`placed`, `awaiting_payment`, `payment_approved`, `delivered`) |
+| `payments` | uma linha por **tentativa** de pagamento: `amount_cents` (cópia do total do pedido), `status` (`approved` / `declined`), `decline_reason`, `card_token`, `gateway`, `gateway_transaction_id`. Índice **único parcial** em `order_id` onde `status = 'approved'` (no máximo um aprovado por pedido) e `CHECK` de motivo só na recusa e de valor `>= 0` |
 | `order_items` | **snapshot** de `product_name` e `unit_price_cents`; `subtotal_cents bigint` (`unit_price_cents × quantity`), os dois com `CHECK >= 0`. Mudar o produto não altera pedidos antigos |
 
 **Integridade:**
 
 - `stocks` e `category_product` usam `cascade` (são dependentes do produto).
 - `order_items.product_id` e `orders.user_id` usam `restrict`: **não é possível excluir um produto que já está em pedidos** (a API responde `409` e sugere desativar o produto).
+- `payments.order_id` também usa `restrict`: um pedido com tentativas de pagamento não pode ser apagado.
 - Categorias com produtos associados também não podem ser excluídas (`409`).
 
 ### Migrations e seeders
@@ -413,13 +415,15 @@ Para ver a concorrência na prática, com o ambiente rodando, deixe um produto c
 O ciclo de vida do pedido envolve três partes, que só conversam por eventos:
 
 - **Pedidos** (Ordering): é a única parte que muda o status do pedido.
-- **Pagamento** (Payment): só anuncia que o pagamento foi aprovado.
+- **Pagamento** (Payment): cobra pelo gateway, grava cada tentativa e só anuncia que o pagamento foi aprovado.
 - **Entrega** (Fulfillment): só anuncia que a transportadora (fake) entregou.
 
 ```
 POST /api/orders ──► OrderPlaced ──(fila)──► MarkOrderAsAwaitingPayment        placed → awaiting_payment
 
-POST /api/orders/{id}/payment
+POST /api/orders/{id}/payment {card_token}
+  Pagamento ──► PaymentGateway (fake) ──► payments (approved | declined)
+             recusado: 402, pedido inalterado
   Pagamento ──► PaymentApproved ──(fila)──► MarkOrderAsPaid                    awaiting_payment → payment_approved
                                                 │
   Pedidos   ◄───────────────────────────────────┘──► OrderPaid
@@ -433,7 +437,7 @@ POST /api/orders/{id}/payment
 | --- | --- | --- | --- |
 | `App\Modules\Ordering\Events\OrderPlaced` | Pedidos | Evento (`ShouldDispatchAfterCommit`) | Disparado após o commit do checkout |
 | `App\Modules\Ordering\Listeners\MarkOrderAsAwaitingPayment` | Pedidos | Listener (`ShouldQueue`) | Move o pedido para `awaiting_payment` (`MarkOrderAsAwaitingPaymentUseCase`) |
-| `App\Modules\Payment\Events\PaymentApproved` | Pagamento | Evento | Disparado pelo pagamento fake (`PayOrderUseCase`) |
+| `App\Modules\Payment\Events\PaymentApproved` | Pagamento | Evento (`ShouldDispatchAfterCommit`) | Disparado pelo `PayOrderUseCase` quando o gateway aprova e a tentativa é gravada |
 | `App\Modules\Ordering\Listeners\MarkOrderAsPaid` | Pedidos | Listener (`ShouldQueue`) | Move para `payment_approved` e dispara `OrderPaid` (`MarkOrderAsPaidUseCase`) |
 | `App\Modules\Ordering\Events\OrderPaid` | Pedidos | Evento | Disparado só pela transição que de fato marcou o pedido como pago |
 | `App\Modules\Fulfillment\Listeners\ScheduleOrderDelivery` | Entrega | Listener (`ShouldQueue`) | Agenda o job de entrega (`ScheduleDeliveryUseCase`) |
@@ -446,7 +450,7 @@ POST /api/orders/{id}/payment
 - Os listeners são registrados automaticamente (event discovery do Laravel), procurando em `app/Modules/*/Listeners` (configurado em `bootstrap/app.php`).
 - Listeners e job são adaptadores finos: só delegam para o caso de uso correspondente.
 - Todas as transições usam `OrderRepository::transitionStatus($order, $from, $to)`, um `UPDATE ... WHERE status = :from`: se um job for executado duas vezes ou fora de ordem, ele simplesmente não faz nada (**idempotência**). Por isso um `PaymentApproved` duplicado gera um único `OrderPaid`, e um retry do `DeliverOrder` (que anuncia a entrega de novo) é ignorado.
-- O endpoint de pagamento responde **`202 Accepted`**, pois a mudança de status acontece de forma assíncrona. O frontend faz *polling* da página do pedido para mostrar a timeline sendo atualizada.
+- O endpoint de pagamento responde **`202 Accepted`** na aprovação, pois a mudança de status acontece de forma assíncrona. O frontend faz *polling* da página do pedido para mostrar a timeline sendo atualizada.
 - O administrador **não altera o status manualmente**: ele é controlado exclusivamente pelos eventos e jobs.
 
 Acompanhando a fila:
@@ -492,7 +496,7 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. Erros segue
 }
 ```
 
-- `code`: identificador estável do erro (enum `App\Modules\Shared\Enums\ApiErrorCode`). O frontend deve decidir pelo `code`, nunca pelo texto de `message`. Valores: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `METHOD_NOT_ALLOWED`, `CSRF_TOKEN_MISMATCH`, `TOO_MANY_REQUESTS`, `BUSINESS_RULE_VIOLATION`, `INSUFFICIENT_STOCK`, `HTTP_ERROR`, `SERVER_ERROR`.
+- `code`: identificador estável do erro (enum `App\Modules\Shared\Enums\ApiErrorCode`). O frontend deve decidir pelo `code`, nunca pelo texto de `message`. Valores: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `METHOD_NOT_ALLOWED`, `CSRF_TOKEN_MISMATCH`, `TOO_MANY_REQUESTS`, `BUSINESS_RULE_VIOLATION`, `INSUFFICIENT_STOCK`, `PAYMENT_DECLINED` (402, pagamento recusado pelo gateway), `HTTP_ERROR`, `SERVER_ERROR`.
 - `errors`: mensagens por campo (lista de strings); `{}` quando o erro não é de um campo específico.
 - `request_id`: o mesmo valor do header `X-Request-ID`, presente em **todas** as respostas. É gerado pelo middleware `AssignRequestId` (ou reaproveitado do header enviado por um proxy, se for seguro) e gravado no `Context` do Laravel, então aparece em todas as linhas de log da requisição e dos jobs enfileirados por ela.
 - Respostas de erro são enviadas com `Cache-Control: private, no-store`.
@@ -511,7 +515,7 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. Erros segue
 | POST | `/api/orders` | cliente | Checkout |
 | GET | `/api/orders` | autenticado | Pedidos do usuário |
 | GET | `/api/orders/{id}` | dono | Detalhe do pedido |
-| POST | `/api/orders/{id}/payment` | dono | Pagamento fake (`202`) |
+| POST | `/api/orders/{id}/payment` | dono | Paga com `card_token` (gateway fake): `202` aprovado, `402 PAYMENT_DECLINED` recusado, `409` se não pode ser pago; `throttle:20,1` |
 | GET | `/api/account` | autenticado | Resumo da área do cliente |
 | PUT | `/api/account/profile` | autenticado | Atualiza nome, e-mail e senha |
 | GET | `/api/admin/dashboard` | admin | Métricas agregadas |
@@ -527,7 +531,7 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. Erros segue
 | GET | `/api/admin/orders` | admin | Lista pedidos |
 | GET | `/api/admin/orders/{id}` | admin | Detalhe do pedido |
 
-Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `403`, `404`, `409`, `422`, `429`, `500`.
+Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `402`, `403`, `404`, `409`, `422`, `429`, `500`.
 
 > **Nota:** a validação do carrinho usa `POST /api/cart/validate` (em vez de `GET`) porque envia uma lista de itens no corpo da requisição — um `GET` com corpo ou com arrays aninhados na query string seria frágil.
 
@@ -560,9 +564,22 @@ make test-filter FILTER=CheckoutTest   # apenas um arquivo/teste
 make test-frontend                     # testes do frontend (Vitest)
 ```
 
-O Vitest cobre a conversão de dinheiro (`utils/money`) e o carrinho. O CI roda só o backend; `make test-frontend` roda localmente.
+O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento com cartão de teste (`composables/usePayment`) e os erros tratados globalmente (`services/api`: `401`, `403`, `419`, `429` e `5xx`; os demais ficam com cada página). O CI roda só o backend; `make test-frontend` roda localmente.
 
 Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes.
+
+### Em que nível testar
+
+O nível de um teste depende do formato do código, não do nome da camada. Código que **decide** muda um resultado: uma tabela de casos, uma validação, uma guarda, uma transição de status. Código de **instrumentação** só repassa argumentos ou converte um formato em outro, sem condição própria.
+
+| Código | Provas exigidas | Cobertura esperada |
+| --- | --- | --- |
+| Decide e é alcançado pelo HTTP (services, use cases, adaptadores) | uma na borda (teste de feature) **e** uma na própria camada | na borda: o contrato de cada status; na camada: um caso afirmado por linha da tabela de decisão |
+| Decide no frontend (composables, stores, utils) | uma na própria camada, com Vitest e os services simulados | um caso por resposta tratada e por estado relevante |
+| Garantia do banco (índice único, `CHECK`) | uma direto no banco | um caso por restrição, aceito e recusado |
+| Instrumentação (controllers, Form Requests, service providers, renderização de exceções) | nenhuma própria | coberta pelas provas de borda |
+
+Um teste prova a camada em que ele **afirma**, não as camadas por onde ele passa. Um teste de feature que atravessa uma tabela de decisão exercita um caminho dela e não falha quando outra linha está errada. Por isso a tabela também é provada na própria camada, como já fazem `Unit/Services/PaymentServiceTest` e `Feature/UseCases/*`.
 
 ### Integração contínua (GitHub Actions)
 
@@ -586,11 +603,12 @@ O frontend ainda não é verificado no CI.
 | `CartValidationTest` | preços recalculados, problemas por item |
 | `CheckoutTest` | pedido + decremento + snapshot, rollback com `409`, cenário 5/4/3, uso de `FOR UPDATE`, `CHECK` no banco |
 | `OrderStatusFlowTest` | listeners de cada evento, transições, entrega agendada só após `OrderPaid`, job com delay, idempotência, ciclo completo |
-| `PaymentTest` | `202` + evento, `409` fora de `awaiting_payment`, `403` de outro cliente |
+| `PaymentTest` | `202` + tentativa gravada + evento, `402` para cada cartão recusado, nova tentativa após recusa, `422` do `card_token`, `409` fora de `awaiting_payment` ou com aprovado, corrida perdida, valor sempre do pedido, `403`, garantias do banco, log sem o token, `429` |
+| `Unit/Gateways/FakePaymentGatewayTest` | resultado de cada cartão de teste, valor ignorado, id de transação novo |
 | `Admin/*` | categorias (slug), produtos, estoque, clientes, pedidos e dashboard |
 | `Account/AccountTest` | resumo e edição de perfil/senha |
 | `Models/CustomerTest` | comprador lido a partir da conta, projeção somente leitura |
-| `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Shared sem módulos de negócio |
+| `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Payment cobrando só pela porta `PaymentGateway`, Shared sem módulos de negócio |
 | `Auth/EmailAndPasswordTest` | e-mail como conta única (caixa, `CHECK` do banco, login, perfil, admin), política de senha só ao escolher uma |
 | `Unit/ValueObjects/*` | `Email` (normalização e recusas), `Password` (política, sem vazar o texto em dumps, serialização e traces) e as listas tipadas (`TypedListsTest`: agrupamento, totais derivados, recusa de tipo e de id inválido) |
 | `Unit/Architecture/TypedListSignaturesTest` | nenhum `array` nas assinaturas de domínio que carregam as listas tipadas |
@@ -624,7 +642,7 @@ O código do backend e do frontend é montado como volume: alterações aparecem
 6. Adicione produtos ao carrinho e vá para o **checkout**: o backend valida o estoque.
 7. **Confirme a compra**: a transação bloqueia e reduz o estoque e cria o pedido.
 8. Na página de pagamento, o status passa de *Pedido efetuado* para *Aguardando pagamento* (listener na fila).
-9. Clique em **Aprovar pagamento**: o pedido vai para *Pagamento aprovado* e, após ~10 s, para *Pedido entregue* (job com delay). A timeline atualiza sozinha.
+9. Escolha **Recusado: saldo insuficiente** e clique em **Pagar**: a recusa aparece na página e o pedido continua aguardando pagamento. Escolha **Cartão aprovado** e clique em **Pagar**: o pedido vai para *Pagamento aprovado* e, após ~10 s, para *Pedido entregue* (job com delay). A timeline atualiza sozinha.
 10. Veja o histórico em **Minha conta → Meus pedidos**.
 11. Entre novamente como admin: o pedido aparece em **Pedidos** e as métricas do dashboard foram atualizadas.
 
@@ -667,4 +685,5 @@ Decisões relevantes:
   - O `OrderRepository` filtra pedidos pelo id do cliente (`paginateForCustomer`, `recentForCustomer`, `countForCustomer`, `countPerCustomer`), sem receber o `User`. O `countPerCustomer` recebe `CustomerIds` e devolve `OrderCountsByCustomer`.
   - A tela **Clientes** do admin junta as duas partes no `CustomerSummaryDTO` / `CustomerSummaryResource`, montados pelos casos de uso `ListCustomersUseCase` e `ShowCustomerUseCase`. A listagem faz sempre 2 consultas por página (contas e, depois, a contagem de pedidos agrupada).
   - A coluna continua `orders.user_id`, porque o cliente é identificado pelo id da conta.
-- **Pagamento recusado** não foi implementado (era opcional), mantendo os quatro status de negócio da especificação.
+- **Pagamento recusado** não cria status no pedido: a recusa (`402`) é gravada em `payments` e o pedido continua em `awaiting_payment`, mantendo os quatro status de negócio da especificação.
+- **Gateway de pagamento atrás de uma porta:** o `PayOrderUseCase` só conhece a interface `PaymentGateway`, ligada ao `FakePaymentGateway` no `PaymentServiceProvider`. Trocar de gateway é uma classe nova e uma ligação. O fake decide pelo cartão de teste (`fake_card_approved`, `fake_card_insufficient_funds`, `fake_card_declined`; qualquer outro é cartão inválido). A cobrança é síncrona: um gateway que confirme depois (Pix, webhook) exigiria um estado pendente. Ver [.design/fake-payment-gateway.md](.design/fake-payment-gateway.md).

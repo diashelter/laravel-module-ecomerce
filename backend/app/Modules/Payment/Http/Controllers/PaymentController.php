@@ -6,6 +6,7 @@ namespace App\Modules\Payment\Http\Controllers;
 
 use App\Modules\Ordering\Http\Resources\OrderResource;
 use App\Modules\Ordering\Models\Order;
+use App\Modules\Payment\Http\Requests\PayOrderRequest;
 use App\Modules\Payment\UseCases\PayOrderUseCase;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -13,15 +14,15 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * Fake payment: no gateway, approving simply fires the PaymentApproved event (see PayOrderUseCase).
+ * Pays an order through the payment gateway (see PayOrderUseCase). A decline is rendered as 402.
  */
 class PaymentController extends Controller
 {
-    public function store(Order $order, PayOrderUseCase $payOrder): JsonResponse
+    public function store(PayOrderRequest $request, Order $order, PayOrderUseCase $payOrder): JsonResponse
     {
         Gate::authorize('pay', $order);
 
-        $order = $payOrder->execute($order);
+        $order = $payOrder->execute($order, $request->toDto());
 
         // 202 Accepted: the status change happens asynchronously in the queue.
         return OrderResource::make($order)

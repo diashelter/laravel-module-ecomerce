@@ -9,17 +9,24 @@ use App\Modules\Ordering\Models\Order;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
 
 /**
- * Fake payment: there is no gateway, only the rule of which orders can be paid.
+ * The rule of which orders can be paid. The approved payment is checked too because the queue
+ * moves the order to payment_approved only a moment after the approval is recorded.
  */
 class PaymentService
 {
     /**
      * @throws BusinessRuleException
      */
-    public function ensureCanBePaid(Order $order): void
+    public function ensureCanBePaid(Order $order, bool $hasApprovedPayment): void
     {
-        if ($order->status !== OrderStatus::AwaitingPayment) {
-            throw new BusinessRuleException('Este pedido não está aguardando pagamento.');
+        if ($order->status !== OrderStatus::AwaitingPayment || $hasApprovedPayment) {
+            throw $this->notPayable();
         }
+    }
+
+    /** The error for an order that can no longer be paid (409). */
+    public function notPayable(): BusinessRuleException
+    {
+        return new BusinessRuleException('Este pedido não está aguardando pagamento.');
     }
 }

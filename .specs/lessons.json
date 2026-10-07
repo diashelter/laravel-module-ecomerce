@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 3,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::every one way constraint listed in plan relations including foreign keys and their ondelete rule needs its own coverage member and a database level proof",
+      "text": "Every one-way constraint listed in plan Relations, including foreign keys and their onDelete rule, needs its own Coverage member and a database-level proof.",
+      "signal": "ac_gap",
+      "scope": "backend/database/migrations",
+      "status": "candidate",
+      "features": [
+        "fake-payment-gateway"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "plan.md Relations; migration payments.order_id (backend/database/migrations)"
+      ],
+      "created": "2026-10-07T00:33:38Z",
+      "last_seen": "2026-10-07T00:33:38Z"
+    },
+    {
+      "id": "L-002",
+      "key": "spec_precision_gap::when the test policy counts n outcomes of a use case write one own layer check per outcome not only a boundary test for the rarest one",
+      "text": "When the Test policy counts N outcomes of a use case, write one own-layer check per outcome, not only a boundary test for the rarest one.",
+      "signal": "spec_precision_gap",
+      "scope": "backend/app/Modules/*/UseCases",
+      "status": "candidate",
+      "features": [
+        "fake-payment-gateway"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md Test policy; PayOrderUseCase lost race (backend/app/Modules/*/UseCases)"
+      ],
+      "created": "2026-10-07T00:33:38Z",
+      "last_seen": "2026-10-07T00:33:38Z"
+    }
+  ]
+}

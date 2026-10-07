@@ -21,6 +21,7 @@ enum ApiErrorCode: string
     case TooManyRequests = 'TOO_MANY_REQUESTS';
     case BusinessRuleViolation = 'BUSINESS_RULE_VIOLATION';
     case InsufficientStock = 'INSUFFICIENT_STOCK';
+    case PaymentDeclined = 'PAYMENT_DECLINED';
     case HttpError = 'HTTP_ERROR';
     case ServerError = 'SERVER_ERROR';
 

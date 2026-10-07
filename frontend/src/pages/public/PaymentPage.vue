@@ -1,26 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
 import LoadingState from '@/components/LoadingState.vue'
 import OrderItemsTable from '@/components/OrderItemsTable.vue'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
+import { usePayment } from '@/composables/usePayment'
 import { usePolling } from '@/composables/usePolling'
 import { ApiError } from '@/services/api'
 import { orderService } from '@/services/orderService'
-import { useNotificationStore } from '@/stores/notifications'
 import type { Order } from '@/types'
 import { formatCents } from '@/utils/money'
 
 const props = defineProps<{ orderId: number }>()
 
-const router = useRouter()
-const notifications = useNotificationStore()
-
 const order = ref<Order | null>(null)
 const error = ref<string | null>(null)
-const paying = ref(false)
 
-const canPay = computed(() => order.value?.status === 'awaiting_payment')
+const { cards, selectedToken, paying, declineMessage, canSubmit, submitLabel, pay } = usePayment(props.orderId, order)
 
 async function load(): Promise<void> {
   order.value = await orderService.find(props.orderId)
@@ -32,23 +27,6 @@ const polling = usePolling(async () => {
   await load()
   return order.value?.status === 'placed'
 })
-
-async function approve(): Promise<void> {
-  paying.value = true
-  try {
-    const { message } = await orderService.approvePayment(props.orderId)
-    notifications.success(message)
-    // The status changes in the queue: the order page keeps polling until it moves on.
-    await router.push({ name: 'account.order', params: { id: props.orderId }, query: { paid: '1' } })
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 409) {
-      notifications.error(e.message)
-      await load()
-    }
-  } finally {
-    paying.value = false
-  }
-}
 
 onMounted(async () => {
   try {
@@ -95,10 +73,26 @@ onMounted(async () => {
         <p v-if="order.status === 'placed'" class="text-sm text-amber-700">
           Processando o pedido na fila... o botão será liberado em instantes.
         </p>
-        <p v-else-if="!canPay" class="text-sm text-slate-600">O pagamento deste pedido já foi processado.</p>
+        <p v-else-if="order.status !== 'awaiting_payment'" class="text-sm text-slate-600">
+          O pagamento deste pedido já foi processado.
+        </p>
+        <fieldset class="space-y-2 text-left" :disabled="order.status !== 'awaiting_payment' || paying">
+          <legend class="mb-2 text-sm font-medium text-slate-700">Cartão de teste</legend>
+          <label
+            v-for="card in cards"
+            :key="card.token"
+            class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 text-sm has-[:checked]:border-indigo-500 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
+          >
+            <input v-model="selectedToken" type="radio" name="test-card" :value="card.token" />
+            {{ card.label }}
+          </label>
+        </fieldset>
+        <p v-if="declineMessage" class="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">
+          {{ declineMessage }}
+        </p>
         <div class="flex flex-col justify-center gap-3 sm:flex-row">
-          <button type="button" class="btn btn-primary" :disabled="!canPay || paying" @click="approve">
-            {{ paying ? 'Aprovando...' : 'Aprovar pagamento' }}
+          <button type="button" class="btn btn-primary" :disabled="!canSubmit" @click="pay">
+            {{ submitLabel }}
           </button>
           <RouterLink :to="{ name: 'account.order', params: { id: order.id } }" class="btn btn-secondary">Ver pedido</RouterLink>
         </div>

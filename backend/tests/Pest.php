@@ -3,6 +3,10 @@
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Identity\Models\User;
+use App\Modules\Payment\Contracts\PaymentGateway;
+use App\Modules\Payment\DTOs\ChargeRequest;
+use App\Modules\Payment\DTOs\ChargeResult;
+use App\Modules\Payment\Gateways\FakePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -56,4 +60,32 @@ function assertApiError(TestResponse $response, string $code, string $message, a
         'errors' => $errors,
         'request_id' => $response->headers->get('X-Request-ID'),
     ]);
+}
+
+/**
+ * Binds a PaymentGateway double that records every charge it receives. It answers like the
+ * fake gateway unless $answer (which receives the ChargeRequest) decides the result.
+ */
+function spyPaymentGateway(?Closure $answer = null): object
+{
+    $spy = new class($answer) implements PaymentGateway
+    {
+        /** @var list<ChargeRequest> */
+        public array $charges = [];
+
+        public function __construct(private readonly ?Closure $answer) {}
+
+        public function charge(ChargeRequest $request): ChargeResult
+        {
+            $this->charges[] = $request;
+
+            return $this->answer !== null
+                ? ($this->answer)($request)
+                : (new FakePaymentGateway)->charge($request);
+        }
+    };
+
+    app()->instance(PaymentGateway::class, $spy);
+
+    return $spy;
 }

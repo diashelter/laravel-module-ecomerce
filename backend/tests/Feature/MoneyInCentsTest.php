@@ -216,7 +216,7 @@ it('exposes order money in cents on every order route', function () {
     $this->actingAs($user);
     $assertOrder($this->getJson('/api/orders')->assertOk()->json('data.0'));
     $assertOrder($this->getJson("/api/orders/{$order->id}")->assertOk()->assertJsonCount(1, 'data.items')->json('data'));
-    $assertOrder($this->postJson("/api/orders/{$order->id}/payment")->assertAccepted()->json('data'));
+    $assertOrder($this->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])->assertAccepted()->json('data'));
     $assertOrder($this->getJson('/api/account')->assertOk()->json('data.last_order'));
 
     $this->actingAs(admin());
