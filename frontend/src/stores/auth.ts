@@ -1,32 +1,31 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authService, type LoginPayload, type RegisterPayload } from '@/services/authService'
-import type { User } from '@/types'
+import type { Customer } from '@/types'
 
 /**
- * Keeps only the authenticated user in memory. The session itself is an HTTP-only
- * cookie managed by Laravel Sanctum: nothing about authentication goes to localStorage.
+ * Keeps only the logged-in shopper in memory (the store area). The session itself is an
+ * HTTP-only cookie managed by Laravel Sanctum: nothing about authentication goes to localStorage.
+ * Staff members have their own store (see staff.ts).
  */
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
+  const customer = ref<Customer | null>(null)
   const loaded = ref(false)
   let loading: Promise<void> | null = null
 
-  const isAuthenticated = computed(() => user.value !== null)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const isCustomer = computed(() => user.value?.role === 'customer')
+  const isAuthenticated = computed(() => customer.value !== null)
 
-  /** Fetches the current user once (on the first navigation). */
+  /** Fetches the current shopper once (on the first navigation). */
   async function ensureLoaded(): Promise<void> {
     if (loaded.value) return
 
     loading ??= authService
       .me()
       .then((current) => {
-        user.value = current
+        customer.value = current
       })
       .catch(() => {
-        user.value = null
+        customer.value = null
       })
       .finally(() => {
         loaded.value = true
@@ -36,16 +35,16 @@ export const useAuthStore = defineStore('auth', () => {
     return loading
   }
 
-  async function login(payload: LoginPayload): Promise<User> {
-    user.value = await authService.login(payload)
+  async function login(payload: LoginPayload): Promise<Customer> {
+    customer.value = await authService.login(payload)
     loaded.value = true
-    return user.value
+    return customer.value
   }
 
-  async function register(payload: RegisterPayload): Promise<User> {
-    user.value = await authService.register(payload)
+  async function register(payload: RegisterPayload): Promise<Customer> {
+    customer.value = await authService.register(payload)
     loaded.value = true
-    return user.value
+    return customer.value
   }
 
   async function logout(): Promise<void> {
@@ -56,14 +55,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function setUser(updated: User): void {
-    user.value = updated
+  function setCustomer(updated: Customer): void {
+    customer.value = updated
   }
 
   function clear(): void {
-    user.value = null
+    customer.value = null
     loaded.value = true
   }
 
-  return { user, loaded, isAuthenticated, isAdmin, isCustomer, ensureLoaded, login, register, logout, setUser, clear }
+  return { customer, loaded, isAuthenticated, ensureLoaded, login, register, logout, setCustomer, clear }
 })

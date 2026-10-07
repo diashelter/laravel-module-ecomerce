@@ -22,5 +22,5 @@ it('shows an order with customer and items', function () {
         ->assertOk()
         ->assertJsonCount(2, 'data.items')
         ->assertJsonCount(4, 'data.timeline')
-        ->assertJsonPath('data.customer.id', $order->user_id);
+        ->assertJsonPath('data.customer.id', $order->customer_id);
 });

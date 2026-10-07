@@ -1,4 +1,4 @@
-import type { AccountSummary, User } from '@/types'
+import type { AccountSummary, Customer } from '@/types'
 import { api } from './api'
 
 export interface ProfilePayload {
@@ -15,8 +15,8 @@ export const accountService = {
     return data.data
   },
 
-  async updateProfile(payload: ProfilePayload): Promise<User> {
-    const { data } = await api.put<{ data: User }>('account/profile', payload)
+  async updateProfile(payload: ProfilePayload): Promise<Customer> {
+    const { data } = await api.put<{ data: Customer }>('account/profile', payload)
     return data.data
   },
 }

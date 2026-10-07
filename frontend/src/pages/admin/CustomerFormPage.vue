@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import FieldError from '@/components/FieldError.vue'
 import LoadingState from '@/components/LoadingState.vue'
 import { useFormErrors } from '@/composables/useFormErrors'
-import { adminUserService } from '@/services/admin/userService'
+import { adminCustomerService } from '@/services/admin/customerService'
 import { useNotificationStore } from '@/stores/notifications'
 
 const props = defineProps<{ id?: number }>()
@@ -17,14 +17,13 @@ const isEdit = computed(() => props.id !== undefined)
 const loading = ref(isEdit.value)
 const saving = ref(false)
 
-// No role field: customers created here are always "customer".
 const form = reactive({ name: '', email: '', password: '', password_confirmation: '' })
 
 onMounted(async () => {
   if (props.id === undefined) return
-  const user = await adminUserService.find(props.id)
-  form.name = user.name
-  form.email = user.email
+  const customer = await adminCustomerService.find(props.id)
+  form.name = customer.name
+  form.email = customer.email
   loading.value = false
 })
 
@@ -37,9 +36,9 @@ async function submit(): Promise<void> {
     ...(form.password ? { password: form.password, password_confirmation: form.password_confirmation } : {}),
   }
   try {
-    const user = props.id !== undefined ? await adminUserService.update(props.id, payload) : await adminUserService.create(payload)
+    const customer = props.id !== undefined ? await adminCustomerService.update(props.id, payload) : await adminCustomerService.create(payload)
     notifications.success(isEdit.value ? 'Cliente atualizado.' : 'Cliente criado.')
-    await router.push({ name: 'admin.users.show', params: { id: user.id } })
+    await router.push({ name: 'admin.customers.show', params: { id: customer.id } })
   } catch (error) {
     handle(error)
   } finally {
@@ -52,7 +51,7 @@ async function submit(): Promise<void> {
   <LoadingState v-if="loading" />
   <div v-else class="max-w-2xl space-y-6">
     <div>
-      <RouterLink :to="{ name: 'admin.users' }" class="text-sm text-indigo-600 hover:underline">← Clientes</RouterLink>
+      <RouterLink :to="{ name: 'admin.customers' }" class="text-sm text-indigo-600 hover:underline">← Clientes</RouterLink>
       <h1 class="page-title mt-1">{{ isEdit ? 'Editar cliente' : 'Novo cliente' }}</h1>
     </div>
 

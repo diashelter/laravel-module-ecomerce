@@ -20,7 +20,7 @@ class StoreCustomerRequest extends ApiFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', new EmailRule, 'unique:users,email'],
+            'email' => ['required', 'string', new EmailRule, 'unique:customers,email'],
             'password' => ['required', 'string', 'confirmed', new PasswordRule],
         ];
     }

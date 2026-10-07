@@ -37,7 +37,8 @@ return [
     |
     */
 
-    'guard' => ['web'],
+    // No route uses `auth:sanctum`: each area has its own session guard (`customer`, `staff`).
+    'guard' => [],
 
     /*
     |--------------------------------------------------------------------------

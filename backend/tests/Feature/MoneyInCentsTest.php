@@ -222,7 +222,7 @@ it('exposes order money in cents on every order route', function () {
     $this->actingAs(admin());
     $assertOrder($this->getJson('/api/admin/orders')->assertOk()->json('data.0'));
     $assertOrder($this->getJson("/api/admin/orders/{$order->id}")->assertOk()->assertJsonCount(1, 'data.items')->json('data'));
-    $assertOrder($this->getJson("/api/admin/users/{$user->id}")->assertOk()->json('data.orders.0'));
+    $assertOrder($this->getJson("/api/admin/customers/{$user->id}")->assertOk()->json('data.orders.0'));
 });
 
 it('seeds orders whose total_cents is the sum of their items', function () {
@@ -251,7 +251,7 @@ dataset('guarded money routes', function () {
         ['get', '/api/admin/orders'],
         ['get', '/api/admin/orders/1'],
         ['get', '/api/account'],
-        ['get', '/api/admin/users/1'],
+        ['get', '/api/admin/customers/1'],
     ];
 
     foreach ($routes as [$method, $uri]) {
@@ -263,13 +263,13 @@ it('keeps 401 for guests on the money routes', function (string $method, string 
     $this->json($method, $uri)->assertUnauthorized();
 })->with('guarded money routes');
 
-it('keeps 403 for customers on the admin money routes', function (string $method, string $uri) {
+it('keeps 401 for customer sessions on the admin money routes', function (string $method, string $uri) {
     // Bindings resolve before the admin middleware, so the ids must exist.
     $product = productWithStock(1);
     $order = Order::factory()->create();
-    $uri = str_replace(['/products/1', '/orders/1', '/users/1'], ["/products/{$product->id}", "/orders/{$order->id}", "/users/{$order->user_id}"], $uri);
+    $uri = str_replace(['/products/1', '/orders/1', '/customers/1'], ["/products/{$product->id}", "/orders/{$order->id}", "/customers/{$order->customer_id}"], $uri);
 
-    $this->actingAs(customer())->json($method, $uri)->assertForbidden();
+    $this->actingAs(customer())->json($method, $uri)->assertUnauthorized();
 })->with([
     ['get', '/api/admin/products'],
     ['post', '/api/admin/products'],
@@ -278,11 +278,12 @@ it('keeps 403 for customers on the admin money routes', function (string $method
     ['patch', '/api/admin/products/1/status'],
     ['get', '/api/admin/orders'],
     ['get', '/api/admin/orders/1'],
-    ['get', '/api/admin/users/1'],
+    ['get', '/api/admin/customers/1'],
 ]);
 
 it('keeps 404 for unknown ids on the money routes', function (string $method, string $uri) {
-    $this->actingAs(admin());
+    // Both areas are signed in, because each route only answers to the session of its own area.
+    $this->actingAs(admin())->actingAs(customer());
     $uri = str_replace('/1', '/999999', $uri);
 
     $this->json($method, $uri)->assertNotFound();
@@ -294,7 +295,7 @@ it('keeps 404 for unknown ids on the money routes', function (string $method, st
     ['get', '/api/orders/1'],
     ['post', '/api/orders/1/payment'],
     ['get', '/api/admin/orders/1'],
-    ['get', '/api/admin/users/1'],
+    ['get', '/api/admin/customers/1'],
 ]);
 
 it('keeps 422 for invalid payloads on the money routes', function () {

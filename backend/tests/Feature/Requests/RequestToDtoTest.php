@@ -5,12 +5,12 @@ use App\Modules\Catalog\Http\Requests\Admin\StoreProductRequest;
 use App\Modules\Catalog\Http\Requests\ProductIndexRequest;
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Customers\Http\Requests\UpdateProfileRequest;
-use App\Modules\Identity\Models\User;
 use App\Modules\Inventory\Enums\StockOperation;
 use App\Modules\Inventory\Http\Requests\Admin\UpdateStockRequest;
 use App\Modules\Ordering\DTOs\CartItemDTO;
 use App\Modules\Ordering\Http\Requests\ValidateCartRequest;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
  * @template T of ApiFormRequest
@@ -18,7 +18,7 @@ use App\Modules\Shared\Http\Requests\ApiFormRequest;
  * @param  class-string<T>  $class
  * @return T
  */
-function validatedRequest(string $class, array $data, ?User $user = null): ApiFormRequest
+function validatedRequest(string $class, array $data, ?Authenticatable $user = null): ApiFormRequest
 {
     $request = $class::create('/', 'POST', $data);
     $request->setContainer(app())->setRedirector(app('redirect'));

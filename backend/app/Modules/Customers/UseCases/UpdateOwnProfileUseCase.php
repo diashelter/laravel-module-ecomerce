@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Customers\UseCases;
 
 use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
-use App\Modules\Identity\Models\User;
-use App\Modules\Identity\Repositories\UserRepository;
+use App\Modules\Identity\Models\CustomerAccount;
+use App\Modules\Identity\Repositories\CustomerAccountRepository;
 use App\Modules\Identity\Services\UserService;
 
 /**
@@ -15,12 +15,12 @@ use App\Modules\Identity\Services\UserService;
 final class UpdateOwnProfileUseCase
 {
     public function __construct(
-        private readonly UserRepository $users,
+        private readonly CustomerAccountRepository $accounts,
         private readonly UserService $userService,
     ) {}
 
-    public function execute(User $user, UpdateUserProfileDTO $data): User
+    public function execute(CustomerAccount $account, UpdateUserProfileDTO $data): CustomerAccount
     {
-        return $this->users->update($user, $this->userService->profileChanges($data));
+        return $this->accounts->update($account, $this->userService->profileChanges($data));
     }
 }

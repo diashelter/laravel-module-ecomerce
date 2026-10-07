@@ -20,7 +20,7 @@ class OrderController extends Controller
 {
     public function index(Request $request, OrderRepository $orders): AnonymousResourceCollection
     {
-        return OrderResource::collection($orders->paginateForCustomer($request->user()->id, 10));
+        return OrderResource::collection($orders->paginateForCustomer($request->user('customer')->id, 10));
     }
 
     public function show(Order $order): OrderResource
@@ -32,7 +32,7 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request, PlaceOrderUseCase $placeOrder): JsonResponse
     {
-        $order = $placeOrder->execute($request->user()->id, $request->toDto());
+        $order = $placeOrder->execute($request->user('customer')->id, $request->toDto());
 
         return OrderResource::make($order)
             ->additional(['message' => 'Pedido criado com sucesso.'])

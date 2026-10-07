@@ -69,10 +69,10 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
     public function countPerCustomer(CustomerIds $customerIds): OrderCountsByCustomer
     {
         return new OrderCountsByCustomer($this->query()
-            ->whereIn('user_id', $customerIds->all())
-            ->selectRaw('user_id, count(*) as total')
-            ->groupBy('user_id')
-            ->pluck('total', 'user_id'));
+            ->whereIn('customer_id', $customerIds->all())
+            ->selectRaw('customer_id, count(*) as total')
+            ->groupBy('customer_id')
+            ->pluck('total', 'customer_id'));
     }
 
     /**
@@ -91,7 +91,7 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
     public function createWithItems(int $customerId, OrderStatus $status, OrderLines $lines): Order
     {
         $order = $this->query()->create([
-            'user_id' => $customerId,
+            'customer_id' => $customerId,
             'total_cents' => $lines->totalCents(),
             'status' => $status,
         ]);
@@ -151,7 +151,7 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
     /** @return Builder<Order> */
     protected function forCustomer(int $customerId): Builder
     {
-        return $this->query()->where('user_id', $customerId);
+        return $this->query()->where('customer_id', $customerId);
     }
 
     /**

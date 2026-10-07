@@ -3,6 +3,8 @@
 use App\Modules\Customers\Http\Requests\Admin\StoreCustomerRequest;
 use App\Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest;
 use App\Modules\Customers\Http\Requests\UpdateProfileRequest;
+use App\Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest;
+use App\Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest;
 use App\Modules\Identity\Http\Requests\LoginRequest;
 use App\Modules\Identity\Http\Requests\RegisterRequest;
 use App\Modules\Identity\Http\Rules\EmailRule;
@@ -30,4 +32,6 @@ it('keeps the email and password rules out of the account form requests', functi
     'StoreCustomerRequest' => [StoreCustomerRequest::class, true],
     'UpdateCustomerRequest' => [UpdateCustomerRequest::class, true],
     'UpdateProfileRequest' => [UpdateProfileRequest::class, true],
+    'StoreStaffMemberRequest' => [StoreStaffMemberRequest::class, true],
+    'UpdateStaffMemberRequest' => [UpdateStaffMemberRequest::class, true],
 ]);

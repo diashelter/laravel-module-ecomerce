@@ -21,7 +21,7 @@ class UpdateCustomerRequest extends ApiFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', new EmailRule, Rule::unique('users', 'email')->ignore($this->route('user'))],
+            'email' => ['required', 'string', new EmailRule, Rule::unique('customers', 'email')->ignore($this->route('customer'))],
             'password' => ['nullable', 'string', 'confirmed', new PasswordRule],
         ];
     }

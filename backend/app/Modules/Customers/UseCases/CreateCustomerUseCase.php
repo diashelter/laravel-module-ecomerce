@@ -6,19 +6,18 @@ namespace App\Modules\Customers\UseCases;
 
 use App\Modules\Customers\DTOs\CustomerSummaryDTO;
 use App\Modules\Identity\DTOs\CreateUserDTO;
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Repositories\UserRepository;
+use App\Modules\Identity\Repositories\CustomerAccountRepository;
 
 /**
- * Admin: creates a customer. Administrators only come from the seeder.
+ * Admin: creates a customer. Staff members are managed in Identity.
  */
 final class CreateCustomerUseCase
 {
-    public function __construct(private readonly UserRepository $users) {}
+    public function __construct(private readonly CustomerAccountRepository $accounts) {}
 
     public function execute(CreateUserDTO $data): CustomerSummaryDTO
     {
-        $account = $this->users->createWithRole($data->toArray(), UserRole::Customer);
+        $account = $this->accounts->create($data->toArray());
 
         // A brand new account has no orders yet: no need to ask the ordering side.
         return new CustomerSummaryDTO($account, ordersCount: 0);

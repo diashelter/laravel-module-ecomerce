@@ -17,9 +17,9 @@ async function submit(): Promise<void> {
   submitting.value = true
   reset()
   try {
-    const user = await auth.login(form)
+    await auth.login(form)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
-    await router.push(redirect ?? (user.role === 'admin' ? { name: 'admin.dashboard' } : { name: 'account' }))
+    await router.push(redirect ?? { name: 'account' })
   } catch (error) {
     handle(error)
   } finally {

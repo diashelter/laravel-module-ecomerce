@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Payment\DTOs\ChargeRequest;
@@ -16,7 +16,7 @@ use Illuminate\Testing\TestResponse;
 
 beforeEach(fn () => Event::fake([PaymentApproved::class]));
 
-function orderAwaitingPayment(User $customer, int $totalCents = 12345): Order
+function orderAwaitingPayment(CustomerAccount $customer, int $totalCents = 12345): Order
 {
     return Order::factory()->for($customer, 'customer')
         ->status(OrderStatus::AwaitingPayment)

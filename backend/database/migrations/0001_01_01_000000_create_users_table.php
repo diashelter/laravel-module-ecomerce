@@ -18,7 +18,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('role', 20)->default('customer')->index();
+            // No default: every staff member needs an explicit role.
+            $table->string('role', 20)->index();
             $table->rememberToken();
             $table->timestamps();
         });
@@ -26,6 +27,7 @@ return new class extends Migration
         // Last line of defense: e-mails that differ only in case are the same account, so the
         // database refuses anything that is not already in the canonical form of the Email value object.
         DB::statement('ALTER TABLE users ADD CONSTRAINT users_email_normalized CHECK (email = lower(btrim(email)))');
+        DB::statement("ALTER TABLE users ADD CONSTRAINT users_role_valid CHECK (role IN ('admin', 'support'))");
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();

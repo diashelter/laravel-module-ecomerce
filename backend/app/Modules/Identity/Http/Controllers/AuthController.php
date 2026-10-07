@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Controllers;
 
+use App\Modules\Identity\Http\Controllers\Concerns\EndsBrowserSession;
 use App\Modules\Identity\Http\Requests\LoginRequest;
 use App\Modules\Identity\Http\Requests\RegisterRequest;
-use App\Modules\Identity\Http\Resources\UserResource;
+use App\Modules\Identity\Http\Resources\CustomerAccountResource;
 use App\Modules\Identity\UseCases\RegisterCustomerUseCase;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -16,24 +17,26 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Sanctum SPA authentication: the session lives in an HTTP-only cookie,
- * no token is ever handed to the frontend.
+ * Store authentication (`customer` guard). Sanctum SPA: the session lives in an HTTP-only
+ * cookie, no token is ever handed to the frontend.
  */
 class AuthController extends Controller
 {
+    use EndsBrowserSession;
+
     public function register(RegisterRequest $request, RegisterCustomerUseCase $registerCustomer): JsonResponse
     {
-        $user = $registerCustomer->execute($request->toDto());
+        $account = $registerCustomer->execute($request->toDto());
 
-        Auth::guard('web')->login($user);
+        Auth::guard('customer')->login($account);
         $request->session()->regenerate();
 
-        return UserResource::make($user)->response()->setStatusCode(Response::HTTP_CREATED);
+        return CustomerAccountResource::make($account)->response()->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function login(LoginRequest $request): UserResource
+    public function login(LoginRequest $request): CustomerAccountResource
     {
-        if (! Auth::guard('web')->attempt($request->toDto()->toArray())) {
+        if (! Auth::guard('customer')->attempt($request->toDto()->toArray())) {
             throw ValidationException::withMessages([
                 'email' => ['E-mail ou senha inválidos.'],
             ]);
@@ -42,21 +45,19 @@ class AuthController extends Controller
         // Prevents session fixation.
         $request->session()->regenerate();
 
-        return UserResource::make($request->user());
+        return CustomerAccountResource::make($request->user('customer'));
     }
 
+    /**
+     * The browser has a single session, so logging out ends both areas.
+     */
     public function logout(Request $request): Response
     {
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return response()->noContent();
+        return $this->endBrowserSession($request);
     }
 
-    public function me(Request $request): UserResource
+    public function me(Request $request): CustomerAccountResource
     {
-        return UserResource::make($request->user());
+        return CustomerAccountResource::make($request->user('customer'));
     }
 }

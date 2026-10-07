@@ -33,6 +33,18 @@ class UserRepository extends BaseRepository
         return $user;
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateWithRole(User $user, array $attributes, UserRole $role): User
+    {
+        $user->fill($attributes);
+        $user->role = $role;
+        $user->save();
+
+        return $user;
+    }
+
     /** @return LengthAwarePaginator<int, User> */
     public function paginateNewestFirst(int $perPage): LengthAwarePaginator
     {
@@ -40,10 +52,5 @@ class UserRepository extends BaseRepository
             ->latest()
             ->latest('id')
             ->paginate($perPage);
-    }
-
-    public function countCustomers(): int
-    {
-        return $this->query()->customers()->count();
     }
 }

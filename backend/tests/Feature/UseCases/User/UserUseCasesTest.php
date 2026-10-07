@@ -7,7 +7,6 @@ use App\Modules\Customers\UseCases\UpdateCustomerUseCase;
 use App\Modules\Customers\UseCases\UpdateOwnProfileUseCase;
 use App\Modules\Identity\DTOs\CreateUserDTO;
 use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
-use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\UseCases\RegisterCustomerUseCase;
 use App\Modules\Identity\ValueObjects\Email;
 use App\Modules\Identity\ValueObjects\Password;
@@ -15,17 +14,17 @@ use App\Modules\Ordering\Models\Order;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
 
-it('registers users as customers', function () {
-    $user = app(RegisterCustomerUseCase::class)->execute(new CreateUserDTO('Maria', new Email('maria@example.com'), new Password('secret-password')));
+it('registers a customer account', function () {
+    $account = app(RegisterCustomerUseCase::class)->execute(new CreateUserDTO('Maria', new Email('maria@example.com'), new Password('secret-password')));
 
-    expect($user->fresh()->role)->toBe(UserRole::Customer)
-        ->and(Hash::check('secret-password', $user->fresh()->password))->toBeTrue();
+    expect($account->fresh()->getTable())->toBe('customers')
+        ->and(Hash::check('secret-password', $account->fresh()->password))->toBeTrue();
 });
 
 it('creates customers with an empty purchase history', function () {
     $summary = app(CreateCustomerUseCase::class)->execute(new CreateUserDTO('João', new Email('joao@example.com'), new Password('secret-password')));
 
-    expect($summary->account->fresh()->role)->toBe(UserRole::Customer)
+    expect($summary->account->fresh()->email)->toBe('joao@example.com')
         ->and($summary->ordersCount)->toBe(0);
 });
 

@@ -4,24 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\Policies;
 
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Models\Order;
 
 class OrderPolicy
 {
-    /** Only customers place orders (admins manage the store). */
-    public function create(User $user): bool
+    public function view(CustomerAccount $account, Order $order): bool
     {
-        return $user->isCustomer();
+        return $order->customer_id === $account->id;
     }
 
-    public function view(User $user, Order $order): bool
+    public function pay(CustomerAccount $account, Order $order): bool
     {
-        return $order->user_id === $user->id;
-    }
-
-    public function pay(User $user, Order $order): bool
-    {
-        return $order->user_id === $user->id;
+        return $order->customer_id === $account->id;
     }
 }

@@ -70,7 +70,7 @@ it('creates an order with its items', function () {
         new OrderLine($product->id, 'Fone', 5000, 2),
     ));
 
-    expect($order->user_id)->toBe($user->id)
+    expect($order->customer_id)->toBe($user->id)
         ->and($order->status)->toBe(OrderStatus::Placed)
         ->and($order->total_cents)->toBe(10000)
         ->and($order->items()->count())->toBe(1)

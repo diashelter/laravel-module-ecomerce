@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Enums;
 
+/**
+ * Role of a staff member (`users`). Shoppers have no role: they live in `customers`.
+ */
 enum UserRole: string
 {
     case Admin = 'admin';
-    case Customer = 'customer';
+    case Support = 'support';
 
     public function label(): string
     {
         return match ($this) {
             self::Admin => 'Administrador',
-            self::Customer => 'Cliente',
+            self::Support => 'Suporte',
         };
     }
 }

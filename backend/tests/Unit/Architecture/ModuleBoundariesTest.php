@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
+use App\Modules\Identity\Models\User;
 use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Repositories\StockRepository;
@@ -41,6 +42,14 @@ foreach (['Models', 'Repositories'] as $layer) {
 arch('identity does not depend on ordering')
     ->expect('App\Modules\Identity')
     ->not->toUse('App\Modules\Ordering');
+
+// The staff `User` belongs to the admin area: the order side knows the shopper account only,
+// so a staff session can never be mistaken for a buyer.
+foreach (['Ordering', 'Payment', 'Fulfillment'] as $module) {
+    arch("{$module} does not use the staff user")
+        ->expect("App\\Modules\\{$module}")
+        ->not->toUse(User::class);
+}
 
 // Payment and fulfillment only publish events: the order status is changed by ordering alone,
 // and they do not know each other.
@@ -102,6 +111,8 @@ arch('identity value objects are final and readonly')
 foreach ([
     'App\Modules\Identity\Http\Requests\RegisterRequest',
     'App\Modules\Identity\Http\Requests\LoginRequest',
+    'App\Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest',
+    'App\Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest',
     'App\Modules\Customers\Http\Requests\Admin\StoreCustomerRequest',
     'App\Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest',
     'App\Modules\Customers\Http\Requests\UpdateProfileRequest',

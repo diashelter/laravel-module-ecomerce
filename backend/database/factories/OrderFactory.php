@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,7 +19,7 @@ class OrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'customer_id' => CustomerAccount::factory(),
             'total_cents' => 0,
             'status' => OrderStatus::Placed,
         ];

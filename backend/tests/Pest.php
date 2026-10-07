@@ -2,6 +2,7 @@
 
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
 use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\DTOs\ChargeRequest;
@@ -18,14 +19,19 @@ pest()->extend(TestCase::class)
 // Unit tests boot the application (helpers, config) but never touch the database.
 pest()->extend(TestCase::class)->in('Unit');
 
-function customer(array $attributes = []): User
+function customer(array $attributes = []): CustomerAccount
 {
-    return User::factory()->customer()->create($attributes);
+    return CustomerAccount::factory()->create($attributes);
 }
 
 function admin(array $attributes = []): User
 {
     return User::factory()->admin()->create($attributes);
+}
+
+function support(array $attributes = []): User
+{
+    return User::factory()->support()->create($attributes);
 }
 
 function productWithStock(int $quantity, array $attributes = []): Product

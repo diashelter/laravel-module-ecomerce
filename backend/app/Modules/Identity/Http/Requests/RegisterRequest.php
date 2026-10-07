@@ -17,13 +17,13 @@ class RegisterRequest extends ApiFormRequest
     use NormalizesEmailInput;
 
     /**
-     * There is deliberately no "role" field: every registered user is a customer.
+     * There is no "role" field: a registration only ever creates a shopper account.
      */
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', new EmailRule, 'unique:users,email'],
+            'email' => ['required', 'string', new EmailRule, 'unique:customers,email'],
             'password' => ['required', 'string', 'confirmed', new PasswordRule],
         ];
     }

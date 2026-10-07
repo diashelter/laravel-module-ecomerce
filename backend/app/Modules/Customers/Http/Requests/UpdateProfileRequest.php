@@ -21,7 +21,7 @@ class UpdateProfileRequest extends ApiFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', new EmailRule, Rule::unique('users', 'email')->ignore($this->user()->id)],
+            'email' => ['required', 'string', new EmailRule, Rule::unique('customers', 'email')->ignore($this->user('customer')->id)],
             // Changing the password requires the current one.
             'current_password' => ['nullable', 'required_with:password', 'current_password'],
             'password' => ['nullable', 'string', 'confirmed', new PasswordRule],

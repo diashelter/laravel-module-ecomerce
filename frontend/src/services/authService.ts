@@ -1,4 +1,4 @@
-import type { User } from '@/types'
+import type { Customer } from '@/types'
 import { api, ensureCsrfCookie } from './api'
 
 export interface LoginPayload {
@@ -12,15 +12,15 @@ export interface RegisterPayload extends LoginPayload {
 }
 
 export const authService = {
-  async login(payload: LoginPayload): Promise<User> {
+  async login(payload: LoginPayload): Promise<Customer> {
     await ensureCsrfCookie()
-    const { data } = await api.post<{ data: User }>('auth/login', payload)
+    const { data } = await api.post<{ data: Customer }>('auth/login', payload)
     return data.data
   },
 
-  async register(payload: RegisterPayload): Promise<User> {
+  async register(payload: RegisterPayload): Promise<Customer> {
     await ensureCsrfCookie()
-    const { data } = await api.post<{ data: User }>('auth/register', payload)
+    const { data } = await api.post<{ data: Customer }>('auth/register', payload)
     return data.data
   },
 
@@ -28,8 +28,8 @@ export const authService = {
     await api.post('auth/logout')
   },
 
-  async me(): Promise<User> {
-    const { data } = await api.get<{ data: User }>('auth/me')
+  async me(): Promise<Customer> {
+    const { data } = await api.get<{ data: Customer }>('auth/me')
     return data.data
   },
 }

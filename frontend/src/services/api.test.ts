@@ -23,3 +23,22 @@ describe('reportGlobalError', () => {
     expect(onForbidden).not.toHaveBeenCalled()
   })
 })
+
+describe('reportGlobalError 401 routing', () => {
+  it.each([
+    ['admin/dashboard', 'staff'],
+    ['admin/users/3', 'staff'],
+    ['orders', 'store'],
+    ['auth/me', null],
+    ['admin/auth/me', null],
+  ])('routes each 401 to the login of its area: %s', (url, area) => {
+    const onUnauthorized = vi.fn()
+    const onStaffUnauthorized = vi.fn()
+    configureApiErrorHandlers({ onUnauthorized, onStaffUnauthorized })
+
+    reportGlobalError(new ApiError(401, 'Não autenticado.', {}, 'UNAUTHENTICATED'), url)
+
+    expect(onStaffUnauthorized).toHaveBeenCalledTimes(area === 'staff' ? 1 : 0)
+    expect(onUnauthorized).toHaveBeenCalledTimes(area === 'store' ? 1 : 0)
+  })
+})

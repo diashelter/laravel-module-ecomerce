@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Customers\UseCases;
 
 use App\Modules\Customers\DTOs\CustomerSummaryDTO;
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Repositories\OrderRepository;
 
 /**
@@ -15,7 +15,7 @@ final class ShowCustomerUseCase
 {
     public function __construct(private readonly OrderRepository $orders) {}
 
-    public function execute(User $account, int $recentOrdersLimit): CustomerSummaryDTO
+    public function execute(CustomerAccount $account, int $recentOrdersLimit): CustomerSummaryDTO
     {
         return new CustomerSummaryDTO(
             $account,

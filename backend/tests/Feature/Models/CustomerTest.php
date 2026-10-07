@@ -3,7 +3,7 @@
 use App\Modules\Ordering\Models\Customer;
 use App\Modules\Ordering\Models\Order;
 
-it('is the buyer of an order, read from the account', function () {
+it('is the buyer of an order, read from the customer account', function () {
     $user = customer(['name' => 'Maria', 'email' => 'maria@example.com']);
     $order = Order::factory()->for($user, 'customer')->create();
 
@@ -14,7 +14,7 @@ it('is the buyer of an order, read from the account', function () {
         ->and($buyer->toArray())->toBe(['id' => $user->id, 'name' => 'Maria', 'email' => 'maria@example.com']);
 });
 
-it('never writes to the accounts table', function (Closure $write) {
+it('never writes to the customers table', function (Closure $write) {
     $user = customer(['name' => 'Maria']);
     $buyer = Customer::query()->findOrFail($user->id);
 

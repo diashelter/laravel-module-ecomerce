@@ -11,8 +11,8 @@ const notifications = useNotificationStore()
 const { first, handle, reset } = useFormErrors()
 
 const form = reactive({
-  name: auth.user?.name ?? '',
-  email: auth.user?.email ?? '',
+  name: auth.customer?.name ?? '',
+  email: auth.customer?.email ?? '',
   current_password: '',
   password: '',
   password_confirmation: '',
@@ -24,14 +24,14 @@ async function submit(): Promise<void> {
   reset()
   try {
     const changingPassword = form.password !== ''
-    const user = await accountService.updateProfile({
+    const updated = await accountService.updateProfile({
       name: form.name,
       email: form.email,
       ...(changingPassword
         ? { current_password: form.current_password, password: form.password, password_confirmation: form.password_confirmation }
         : {}),
     })
-    auth.setUser(user)
+    auth.setCustomer(updated)
     form.current_password = form.password = form.password_confirmation = ''
     notifications.success('Dados atualizados com sucesso.')
   } catch (error) {

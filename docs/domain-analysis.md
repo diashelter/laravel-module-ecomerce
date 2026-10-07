@@ -1,7 +1,7 @@
 # Análise de Domínio: Contextos Delimitados do Backend
 
 > Análise estratégica (DDD) do código em [`backend/`](../backend), feita em 06/10/2026.
-> Última atualização: 06/10/2026 (todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
+> Última atualização: 07/10/2026 (equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
 > O objetivo é identificar subdomínios (Core, Supporting, Generic), mapear os contextos delimitados (bounded contexts) e apontar problemas de coesão e acoplamento.
 
 ## Sumário
@@ -56,9 +56,10 @@ Score = (
 ```txt
                     ┌─────────────────────┐
                     │  Identity & Access  │  (Generic)
-                    │  User, Role, Auth   │
+                    │ User (equipe), Role │
+                    │ CustomerAccount     │
                     └─────────┬───────────┘
-                              │ user_id
+                              │ customer_id
  ┌──────────────┐   status    ▼          ┌──────────────┐
  │   Catalog    │──────────►┌──────────────────┐◄───────│  Inventory   │
  │ Product,     │  preço,   │ Ordering (CORE)  │ lock/  │ Stock,       │
@@ -115,7 +116,7 @@ Score = (
 - `CheckoutService` (Service): valida o atendimento do pedido e monta os itens.
 - `CartValidationService` (Service): revalida o carrinho antes do checkout.
 - `PurchaseAvailabilityService` (Service): fonte única da regra "pode ser comprado" (produto ativo **e** com estoque).
-- `Customer` (Read model): o comprador visto pelo pedido, uma projeção somente leitura de `users` (`id`, `name`, `email`).
+- `Customer` (Read model): o comprador visto pelo pedido, uma projeção somente leitura de `customers` (`id`, `name`, `email`). O pedido guarda `orders.customer_id`.
 - `PlaceOrderUseCase` (Use Case): checkout atômico.
 - `ValidateCartUseCase` (Use Case): validação do carrinho, só leitura.
 - `MarkOrderAsAwaitingPaymentUseCase` (Use Case): primeira transição de status.
@@ -228,19 +229,21 @@ Score = (
 
 ### 6. Identity & Access: Generic Subdomain
 
-**Linguagem ubíqua:** usuário, login, sessão, papel (admin/cliente), permissão.
+**Linguagem ubíqua:** membro da equipe (`User`), conta do cliente (`CustomerAccount`), login, sessão, guard, papel (admin/suporte), permissão.
 
-**Capacidade de negócio:** autenticar usuários e controlar o acesso às áreas pública, de cliente e administrativa.
+**Capacidade de negócio:** autenticar a equipe e os clientes, cada um com a sua conta e o seu guard, e controlar o acesso às áreas pública, de cliente e administrativa (o admin faz tudo; o suporte cadastra, edita e consulta, mas não remove nem gerencia a equipe).
 
 **Conceitos principais:**
 
-- `User` (Entity, na parte de autenticação), `UserRole` (Enum).
-- `AuthController` (Sanctum SPA), `LoginCredentialsDTO`, `RegisterCustomerUseCase`.
-- Middleware `EnsureUserIsAdmin`, `UserPolicy`.
+- `User` (Entity da equipe, tabela `users`, guard `staff`) e `UserRole` (Enum: `admin`, `support`).
+- `CustomerAccount` (Entity do comprador, tabela `customers`, guard `customer`) e o `CustomerAccountRepository`.
+- `AuthController` (login da loja, Sanctum SPA), `StaffAuthController` (login do admin), `LoginCredentialsDTO`, `RegisterCustomerUseCase`.
+- Gestão da equipe: `StaffMemberController` e os casos de uso `List`, `Create`, `Update` e `DeleteStaffMemberUseCase` (o admin não muda o próprio papel nem remove a própria conta).
+- Middleware `EnsureUserIsAdmin`: o grupo de rotas do admin que guarda todo `DELETE` e a gestão da equipe.
 
-- `Email` e `Password` ([`ValueObjects`](../backend/app/Modules/Identity/ValueObjects/)): as regras de e-mail (canônico, em minúsculas, até 255 caracteres) e de senha (mínimo de 8) ficam escritas uma vez e chegam aos Form Requests por `EmailRule` e `PasswordRule`. O `users.email` tem o `CHECK users_email_normalized` como última defesa.
+- `Email` e `Password` ([`ValueObjects`](../backend/app/Modules/Identity/ValueObjects/)): as regras de e-mail (canônico, em minúsculas, até 255 caracteres) e de senha (mínimo de 8) ficam escritas uma vez e chegam aos Form Requests por `EmailRule` e `PasswordRule`. O `users.email` e o `customers.email` têm o `CHECK ..._email_normalized` como última defesa.
 
-**Coesão:** 8/10 ✅. Subiu de 6/10 depois que o `User` deixou de conhecer pedidos (problema 3). Ele agora só trata de login, senha, papel e perfil. As regras de e-mail e senha deixaram de ser copiadas nos Form Requests.
+**Coesão:** 8/10 ✅. Subiu de 6/10 depois que o `User` deixou de conhecer pedidos (problema 3), e a separação entre equipe e cliente (problema 9) tirou dele o papel `customer`. Cada conta agora trata só do próprio login, senha e perfil (a equipe, também do papel). As regras de e-mail e senha deixaram de ser copiadas nos Form Requests.
 
 **Contexto sugerido:** `IdentityContext`
 
@@ -248,20 +251,20 @@ Score = (
 
 ### 7. Customer Account / Customer Management: Supporting Subdomain
 
-**Linguagem ubíqua:** cliente, perfil, minha conta, pedidos recentes, cadastro de clientes pelo admin.
+**Linguagem ubíqua:** cliente, perfil, minha conta, pedidos recentes, cadastro de clientes pela equipe.
 
-**Capacidade de negócio:** permitir que o cliente gerencie os próprios dados e que o admin gerencie os clientes.
+**Capacidade de negócio:** permitir que o cliente gerencie os próprios dados e que a equipe (admin e suporte) consulte, cadastre e edite clientes. Não há exclusão de cliente.
 
 **Conceitos principais:**
 
 - `AccountController`, `ProfileController`.
 - `UpdateOwnProfileUseCase`, `CreateCustomerUseCase`, `UpdateCustomerUseCase`, `ListCustomersUseCase`, `ShowCustomerUseCase`.
 - `CustomerSummaryDTO` / `CustomerSummaryResource`: a conta (Identity) ao lado do histórico de pedidos (Ordering).
-- `UserService::profileChanges`, `Admin\UserController`.
+- `UserService::profileChanges` (Identity), `Admin\CustomerController`.
 
-**Observação:** este contexto **compõe** dois outros: os dados da conta vêm do Identity (`UserRepository`) e as estatísticas de pedidos vêm do Ordering (`OrderRepository`). Os dois lados são lidos separadamente e só se encontram no `CustomerSummaryDTO`.
+**Observação:** este contexto **compõe** dois outros: os dados da conta vêm do Identity (`CustomerAccountRepository`) e as estatísticas de pedidos vêm do Ordering (`OrderRepository`). Os dois lados são lidos separadamente e só se encontram no `CustomerSummaryDTO`.
 
-**Coesão:** 7/10 ⚠️. Ela ainda cai porque o cadastro e a edição de clientes gravam no `User` (Identity) diretamente. Isso é aceitável enquanto não houver dados próprios de cliente (endereços, preferências etc.).
+**Coesão:** 7/10 ⚠️. Ela ainda cai porque o cadastro e a edição de clientes gravam no `CustomerAccount` (Identity) diretamente. Isso é aceitável enquanto não houver dados próprios de cliente (endereços, preferências etc.).
 
 **Contexto sugerido:** `CustomersContext`
 
@@ -287,7 +290,7 @@ Score = (
 | Ordering | Catalog | Médio | ✅ O snapshot de nome e preço está correto | Customer/Supplier: o Catalog publica preço e status |
 | Ordering | Payment | Baixo | ✅ O Payment só publica `PaymentApproved`; o Ordering muda o status. O Payment tem modelo próprio (`Payment`) e cobra pela porta `PaymentGateway` | Manter a integração por eventos |
 | Payment | Fulfillment | Nenhum | ✅ Não se conhecem: o Fulfillment reage a `OrderPaid`, publicado pelo Ordering | Manter a integração por eventos |
-| Identity | Ordering | Baixo | ✅ O Ordering referencia o cliente só por id e lê nome e e-mail pelo `Customer` | Conformist: manter o `Customer` somente leitura |
+| Identity | Ordering | Baixo | ✅ O Ordering referencia o cliente só por id (`orders.customer_id`) e lê nome e e-mail pelo `Customer`. O `User` da equipe é proibido no Ordering, no Payment e no Fulfillment (`ModuleBoundariesTest`); só o `CustomerAccount` chega à `OrderPolicy` | Conformist: manter o `Customer` somente leitura |
 | Catalog | Ordering | Baixo | ✅ A exclusão pergunta pelo contrato `ProductOrderHistory`, definido pelo Catalog e implementado pelo Ordering | Manter a inversão de dependência |
 
 ---
@@ -318,15 +321,15 @@ Score = (
 - **Onde estava:** `User::orders()`, `UserRepository::paginateWithOrderCount()` / `loadRecentOrders()`, os campos `orders` e `orders_count` do `UserResource`, `Order::user()` e os métodos do `OrderRepository` que recebiam o `User`.
 - **Problema:** o modelo de autenticação conhecia pedidos, e Identity (Generic) ficava acoplado ao Core.
 - **Solução aplicada:**
-  - [`User`](../backend/app/Modules/Identity/Models/User.php) ficou só com identidade (login, senha, papel e perfil). O [`UserResource`](../backend/app/Modules/Identity/Http/Resources/UserResource.php) não fala mais de pedidos.
+  - [`User`](../backend/app/Modules/Identity/Models/User.php) ficou só com identidade (login, senha, papel e perfil). O [`StaffMemberResource`](../backend/app/Modules/Identity/Http/Resources/StaffMemberResource.php) (antes `UserResource`) não fala mais de pedidos.
   - Novo [`Customer`](../backend/app/Modules/Ordering/Models/Customer.php): o comprador visto pelo Ordering, uma projeção somente leitura de `users` com `id`, `name` e `email`. Ele lança `LogicException` em qualquer tentativa de gravar ou excluir. `Order::user()` virou `Order::customer()`.
   - O [`OrderRepository`](../backend/app/Modules/Ordering/Repositories/OrderRepository.php) trabalha com o id do cliente (`paginateForCustomer`, `recentForCustomer`, `countForCustomer`, `countPerCustomer`, `createWithItems`), com `CustomerIds`, `OrderCountsByCustomer` e `OrderLines` no lugar de arrays, e o `PlaceOrderUseCase` recebe `int $customerId`.
   - A tela "Clientes" do admin compõe os dois lados no [`CustomerSummaryDTO`](../backend/app/Modules/Customers/DTOs/CustomerSummaryDTO.php) e no [`CustomerSummaryResource`](../backend/app/Modules/Customers/Http/Resources/CustomerSummaryResource.php), por meio do `ListCustomersUseCase` e do `ShowCustomerUseCase`. A listagem faz 2 consultas por página, sem N+1.
 - **Decisões:**
-  - **O contrato da API não mudou:** os endpoints `/api/admin/users`, `/api/account` e `/api/auth/me` devolvem os mesmos campos, e o frontend não precisou de ajustes.
+  - **O contrato da API não mudou:** os endpoints `/api/admin/users`, `/api/account` e `/api/auth/me` devolvem os mesmos campos, e o frontend não precisou de ajustes. *(Superado pelo [problema 9](#9-resolvido-equipe-e-cliente-dividiam-a-mesma-conta): hoje a tela vive em `/api/admin/customers`.)*
   - **Sem escopo global de papel no `Customer`:** para o Ordering, cliente é quem fez o pedido; o papel é um conceito do Identity. A tela "Clientes" continua listando também os administradores (com 0 pedidos), como antes.
-  - **A coluna continua `orders.user_id`:** renomear para `customer_id` exigiria uma migration sem ganho de comportamento. A relação `Order::customer()` declara a chave explicitamente.
-- **Testes:** [`CustomerTest`](../backend/tests/Feature/Models/CustomerTest.php), além dos casos novos em `UserUseCasesTest`, `OrderRepositoryTest` e `Admin/UserTest`.
+  - **A coluna continua `orders.user_id`:** renomear para `customer_id` exigiria uma migration sem ganho de comportamento. A relação `Order::customer()` declara a chave explicitamente. *(Superado pelo problema 9: a coluna passou a `orders.customer_id`, ligada a `customers`.)*
+- **Testes:** [`CustomerTest`](../backend/tests/Feature/Models/CustomerTest.php), além dos casos novos em `UserUseCasesTest`, `OrderRepositoryTest` e `Admin/CustomerTest` (antes `Admin/UserTest`).
 
 ### Prioridade média
 
@@ -373,6 +376,22 @@ Score = (
 - **Fronteira verificada:** o teste de arquitetura [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) falha se qualquer módulo além do Inventory e do read model do Backoffice usar o `StockRepository`. A falha foi conferida introduzindo uma violação de propósito.
   - **Armadilha do Pest:** com uma *lista* de namespaces, o `not->toUse` dessa versão nunca falha. Por isso o teste gera uma expectativa por namespace.
 
+#### 9. ✅ Resolvido: equipe e cliente dividiam a mesma conta
+
+- **Onde estava:** uma única tabela `users`, com `role` `admin` ou `customer`, um único login (`POST /api/auth/login`) e o `auth:sanctum` em todas as rotas autenticadas.
+- **Problema:** não havia um perfil de suporte (quem atende e mantém o catálogo sem poder excluir), o mesmo e-mail não podia ser equipe e cliente, e a tela "Clientes" listava também os administradores.
+- **Solução aplicada** (feature `staff-and-customer-accounts`, [design](../.design/staff-and-customer-accounts.md)):
+  - Duas contas independentes no Identity: [`User`](../backend/app/Modules/Identity/Models/User.php) (equipe, `users`, papel `admin` ou `support`, `CHECK users_role_valid`) e [`CustomerAccount`](../backend/app/Modules/Identity/Models/CustomerAccount.php) (comprador, `customers`). O e-mail é único dentro de cada tabela, não entre as duas.
+  - Um guard de sessão por área em [`config/auth.php`](../backend/config/auth.php) (`customer` e `staff`), nenhuma rota com `auth:sanctum`. Uma sessão de uma área recebe `401` na outra.
+  - `orders.customer_id` aponta para `customers` (`restrict`). O [`Customer`](../backend/app/Modules/Ordering/Models/Customer.php) do Ordering virou projeção de `customers`, e o `ModuleBoundariesTest` proíbe o `User` no Ordering, no Payment e no Fulfillment.
+  - Todo `DELETE` de `/api/admin/*` e a gestão da equipe (`/api/admin/users`) só para o papel `admin`, no grupo com o middleware [`EnsureUserIsAdmin`](../backend/app/Modules/Identity/Http/Middleware/EnsureUserIsAdmin.php). A tela "Clientes" foi para `/api/admin/customers`.
+- **Decisões:**
+  - **`CustomerAccount` no Identity, e não no Customers:** a `OrderPolicy` do Ordering dependeria do Customers, que já depende do Ordering (`OrderRepository`), e isso criaria um ciclo.
+  - **Sem `delete` por policy:** a regra "só o admin remove" fica no grupo de rotas, e um teste percorre a tabela de rotas, para que uma rota nova não libere o suporte em silêncio.
+  - **O contrato da API mudou** (único consumidor: o frontend do repositório, no mesmo pull request): `role` saiu das respostas da loja, `GET /api/account` devolve `data.customer`, e a tela de clientes passou para `/api/admin/customers`.
+  - **Sem migração de dados:** o banco é recriado por `make fresh`.
+- **Testes:** `Auth/AuthTest`, `Auth/StaffAuthTest`, `AuthorizationTest`, `Admin/CustomerTest`, `Admin/StaffTest`, `Admin/StaffRoleTest`, `Middleware/EnsureUserIsAdminTest`, `Models/CustomerAccountTest`, `UseCases/User/StaffUseCasesTest` e o `ModuleBoundariesTest`.
+
 ### Prioridade baixa
 
 #### 7. ✅ Resolvido: Catalog conhecia pedidos para bloquear a exclusão
@@ -414,7 +433,7 @@ backend/app/Modules/
   Payment/       Payment, PaymentGateway, FakePaymentGateway, PayOrder, PaymentApproved
   Fulfillment/   ScheduleDelivery, DeliverOrder, OrderDelivered
   Customers/     Account, Profile, admin customer management
-  Identity/      User, UserRole, Auth, Email, Password, EnsureUserIsAdmin
+  Identity/      User (staff), CustomerAccount, UserRole, Auth, Email, Password, EnsureUserIsAdmin
   Backoffice/    Dashboard (read model)
   Shared/        ApiErrorCode, BusinessRuleException, BaseRepository...
 ```
@@ -439,8 +458,9 @@ Cada módulo usa só as pastas de que precisa: `Contracts/`, `DTOs/`, `Enums/`, 
 | Pagamento recusado | Payment | Tentativa negada pelo gateway, com motivo; o pedido continua aguardando pagamento |
 | Pagamento aprovado | Payment | Pedido que pode seguir para a entrega |
 | Entregue | Fulfillment | Pedido concluído |
-| Usuário | Identity | Quem se autentica, com papel `admin` ou `customer` |
-| Cliente (`Customer`) | Ordering | Quem fez o pedido: identificado pelo id da conta, conhecido só por nome e e-mail |
+| Usuário (`User`) | Identity | Membro da equipe, que entra no admin com o papel `admin` ou `support` (suporte) |
+| Conta do cliente (`CustomerAccount`) | Identity | A conta de quem compra na loja (tabela `customers`), sem papel |
+| Cliente (`Customer`) | Ordering | Quem fez o pedido: identificado pelo id da conta (`customer_id`), conhecido só por nome e e-mail |
 | Resumo do cliente (`CustomerSummaryDTO`) | Customers | A conta junto com o histórico de pedidos, na tela "Clientes" do admin |
 
 ---
@@ -454,6 +474,7 @@ A ordem abaixo prioriza o que reduz mais risco com o menor esforço:
 3. ✅ **Separar Payment e Fulfillment por eventos** (problema 5). Concluído em 06/10/2026 com os eventos `OrderPaid` e `OrderDelivered`.
 4. ✅ **Expor interfaces do Inventory** (problemas 4 e 6). Concluído em 06/10/2026 com os contratos `StockInitializer` e `StockReservation`, sem mudar o comportamento transacional.
 5. ✅ **Migrar para `app/Modules`** (problema 8). Concluído em 06/10/2026: 9 módulos, um contexto por vez, começando pelo Inventory, com as fronteiras verificadas pelo `ModuleBoundariesTest`.
+6. ✅ **Separar a conta da equipe da conta do cliente** (problema 9). Concluído em 07/10/2026: tabelas `users` e `customers`, guards `staff` e `customer`, papéis `admin` e `support`, e o `DELETE` do admin só para o papel `admin`.
 
 Depois do plano:
 
@@ -471,6 +492,6 @@ Os 5 passos organizaram o código e tornaram as fronteiras explícitas e verific
 | Tentativas de pagamento presas ao pedido por `restrictOnDelete` | FK `payments.order_id` | O Payment grava na própria tabela, mas referencia `orders`; pedidos nunca são apagados, então a FK só protege o histórico |
 | Eventos carregam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered` | Padrão do projeto com `SerializesModels`; só faz diferença com persistência separada |
 | Dashboard lê os repositories de vários módulos | `GetAdminDashboardUseCase` | É um read model; a dependência é só de leitura |
-| Customers grava pelo `UserRepository` | `CreateCustomerUseCase`, `UpdateCustomerUseCase` | Não há dados próprios de cliente (endereço, preferências) que justifiquem um modelo separado |
+| Customers grava pelo repositório do `CustomerAccount` | `CreateCustomerUseCase`, `UpdateCustomerUseCase` | Não há dados próprios de cliente (endereço, preferências) que justifiquem um modelo separado |
 
 > As classificações e fronteiras desta análise foram derivadas do código. Elas devem ser validadas com quem conhece o negócio antes de qualquer refatoração estrutural.
