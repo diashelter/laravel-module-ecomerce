@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Identity\Http\Resources;
+namespace App\Modules\Customers\Http\Resources;
 
 use App\Modules\Identity\ValueObjects\CustomerProfile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The shopper's account fields as the store session (AuthController) renders them. The customers
- * module renders the same account with its own resource (the Http folder of a module is
- * private), and a test keeps the two in one shape.
+ * The shopper's account fields as the customers module shows them (account and admin screens).
+ * Identity renders the same account in its store session with its own resource: the Http folder
+ * of a module is private, and a test keeps the two in one shape.
  *
  * @property CustomerProfile $resource
  */

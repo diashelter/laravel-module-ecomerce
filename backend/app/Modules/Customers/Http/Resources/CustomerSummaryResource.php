@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Customers\Http\Resources;
 
 use App\Modules\Customers\DTOs\CustomerSummaryDTO;
-use App\Modules\Identity\Http\Resources\CustomerProfileResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

@@ -119,6 +119,32 @@ it('updates a customer from the admin', function (Closure $member) {
     expect($account->fresh()->name)->toBe('Novo Nome');
 })->with('staff roles');
 
+it('renders the account fields on every admin customer route', function () {
+    $this->actingAs(admin());
+    $account = customer();
+    $keys = ['id', 'name', 'email', 'created_at', 'orders_count'];
+    $createdAt = $account->created_at->toIso8601String();
+
+    $listed = $this->getJson('/api/admin/customers')->assertOk()->json('data.0');
+    $shown = $this->getJson("/api/admin/customers/{$account->id}")->assertOk()->json('data');
+    $updated = $this->putJson("/api/admin/customers/{$account->id}", ['name' => 'Novo Nome', 'email' => $account->email])->assertOk()->json('data');
+    $created = $this->postJson('/api/admin/customers', [
+        'name' => 'Novo Cliente',
+        'email' => 'novo@example.com',
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
+    ])->assertCreated()->json('data');
+
+    expect(array_keys($listed))->toBe($keys)
+        ->and($listed['created_at'])->toBe($createdAt)
+        ->and(array_keys($shown))->toBe([...$keys, 'orders'])
+        ->and($shown['created_at'])->toBe($createdAt)
+        ->and(array_keys($updated))->toBe($keys)
+        ->and($updated['created_at'])->toBe($createdAt)
+        ->and(array_keys($created))->toBe($keys)
+        ->and($created['created_at'])->toBe(CustomerAccount::query()->where('email', 'novo@example.com')->sole()->created_at->toIso8601String());
+});
+
 it('answers 404 to an unknown customer in the admin', function () {
     $this->actingAs(admin());
 
