@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\UseCases;
 
-use App\Modules\Catalog\Repositories\ProductRepository;
+use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Ordering\Contracts\DeliveryAddressBook;
 use App\Modules\Ordering\Contracts\ShippingQuoter;
@@ -26,7 +26,7 @@ use Illuminate\Validation\ValidationException;
 final class PlaceOrderUseCase
 {
     public function __construct(
-        private readonly ProductRepository $products,
+        private readonly ProductCatalog $catalog,
         private readonly StockReservation $stockReservation,
         private readonly OrderRepository $orders,
         private readonly CheckoutService $checkout,
@@ -55,24 +55,20 @@ final class PlaceOrderUseCase
             // 1. Lock the stock rows (SELECT ... FOR UPDATE). Any concurrent checkout touching
             //    the same products waits here until this transaction commits or rolls back.
             //    Rows are always locked in the same order (by product_id) to avoid deadlocks.
-            $stocks = $this->stockReservation->lockForProducts($productIds);
+            $stock = $this->stockReservation->lockForProducts($productIds);
 
-            $products = $this->products->findManyKeyedById($productIds);
-
-            foreach ($products as $productId => $product) {
-                $product->setRelation('stock', $stocks->get($productId));
-            }
+            $products = $this->catalog->findMany($productIds);
 
             // 2. Check availability again, now with the locked (up-to-date) quantities.
             //    Throwing inside DB::transaction() rolls everything back.
-            $this->checkout->assertCanFulfil($quantities, $products);
+            $this->checkout->assertCanFulfil($quantities, $products, $stock);
 
-            // 3. Prices come from the database.
+            // 3. Prices come from the catalog.
             $lines = $this->checkout->buildOrderLines($quantities, $products);
 
             // 4. UPDATE stocks SET quantity = quantity - ? (safe: the rows are locked).
             foreach ($quantities as $productId => $quantity) {
-                $this->stockReservation->decrement($stocks->get($productId), $quantity);
+                $this->stockReservation->decrement($productId, $quantity);
             }
 
             // 5. Create the order and its items (snapshot of name and price), with the address copy and

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\Models;
 
-use App\Modules\Catalog\Models\Product;
 use Database\Factories\OrderItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -32,11 +31,5 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
-    }
-
-    /** @return BelongsTo<Product, $this> */
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class);
     }
 }

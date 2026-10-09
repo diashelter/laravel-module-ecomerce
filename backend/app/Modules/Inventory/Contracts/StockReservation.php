@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Contracts;
 
 use App\Modules\Catalog\ValueObjects\ProductIds;
-use App\Modules\Inventory\Models\Stock;
-use Illuminate\Database\Eloquent\Collection;
+use App\Modules\Inventory\ValueObjects\StockQuantities;
 
 /**
  * Published by the inventory for the checkout: locks the stock of the products being bought
@@ -19,14 +18,13 @@ interface StockReservation
 {
     /**
      * SELECT ... FOR UPDATE on the stock rows of the given products. Rows are always locked in
-     * the same order (by product_id), so concurrent checkouts never deadlock.
-     *
-     * @return Collection<int, Stock> keyed by product_id
+     * the same order (by product_id), so concurrent checkouts never deadlock. Returns the
+     * quantities read under the lock.
      */
-    public function lockForProducts(ProductIds $productIds): Collection;
+    public function lockForProducts(ProductIds $productIds): StockQuantities;
 
     /**
-     * Deducts sold units from a stock row previously locked with lockForProducts().
+     * Deducts sold units from the stock of a product previously locked with lockForProducts().
      */
-    public function decrement(Stock $stock, int $quantity): void;
+    public function decrement(int $productId, int $quantity): void;
 }

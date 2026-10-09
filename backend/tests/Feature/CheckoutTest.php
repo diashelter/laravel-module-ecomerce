@@ -128,11 +128,16 @@ it('rejects inactive and out of stock products', function () {
     $empty = productWithStock(0);
     $this->actingAs(customer());
 
-    checkout([['product_id' => $inactive->id, 'quantity' => 1]])->assertConflict();
-    checkout([['product_id' => $empty->id, 'quantity' => 1]])->assertConflict();
-    checkout([['product_id' => 999999, 'quantity' => 1]])->assertConflict();
+    expect(checkout([['product_id' => $inactive->id, 'quantity' => 1]])->assertConflict()->json('errors'))
+        ->toBe(["items.{$inactive->id}" => ['Produto indisponível.']])
+        ->and(checkout([['product_id' => $empty->id, 'quantity' => 1]])->assertConflict()->json('errors'))
+        ->toBe(["items.{$empty->id}" => ['Produto indisponível.']])
+        ->and(checkout([['product_id' => 999999, 'quantity' => 1]])->assertConflict()->json('errors'))
+        ->toBe(['items.999999' => ['Produto não encontrado.']]);
 
-    expect(Order::query()->count())->toBe(0);
+    expect(Order::query()->count())->toBe(0)
+        ->and($inactive->stock->fresh()->quantity)->toBe(10)
+        ->and($empty->stock->fresh()->quantity)->toBe(0);
 });
 
 it('never lets stock go negative (spec scenario: stock 5, buy 4 then 3)', function () {
@@ -155,11 +160,13 @@ it('locks the stock rows with SELECT ... FOR UPDATE', function () {
     DB::enableQueryLog();
     checkout([['product_id' => $product->id, 'quantity' => 1]])->assertCreated();
 
-    $lockQueries = collect(DB::getQueryLog())
-        ->pluck('query')
-        ->filter(fn (string $sql) => str_contains($sql, 'from "stocks"') && str_contains($sql, 'for update'));
+    $queries = collect(DB::getQueryLog())->pluck('query')->values();
+    $lockQueries = $queries->filter(fn (string $sql) => str_contains($sql, 'from "stocks"') && str_contains($sql, 'for update'));
 
-    expect($lockQueries)->toHaveCount(1);
+    expect($lockQueries)->toHaveCount(1)
+        ->and($lockQueries->first())->toContain('order by "product_id"')
+        ->and($lockQueries->keys()->first())
+        ->toBeLessThan($queries->search(fn (string $sql) => str_contains($sql, 'from "products"')));
 });
 
 it('is protected by a database check constraint as a last line of defense', function () {

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Repositories;
 
+use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Catalog\ValueObjects\CatalogProduct;
+use App\Modules\Catalog\ValueObjects\CatalogProducts;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Shared\Repositories\BaseRepository;
@@ -16,7 +19,7 @@ use Illuminate\Support\Collection as BaseCollection;
 /**
  * @extends BaseRepository<Product>
  */
-class ProductRepository extends BaseRepository
+class ProductRepository extends BaseRepository implements ProductCatalog
 {
     protected function model(): string
     {
@@ -68,6 +71,17 @@ class ProductRepository extends BaseRepository
             ->whereIn('id', $ids->all())
             ->get()
             ->keyBy('id');
+    }
+
+    public function findMany(ProductIds $ids): CatalogProducts
+    {
+        return new CatalogProducts(...$this->findManyKeyedById($ids)->map(fn (Product $product) => new CatalogProduct(
+            $product->id,
+            $product->name,
+            $product->image_url,
+            $product->price_cents,
+            $product->isActive(),
+        ))->values()->all());
     }
 
     /** @return BaseCollection<string, int> [status => total] */

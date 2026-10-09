@@ -34,6 +34,21 @@ it('reports problems for each item', function () {
         ->and($problems[999999])->toBe('Produto não encontrado.');
 });
 
+it('treats a product without a stock row as unavailable in the cart', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->postJson('/api/cart/validate', ['items' => [['product_id' => $product->id, 'quantity' => 1]]])
+        ->assertOk()
+        ->assertJsonPath('data.is_valid', false);
+
+    expect($response->json('data.items.0'))->toMatchArray([
+        'product_id' => $product->id,
+        'available_quantity' => 0,
+        'is_available' => false,
+        'problem' => 'Produto indisponível.',
+    ]);
+});
+
 it('validates the cart payload', function () {
     $this->postJson('/api/cart/validate', ['items' => [['product_id' => 'x', 'quantity' => 0]]])
         ->assertUnprocessable()

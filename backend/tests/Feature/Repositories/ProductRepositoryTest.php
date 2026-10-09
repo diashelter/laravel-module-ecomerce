@@ -1,8 +1,11 @@
 <?php
 
+use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
+use App\Modules\Catalog\ValueObjects\CatalogProduct;
+use App\Modules\Catalog\ValueObjects\CatalogProducts;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Catalog\ValueObjects\ProductIds;
 
@@ -95,6 +98,19 @@ it('optionally eager loads the stock when finding many products', function () {
 
     expect($products->get($product->id)->relationLoaded('stock'))->toBeTrue()
         ->and($products->get($product->id)->stock->quantity)->toBe(4);
+});
+
+it('finds catalog products by id for other modules', function () {
+    $active = productWithStock(3, ['name' => 'Teclado', 'price_cents' => 15990, 'image_url' => 'https://example.com/teclado.png']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Mouse', 'price_cents' => 4990, 'image_url' => null]);
+
+    $products = app(ProductCatalog::class)->findMany(new ProductIds($active->id, $inactive->id, 999999));
+
+    expect($products)->toBeInstanceOf(CatalogProducts::class)
+        ->and($products)->toHaveCount(2)
+        ->and($products->find($active->id))->toEqual(new CatalogProduct($active->id, 'Teclado', 'https://example.com/teclado.png', 15990, true))
+        ->and($products->find($inactive->id))->toEqual(new CatalogProduct($inactive->id, 'Mouse', null, 4990, false))
+        ->and($products->find(999999))->toBeNull();
 });
 
 it('counts products by status', function () {

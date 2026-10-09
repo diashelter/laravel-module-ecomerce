@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Catalog\CatalogServiceProvider;
 use App\Modules\Customers\CustomersServiceProvider;
 use App\Modules\Fulfillment\FulfillmentServiceProvider;
 use App\Modules\Inventory\InventoryServiceProvider;
@@ -9,6 +10,7 @@ use App\Providers\AppServiceProvider;
 
 return [
     AppServiceProvider::class,
+    CatalogServiceProvider::class,
     CustomersServiceProvider::class,
     FulfillmentServiceProvider::class,
     InventoryServiceProvider::class,
