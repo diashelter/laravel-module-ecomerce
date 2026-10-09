@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Ordering\Repositories;
 
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
+use App\Modules\Ordering\Contracts\CustomerOrderHistory;
 use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
@@ -15,12 +16,13 @@ use App\Modules\Ordering\ValueObjects\OrderCountsByCustomer;
 use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\OrderSummaries;
+use App\Modules\Ordering\ValueObjects\OrderSummary;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as BaseCollection;
 
@@ -30,7 +32,7 @@ use Illuminate\Support\Collection as BaseCollection;
  *
  * @extends BaseRepository<Order>
  */
-class OrderRepository extends BaseRepository implements PayableOrders, ProductOrderHistory
+class OrderRepository extends BaseRepository implements CustomerOrderHistory, PayableOrders, ProductOrderHistory
 {
     protected function model(): string
     {
@@ -54,13 +56,13 @@ class OrderRepository extends BaseRepository implements PayableOrders, ProductOr
             ->paginate($perPage);
     }
 
-    /** @return Collection<int, Order> */
-    public function recentForCustomer(int $customerId, int $limit): Collection
+    public function recentForCustomer(int $customerId, int $limit): OrderSummaries
     {
-        return $this->newestFirst($this->forCustomer($customerId))
-            ->withCount('items')
+        return new OrderSummaries(...$this->newestFirst($this->forCustomer($customerId))
             ->limit($limit)
-            ->get();
+            ->get()
+            ->map(fn (Order $order) => new OrderSummary($order->id, $order->status, $order->total_cents, $order->created_at->toImmutable()))
+            ->all());
     }
 
     public function countForCustomer(int $customerId): int

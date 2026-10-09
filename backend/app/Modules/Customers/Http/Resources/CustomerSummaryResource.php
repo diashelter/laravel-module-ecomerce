@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Customers\Http\Resources;
 
 use App\Modules\Customers\DTOs\CustomerSummaryDTO;
-use App\Modules\Ordering\Http\Resources\OrderResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,7 +24,7 @@ class CustomerSummaryResource extends JsonResource
             'orders_count' => $summary->ordersCount,
             'orders' => $this->when(
                 $summary->recentOrders !== null,
-                fn () => OrderResource::collection($summary->recentOrders),
+                fn () => OrderSummaryResource::collection(iterator_to_array($summary->recentOrders)),
             ),
         ];
     }

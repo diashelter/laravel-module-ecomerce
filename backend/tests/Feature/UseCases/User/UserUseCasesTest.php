@@ -14,6 +14,7 @@ use App\Modules\Identity\ValueObjects\CustomerProfile;
 use App\Modules\Identity\ValueObjects\Email;
 use App\Modules\Identity\ValueObjects\Password;
 use App\Modules\Ordering\Models\Order;
+use App\Modules\Ordering\ValueObjects\OrderSummaries;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
 
@@ -90,7 +91,7 @@ it('shows an account with its order count and only the most recent orders', func
     $summary = app(ShowCustomerUseCase::class)->execute(app(CustomerAccounts::class)->findProfile($user->id), 10);
 
     expect($summary->ordersCount)->toBe(12)
+        ->and($summary->recentOrders)->toBeInstanceOf(OrderSummaries::class)
         ->and($summary->recentOrders)->toHaveCount(10)
-        ->and($summary->recentOrders->first()->id)->toBe($orders->last()->id)
-        ->and($summary->recentOrders->first()->items_count)->toBe(0);
+        ->and($summary->recentOrders->first()->id)->toBe($orders->last()->id);
 });

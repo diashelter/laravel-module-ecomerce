@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Ordering\Contracts\CustomerOrderHistory;
 use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Enums\BrazilianState;
 use App\Modules\Ordering\Enums\OrderStatus;
@@ -11,6 +12,8 @@ use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\OrderSummaries;
+use App\Modules\Ordering\ValueObjects\OrderSummary;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use Illuminate\Support\Carbon;
 
@@ -44,10 +47,13 @@ it('returns the most recent orders of a customer, using the id as tie breaker', 
     $user = customer();
     $orders = Order::factory()->count(4)->for($user, 'customer')->create(['created_at' => now()]);
 
-    $recent = $this->repository->recentForCustomer($user->id, 3);
+    $recent = app(CustomerOrderHistory::class)->recentForCustomer($user->id, 3);
+    $newest = $orders->last();
 
-    expect($recent->pluck('id')->all())->toBe($orders->pluck('id')->reverse()->take(3)->values()->all())
-        ->and($recent->first()->items_count)->toBe(0);
+    // The summary carries what the account screens show, not the items.
+    expect($recent)->toBeInstanceOf(OrderSummaries::class)
+        ->and(array_map(fn (OrderSummary $summary) => $summary->id, iterator_to_array($recent)))->toBe($orders->pluck('id')->reverse()->take(3)->values()->all())
+        ->and($recent->first())->toEqual(new OrderSummary($newest->id, $newest->status, $newest->total_cents, $newest->created_at->toImmutable()));
 });
 
 it('finds an order for payment by id', function () {
@@ -64,7 +70,7 @@ it('counts the orders of a customer', function () {
     Order::factory()->count(3)->for($user, 'customer')->create();
     Order::factory()->create();
 
-    expect($this->repository->countForCustomer($user->id))->toBe(3);
+    expect(app(CustomerOrderHistory::class)->countForCustomer($user->id))->toBe(3);
 });
 
 it('tells the catalog whether a product was ever ordered', function () {

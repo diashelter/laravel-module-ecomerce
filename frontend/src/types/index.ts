@@ -11,7 +11,7 @@ export interface Customer {
   name: string
   email: string
   orders_count?: number
-  orders?: Order[]
+  orders?: OrderSummary[]
   created_at: string
 }
 
@@ -113,6 +113,15 @@ export interface OrderDelivery {
   address: AddressFields
 }
 
+/** An order as the account screens list it (account summary and the admin customer page). */
+export interface OrderSummary {
+  id: number
+  status: OrderStatus
+  status_label: string
+  total_cents: number
+  created_at: string
+}
+
 /** One payment attempt, as returned by `POST /orders/{id}/payment`. */
 export interface PaymentAttempt {
   id: number
@@ -179,8 +188,8 @@ export interface CartValidation {
 export interface AccountSummary {
   customer: Customer
   orders_count: number
-  last_order: Order | null
-  recent_orders: Order[]
+  last_order: OrderSummary | null
+  recent_orders: OrderSummary[]
 }
 
 export interface ChartPoint {
