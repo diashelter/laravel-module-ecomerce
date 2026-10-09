@@ -26,6 +26,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: checks.md Test policy; PayOrderUseCase lost race (backend/app/Modules/*/UseCases)
 - last seen: 2026-10-07T00:33:38Z
 
+### L-003 - A fault exercise for a computed rule must place the probe where the rule reads its input, such as a native signature, not only in a use statement, or it also fails under the rejected alternative.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `backend/tests/Unit/Architecture` · harmful: 0
+- features: module-vocabulary
+- evidence: verification.md F1; C10 (backend/tests/Unit/Architecture/ModuleBoundariesTest.php:168) (backend/tests/Unit/Architecture)
+- last seen: 2026-10-09T16:32:07Z
+
+### L-004 - When a check says every route that does something, list those routes in the check and make the test dataset cover exactly that list.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `backend/tests/Feature` · harmful: 0
+- features: module-vocabulary
+- evidence: verification.md gap 2; C21 (backend/tests/Feature/Auth/EmailAndPasswordTest.php:264) (backend/tests/Feature)
+- last seen: 2026-10-09T16:32:07Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
