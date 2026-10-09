@@ -218,14 +218,28 @@ it('charges the order total and ignores amounts in the request', function () {
 
 it('forbids paying an order of another customer', function () {
     $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
+    // Not payable either: the owner is checked before the status, so it is still 403, never 409.
+    $placed = Order::factory()->status(OrderStatus::Placed)->create();
     $gateway = spyPaymentGateway();
 
-    $this->actingAs(customer())->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])
-        ->assertForbidden();
+    $this->actingAs(customer());
+    $this->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])->assertForbidden();
+    $this->postJson("/api/orders/{$placed->id}/payment", ['card_token' => 'fake_card_approved'])->assertForbidden();
 
     expect(paymentRows($order))->toBeEmpty()
+        ->and(paymentRows($placed))->toBeEmpty()
         ->and($gateway->charges)->toBeEmpty();
     Event::assertNotDispatched(PaymentApproved::class);
+});
+
+it('validates the payment body before checking the order owner', function () {
+    $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
+
+    $this->actingAs(customer())->postJson("/api/orders/{$order->id}/payment", [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('card_token');
+
+    expect(paymentRows($order))->toBeEmpty();
 });
 
 it('allows only one approved payment per order in the database', function () {

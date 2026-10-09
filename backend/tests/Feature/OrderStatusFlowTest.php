@@ -173,6 +173,23 @@ it('ignores out of order or duplicated executions (idempotency)', function () {
 
     expect($order->fresh()->status)->toBe(OrderStatus::Placed);
     Event::assertNotDispatched(OrderPaid::class);
+
+    // A late OrderPlaced does not move an order that already left "placed".
+    $paid = Order::factory()->status(OrderStatus::PaymentApproved)->create();
+    (new MarkOrderAsAwaitingPayment)->handle(new OrderPlaced($paid->id));
+    expect($paid->fresh()->status)->toBe(OrderStatus::PaymentApproved);
+
+    // A second OrderDelivered for an order already delivered changes nothing.
+    $delivered = Order::factory()->status(OrderStatus::PaymentApproved)->create();
+    (new MarkOrderAsDelivered)->handle(new OrderDelivered($delivered->id));
+    $afterFirst = $delivered->fresh();
+    $this->travel(1)->minutes();
+    (new MarkOrderAsDelivered)->handle(new OrderDelivered($delivered->id));
+    $afterSecond = $delivered->fresh();
+
+    expect($afterFirst->status)->toBe(OrderStatus::Delivered)
+        ->and($afterSecond->status)->toBe(OrderStatus::Delivered)
+        ->and($afterSecond->updated_at->equalTo($afterFirst->updated_at))->toBeTrue();
 });
 
 it('announces OrderPaid only once for a duplicated payment approval', function () {
