@@ -73,7 +73,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="uses only the pub
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="Payment uses only the public vocabulary of Ordering"` com o método e o `use` aplicados: sai com 0; só com o `use`: sai com código diferente de zero
 
 **C9** - Exercício temporário: uma classe nova `backend/app/Modules/Ordering/ValueObjects/VocabularyProbe.php` (`final readonly`, sem uso em contrato nem evento), usada em `Payment\Services\PaymentService`, faz a expectativa falhar com uma descrição que nomeia `App\Modules\Ordering\ValueObjects\VocabularyProbe`, sem edição no arquivo de teste (AC 6)
-Proof: `docker compose exec -T api ./vendor/bin/pest --filter="Payment uses only the public vocabulary of Ordering"` com a classe e o `use` aplicados: sai com código diferente de zero e a saída contém `VocabularyProbe`
+Proof: `docker compose exec -T -e COLUMNS=250 api ./vendor/bin/pest --filter="Payment uses only the public vocabulary of Ordering"` com a classe e o `use` aplicados: sai com código diferente de zero e a saída contém `VocabularyProbe` (sem o `COLUMNS`, o Pest corta a descrição na largura do terminal)
 
 **C10** - Exercício temporário: um `use App\Modules\Ordering\ValueObjects\ValidatedCart;` em `backend/app/Modules/Inventory/Contracts/StockLevels.php` faz o teste falhar. Um contrato de A não torna público um tipo interno de B (AC 8)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="Inventory uses only the public vocabulary of Ordering"` com o `use` aplicado: sai com código diferente de zero
@@ -172,7 +172,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="keeps the passwor
 
 **C24** - Os seis adaptadores novos não escrevem nenhuma regra. São eles: `Customers\Http\Rules\EmailRule`, `Customers\Http\Rules\PasswordRule`, `Customers\Http\Requests\Concerns\NormalizesEmailInput`, `Customers\Http\Requests\Concerns\NormalizesStateInput`, `Customers\Http\Resources\CustomerProfileResource` e `Fulfillment\Http\Requests\Concerns\NormalizesStateInput` (AC 22, door 4).
 
-Pelos tokens do PHP, nenhum dos seis tem:
+Pelos tokens do PHP, fora do `declare(strict_types=1)` do cabeçalho, nenhum dos seis tem:
 - literal numérico (`T_LNUMBER` ou `T_DNUMBER`);
 - chamada a função `preg_*`;
 - string literal com exatamente duas letras maiúsculas;
@@ -327,3 +327,6 @@ Cost: 12 testes novos. 2 deles provam o percurso com classes de teste (C2, C3) e
 
 - S1 = 4k, S2 = 4k, S3 = 4k e S4 = 4k: 16k de código e testes (`wc -c` dos arquivos que cada slice toca, dividido por 4), mais 38k do README, da análise de domínio e do `AGENTS.md`. Somam 54k, abaixo do budget de 150k - one builder
 - Mechanism: one builder (cabe no orçamento, sem pergunta)
+- **Boundary:** C1-C37 fechados em `92be3cf..HEAD` (S2 `67441ab`, S3 `ae6eeb2`, S4 `5eb3047`, S1 `af7a9ac`, docs `afceab8`, C24 e C35 no último commit)
+- **Settled mid-build:** (1) C24: o `declare(strict_types=1)` do cabeçalho, presente em 208 dos 209 arquivos do `app`, tem um `T_LNUMBER`; o usuário escolheu que o teste ignore os tokens do `declare(...)` em vez de tirar o `declare` dos adaptadores, e o texto do C24 diz isso. (2) C9: a prova ganhou `-e COLUMNS=250`, porque a saída padrão corta o nome da classe (`ValueObj…yProbe`). (3) C13 (d): como o `UpdateProfileRequest` agora importa o `EmailRule` do Customers, o `use App\Modules\Identity\Http\Rules\EmailRule;` literal colide com esse nome e o parser do Pest aborta com "the name is already in use" (sai com código diferente de zero, mas por erro de análise). Com `use App\Modules\Identity\Http\Rules\EmailRule as IdentityEmailRule;`, falha exatamente a regra `Customers reaches another module only through its public directories: Identity\Http`
+- **Abandoned:** nada
