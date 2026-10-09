@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 5,
+  "next_id": 6,
   "lessons": [
     {
       "id": "L-001",
@@ -76,6 +76,24 @@
       ],
       "created": "2026-10-09T16:32:07Z",
       "last_seen": "2026-10-09T16:32:07Z"
+    },
+    {
+      "id": "L-005",
+      "key": "spec_precision_gap::when a computed rule is proven only by a temporary exercise add a permanent fixture proof or state in the checks that only the exercise protects the rule",
+      "text": "When a computed rule is proven only by a temporary exercise, add a permanent fixture proof or state in the checks that only the exercise protects the rule.",
+      "signal": "spec_precision_gap",
+      "scope": "backend/tests/Unit/Architecture",
+      "status": "candidate",
+      "features": [
+        "module-vocabulary"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md round 2 gap 1; C10 (backend/tests/Unit/Architecture/ModuleBoundariesTest.php:168) (backend/tests/Unit/Architecture)"
+      ],
+      "created": "2026-10-09T16:44:55Z",
+      "last_seen": "2026-10-09T16:44:55Z"
     }
   ]
 }

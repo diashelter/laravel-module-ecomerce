@@ -38,6 +38,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md gap 2; C21 (backend/tests/Feature/Auth/EmailAndPasswordTest.php:264) (backend/tests/Feature)
 - last seen: 2026-10-09T16:32:07Z
 
+### L-005 - When a computed rule is proven only by a temporary exercise, add a permanent fixture proof or state in the checks that only the exercise protects the rule.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `backend/tests/Unit/Architecture` · harmful: 0
+- features: module-vocabulary
+- evidence: verification.md round 2 gap 1; C10 (backend/tests/Unit/Architecture/ModuleBoundariesTest.php:168) (backend/tests/Unit/Architecture)
+- last seen: 2026-10-09T16:44:55Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
