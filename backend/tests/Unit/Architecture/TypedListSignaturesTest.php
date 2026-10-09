@@ -46,7 +46,7 @@ it('declares no array in the domain list signatures', function (string $class, ?
     [CustomerOrderHistory::class, null],
     [CustomerAccounts::class, null],
     [ProductDTO::class, '__construct'],
-    [ProductRepository::class, 'findManyKeyedById'],
+    [ProductRepository::class, 'findMany'],
     [ProductRepository::class, 'syncCategories'],
     [OrderRepository::class, 'countPerCustomer'],
     [OrderRepository::class, 'createWithItems'],

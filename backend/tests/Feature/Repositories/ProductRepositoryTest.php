@@ -80,26 +80,6 @@ it('syncs the product categories', function () {
         ->toBe(collect([$kept->id, $new->id])->sort()->values()->all());
 });
 
-it('finds many products keyed by id', function () {
-    $first = productWithStock(4);
-    $second = productWithStock(2);
-    productWithStock(1);
-
-    $products = $this->repository->findManyKeyedById(new ProductIds($second->id, $first->id, 999999));
-
-    expect($products->keys()->sort()->values()->all())->toBe(collect([$first->id, $second->id])->sort()->values()->all())
-        ->and($products->get($first->id)->relationLoaded('stock'))->toBeFalse();
-});
-
-it('optionally eager loads the stock when finding many products', function () {
-    $product = productWithStock(4);
-
-    $products = $this->repository->findManyKeyedById(new ProductIds($product->id), withStock: true);
-
-    expect($products->get($product->id)->relationLoaded('stock'))->toBeTrue()
-        ->and($products->get($product->id)->stock->quantity)->toBe(4);
-});
-
 it('finds catalog products by id for other modules', function () {
     $active = productWithStock(3, ['name' => 'Teclado', 'price_cents' => 15990, 'image_url' => 'https://example.com/teclado.png']);
     $inactive = Product::factory()->inactive()->create(['name' => 'Mouse', 'price_cents' => 4990, 'image_url' => null]);

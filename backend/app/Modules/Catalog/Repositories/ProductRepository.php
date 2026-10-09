@@ -13,7 +13,6 @@ use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as BaseCollection;
 
 /**
@@ -61,27 +60,15 @@ class ProductRepository extends BaseRepository implements ProductCatalog
         $product->categories()->sync($categoryIds->all());
     }
 
-    /**
-     * @return Collection<int, Product>
-     */
-    public function findManyKeyedById(ProductIds $ids, bool $withStock = false): Collection
-    {
-        return $this->query()
-            ->when($withStock, fn (Builder $query) => $query->with('stock'))
-            ->whereIn('id', $ids->all())
-            ->get()
-            ->keyBy('id');
-    }
-
     public function findMany(ProductIds $ids): CatalogProducts
     {
-        return new CatalogProducts(...$this->findManyKeyedById($ids)->map(fn (Product $product) => new CatalogProduct(
+        return new CatalogProducts(...$this->query()->whereIn('id', $ids->all())->get()->map(fn (Product $product) => new CatalogProduct(
             $product->id,
             $product->name,
             $product->image_url,
             $product->price_cents,
             $product->isActive(),
-        ))->values()->all());
+        ))->all());
     }
 
     /** @return BaseCollection<string, int> [status => total] */
