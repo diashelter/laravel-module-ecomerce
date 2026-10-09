@@ -130,12 +130,6 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
         return $order;
     }
 
-    /**
-     * Moves the order to a new status only when it is currently in the expected one.
-     *
-     * The conditional UPDATE makes queued listeners/jobs idempotent: if a job runs twice
-     * (retry) or out of order, it simply does nothing.
-     */
     public function findForPayment(int $orderId): ?OrderForPayment
     {
         $order = $this->query()->find($orderId);
@@ -148,6 +142,12 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
         return $this->query()->findOrFail($id);
     }
 
+    /**
+     * Moves the order to a new status only when it is currently in the expected one.
+     *
+     * The conditional UPDATE makes queued listeners/jobs idempotent: if a job runs twice
+     * (retry) or out of order, it simply does nothing.
+     */
     public function transitionStatus(Order $order, OrderStatus $from, OrderStatus $to): bool
     {
         $updated = $this->query()
