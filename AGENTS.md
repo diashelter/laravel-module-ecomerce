@@ -57,7 +57,7 @@ Atualize a documentação sempre que a mudança:
 - **Documentação em português do Brasil:** `.md`, guias, decisões e planos.
 - **Textos de interface e mensagens de negócio da API** podem ser em português.
 - **Módulos do backend:** todo código de negócio fica em `backend/app/Modules/<Módulo>` (Catalog, Inventory, Ordering, Payment, Fulfillment, Identity, Customers, Backoffice, Shared). Antes de criar uma classe, decida a qual contexto ela pertence ([análise de domínio](docs/domain-analysis.md)). Não recrie pastas por camada na raiz de `app/`.
-- **Camadas dentro de cada módulo** (ver o README): controllers finos, casos de uso em `UseCases/`, regras puras em `Services/` (sem banco, transação ou eventos) e acesso a dados só em `Repositories/`.
+- **Camadas dentro de cada módulo** (ver o README): controllers finos, casos de uso em `UseCases/`, regras puras em `Services/` (sem banco, transação ou eventos) e acesso a dados só em `Repositories/`, que não usam os services do módulo (o `ModuleBoundariesTest` cobra).
 - **Ligações explícitas:** um model novo declara a sua factory com `#[UseFactory]` (e a factory declara `protected $model`), e a sua policy com `#[UsePolicy]`. As convenções de namespace do Laravel (`App\Models`) não valem para os módulos.
 - **Fronteiras entre contextos** (ver a [análise de domínio](docs/domain-analysis.md)):
   - **A facade de um módulo é o seu `Contracts/` mais os seus `Events/`.** Um módulo só usa outro por eles; as demais pastas (`Models`, `Repositories`, `Services`, `UseCases`, `Policies`, `Jobs`, `Listeners`, uma pasta nova...) e o service provider são privados. Até a HEL-10, `DTOs`, `ValueObjects`, `Enums` e `Http` de outro módulo continuam permitidos.

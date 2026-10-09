@@ -81,10 +81,10 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
   - **Controllers** (`Http/Controllers`): só HTTP (request, autorização, resposta). Consultas simples chamam um repository direto.
   - **Casos de uso** (`UseCases/`): cada um representa uma intenção do usuário ou do sistema (ex.: `PlaceOrderUseCase`) e orquestra o fluxo: transação, repositories, services, eventos e jobs.
   - **Services** (`Services/`): regras de negócio **puras**, sem acesso a banco, transação ou eventos.
-  - **Repositories** (`Repositories/`): única camada que lê e grava no banco.
-  - **Value objects** (`ValueObjects/`): conceitos com invariante própria, `final readonly`, que lançam `InvalidArgumentException` se construídos com um valor inválido. Hoje existem no Identity: `Email` e `Password`. Os Form Requests os usam pelas regras `EmailRule` e `PasswordRule` (`Identity/Http/Rules`), e eles viram `string` só na gravação, nos casos de uso e no `UserService`.
+  - **Repositories** (`Repositories/`): única camada que lê e grava no banco. Não usa os services do próprio módulo: as regras são aplicadas antes de chamá-lo (o `ModuleBoundariesTest` cobra).
+  - **Value objects** (`ValueObjects/`): conceitos com invariante própria, `final readonly`, que lançam `InvalidArgumentException` se construídos com um valor inválido. Hoje existem no Identity: `Email` e `Password`. Os Form Requests os usam pelas regras `EmailRule` e `PasswordRule` (`Identity/Http/Rules`), e eles viram `string` só na gravação, no `toArray()` do `CreateUserDTO` e do `UpdateUserProfileDTO` (este deixa a senha de fora quando nenhuma nova é enviada).
   - **Listas tipadas** (também em `ValueObjects/`): as listas de domínio que atravessam camadas não são `array`. Cada uma é `final readonly`, implementa `IteratorAggregate` e `Countable`, é construída com parâmetro variádico tipado (um elemento de outro tipo lança `TypeError`) e calcula os próprios totais. No Catalog: `ProductIds` e `CategoryIds` (ids positivos e sem repetição, senão `InvalidArgumentException`) e `CatalogProducts`/`CatalogProduct` (o que o contrato `ProductCatalog` devolve: id, nome, imagem, preço e se o produto está ativo). No Inventory: `StockQuantities` (quantidade por produto, 0 para produto sem linha de estoque). No Ordering: `ProductQuantities` (quantidade por produto, em ordem de `product_id`), `OrderLines`/`OrderLine` (linhas do pedido novo e o total derivado), `ValidatedCart`/`ValidatedCartLine` (resultado da validação do carrinho, com `total_cents` e `is_valid` derivados), `CustomerIds` e `OrderCountsByCustomer` (responde zero para cliente sem pedidos). Também no Ordering, `DeliveryAddress` (a cópia de um endereço que o pedido guarda) e `ShippingQuote` (preço e prazo de uma UF) são o vocabulário dos contratos `DeliveryAddressBook` e `ShippingQuoter`, `OrderForPayment` é o que o `PayableOrders` devolve e `OrderSummaries`/`OrderSummary` (id, status, total e data) são o histórico que o `CustomerOrderHistory` devolve. No Identity, `CustomerProfile` (a conta sem credenciais) é o que o `CustomerAccounts` devolve. O `CartDTO` é a lista tipada de `CartItemDTO`. O `array` só aparece onde o Laravel o exige: `whereIn`, `sync`, `createMany` e o `ValidatedCartResource`.
-- **Fronteiras verificadas por teste**: o `ModuleBoundariesTest` (teste de arquitetura do Pest) é uma lista do que é permitido. Ele gera uma expectativa para cada pasta privada de cada módulo, a partir das pastas que existem, e falha se outro módulo usar uma delas ou a classe da raiz de um módulo (o service provider). Também confere que `Contracts` só tem interfaces e que nenhuma assinatura de contrato usa model ou coleção do Eloquent, além das regras de direção entre módulos.
+- **Fronteiras verificadas por teste**: o `ModuleBoundariesTest` (teste de arquitetura do Pest) é uma lista do que é permitido. Ele gera uma expectativa para cada pasta privada de cada módulo, a partir das pastas que existem, e falha se outro módulo usar uma delas ou a classe da raiz de um módulo (o service provider). Também confere que `Contracts` só tem interfaces, que nenhuma assinatura de contrato usa model ou coleção do Eloquent e que nenhum repository usa os services do próprio módulo, além das regras de direção entre módulos.
 - **Processamento assíncrono**: mudanças de status do pedido são feitas por listeners/jobs executados pelo container `queue-worker`.
 
 ---
@@ -495,6 +495,22 @@ make queue-retry     # reprocessar falhas
 
 > Depois de alterar código de listeners/jobs, rode `make queue-restart` — o worker mantém o código carregado em memória.
 
+**Deploy que muda o formato de um evento ou job** (como a HEL-7, que trocou o model `Order` pelo `orderId`): o `queue-restart` só troca o código do worker. Os jobs que já estão na fila, inclusive os `DeliverOrder` com delay, continuam no formato antigo e falham no código novo (`Typed property ...::$orderId must not be accessed before initialization`); o retry repete o erro e o pedido fica parado. Antes de subir o código, esvazie a fila com o código antigo:
+
+```bash
+make artisan CMD="down"
+```
+
+```bash
+docker compose exec queue-worker php artisan queue:work redis --force --tries=3 --max-time=30
+```
+
+```bash
+make artisan CMD="queue:monitor redis:default"
+```
+
+O `down` faz a API responder `503`, então nada novo entra na fila. O worker do container não processa jobs em manutenção, por isso o segundo comando usa `--force` e para sozinho depois de 30 segundos (mais que o `ORDER_DELIVERY_DELAY_SECONDS` padrão). Repita-o até o `queue:monitor` mostrar `[0]`: no Redis, essa contagem inclui os jobs com delay e os reservados. Depois suba o código, rode `make queue-restart` e `make artisan CMD="up"`.
+
 ---
 
 ## Regra de disponibilidade do produto
@@ -677,7 +693,7 @@ O frontend ainda não é verificado no CI.
 | `Models/CustomerAccountTest` | `customers`: FK do pedido (`restrict`, id existente), `CHECK` do e-mail e unicidade direto no banco |
 | `Middleware/EnsureUserIsAdminTest` | o middleware `admin` deixa passar só o papel `admin` |
 | `UseCases/User/StaffUseCasesTest` | regras do admin sobre si mesmo: não muda o próprio papel, não remove a própria conta |
-| `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Ordering, Payment e Fulfillment sem o `User` da equipe, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Payment cobrando só pela porta `PaymentGateway`, Ordering sem o Customers e só com os eventos do Fulfillment (uma expectativa por namespace), Fulfillment sem o Customers, contratos do Ordering só interfaces, Shared sem módulos de negócio |
+| `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: estoque só pelos contratos, Identity sem pedidos, Ordering, Payment e Fulfillment sem o `User` da equipe, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Payment cobrando só pela porta `PaymentGateway`, Ordering sem o Customers e só com os eventos do Fulfillment (uma expectativa por namespace), Fulfillment sem o Customers, contratos do Ordering só interfaces, Shared sem módulos de negócio, repositories sem os services do próprio módulo |
 | `Auth/EmailAndPasswordTest` | e-mail como conta única (caixa, `CHECK` do banco em `users` e `customers`, login, perfil, admin), política de senha só ao escolher uma |
 | `Unit/ValueObjects/*` | `Email` (normalização e recusas), `Password` (política, sem vazar o texto em dumps, serialização e traces) e as listas tipadas (`TypedListsTest`: agrupamento, totais derivados, recusa de tipo e de id inválido) |
 | `Unit/Architecture/TypedListSignaturesTest` | nenhum `array` nas assinaturas de domínio que carregam as listas tipadas |

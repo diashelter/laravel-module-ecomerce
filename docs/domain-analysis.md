@@ -1,7 +1,7 @@
 # Análise de Domínio: Contextos Delimitados do Backend
 
 > Análise estratégica (DDD) do código em [`backend/`](../backend), feita em 06/10/2026.
-> Última atualização: 08/10/2026 (facades dos módulos: cada módulo é usado de fora só pelos seus contratos e eventos, que falam em dados, e o `ModuleBoundariesTest` virou uma lista do que é permitido; antes, em 07/10/2026: endereços de entrega e frete: Customers com o caderno de endereços, Fulfillment com a tabela de frete e a data prevista, e o pedido com a cópia do endereço; equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
+> Última atualização: 09/10/2026 (ajustes da revisão do PR #12: repository sem service, um só resource para a conta de cliente e a nota de deploy sobre payloads na fila; antes, em 08/10/2026: facades dos módulos: cada módulo é usado de fora só pelos seus contratos e eventos, que falam em dados, e o `ModuleBoundariesTest` virou uma lista do que é permitido; em 07/10/2026: endereços de entrega e frete: Customers com o caderno de endereços, Fulfillment com a tabela de frete e a data prevista, e o pedido com a cópia do endereço; equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
 > O objetivo é identificar subdomínios (Core, Supporting, Generic), mapear os contextos delimitados (bounded contexts) e apontar problemas de coesão e acoplamento.
 
 ## Sumário
@@ -260,8 +260,9 @@ Score = (
 **Conceitos principais:**
 
 - `User` (Entity da equipe, tabela `users`, guard `staff`) e `UserRole` (Enum: `admin`, `support`).
-- `CustomerAccount` (Entity do comprador, tabela `customers`, guard `customer`) e o `CustomerAccountRepository`.
-- [`CustomerAccounts`](../backend/app/Modules/Identity/Contracts/CustomerAccounts.php) (contrato publicado para o Customers, implementado pelo `CustomerAccountRepository` e ligado no `IdentityServiceProvider`): cria, atualiza o perfil, busca e lista as contas de cliente e devolve `CustomerProfile` (id, nome, e-mail e data de criação, sem credenciais). As regras da conta (e-mail normalizado, senha com hash, senha que só muda quando uma nova é enviada) ficam atrás dele.
+- `CustomerAccount` (Entity do comprador, tabela `customers`, guard `customer`) e o `CustomerAccountRepository`. O `CustomerAccount::toProfile()` é o único lugar que transforma a conta em `CustomerProfile`.
+- [`CustomerAccounts`](../backend/app/Modules/Identity/Contracts/CustomerAccounts.php) (contrato publicado para o Customers, implementado pelo `CustomerAccountRepository` e ligado no `IdentityServiceProvider`): cria, atualiza o perfil, busca e lista as contas de cliente e devolve `CustomerProfile` (id, nome, e-mail e data de criação, sem credenciais). As regras da conta (e-mail normalizado, senha com hash, senha que só muda quando uma nova é enviada) ficam atrás dele; a última está no `UpdateUserProfileDTO::toArray()`, que também serve à equipe.
+- [`CustomerProfileResource`](../backend/app/Modules/Identity/Http/Resources/CustomerProfileResource.php): o único formato da conta de cliente na API, usado pelo `AuthController` e pelas telas de conta e de clientes do Customers.
 - `AuthController` (login da loja, Sanctum SPA), `StaffAuthController` (login do admin), `LoginCredentialsDTO`, `RegisterCustomerUseCase`.
 - Gestão da equipe: `StaffMemberController` e os casos de uso `List`, `Create`, `Update` e `DeleteStaffMemberUseCase` (o admin não muda o próprio papel nem remove a própria conta).
 - Middleware `EnsureUserIsAdmin`: o grupo de rotas do admin que guarda todo `DELETE` e a gestão da equipe.
@@ -286,7 +287,7 @@ Score = (
 - `UpdateOwnProfileUseCase`, `CreateCustomerUseCase`, `UpdateCustomerUseCase`, `ListCustomersUseCase`, `ShowCustomerUseCase`.
 - `CustomerSummaryDTO` / `CustomerSummaryResource`: a conta (Identity) ao lado do histórico de pedidos (Ordering).
 - `Admin\CustomerController`. O `{customer}` das rotas do admin é resolvido pelo contrato `CustomerAccounts` do Identity no `CustomersServiceProvider` (`404` para conta inexistente).
-- `CustomerProfileResource` e `OrderSummaryResource`: os dados da conta e os pedidos resumidos (`id`, `status`, `status_label`, `total_cents`, `created_at`) nas telas de conta e de clientes.
+- `OrderSummaryResource`: os pedidos resumidos (`id`, `status`, `status_label`, `total_cents`, `created_at`) nas telas de conta e de clientes. Os dados da conta saem pelo `CustomerProfileResource` do Identity.
 - [`CustomerAddress`](../backend/app/Modules/Customers/Models/CustomerAddress.php) (Entity, tabela `customer_addresses`): o caderno do cliente, apagado junto com a conta (`cascadeOnDelete`; não há nada a preservar, porque o pedido guarda cópia). O banco garante o CEP com 8 dígitos e a UF entre as 27.
 - [`CustomerAddressRepository`](../backend/app/Modules/Customers/Repositories/CustomerAddressRepository.php): também implementa o contrato `DeliveryAddressBook` do Ordering, ligado no [`CustomersServiceProvider`](../backend/app/Modules/Customers/CustomersServiceProvider.php). Um endereço de outro cliente responde igual a um que não existe.
 - `CustomerAddressController` (`/api/account/addresses`), `CustomerAddressRequest` (um só para criar e editar; normaliza a UF), `CustomerAddressPolicy` (só o dono edita e exclui) e os casos de uso `CreateCustomerAddressUseCase`, `UpdateCustomerAddressUseCase` e `DeleteCustomerAddressUseCase`.
@@ -325,7 +326,7 @@ Score = (
 | Ordering | Customers | Baixo | ✅ O Ordering pede a cópia do endereço pelo contrato `DeliveryAddressBook`, que ele define e o Customers implementa. O `ModuleBoundariesTest` proíbe o Ordering de usar o Customers | Manter a inversão de dependência |
 | Ordering | Fulfillment | Baixo | ✅ O Ordering pede o orçamento pelo contrato `ShippingQuoter` (implementado pelo Fulfillment) e só conhece o Fulfillment pelos eventos. O `ModuleBoundariesTest` falha se o Ordering usar qualquer outro namespace dele (uma expectativa por namespace) | Manter a integração por contrato e eventos |
 | Fulfillment | Customers | Nenhum | ✅ O Fulfillment não conhece o caderno de endereços: o pedido carrega a cópia de que ele precisa (`ModuleBoundariesTest`) | Manter |
-| Customers | Identity | Baixo | ✅ O Customers cria, edita, busca e lista as contas pelo contrato `CustomerAccounts`, que devolve `CustomerProfile`; restam as regras HTTP de e-mail e senha do Identity nos Form Requests (HEL-10) | Manter o contrato |
+| Customers | Identity | Baixo | ✅ O Customers cria, edita, busca e lista as contas pelo contrato `CustomerAccounts`, que devolve `CustomerProfile`; do `Http` do Identity restam as regras de e-mail e senha nos Form Requests e o `CustomerProfileResource` (HEL-10) | Manter o contrato |
 | Customers | Ordering | Baixo | ✅ A contagem e os pedidos recentes vêm pelo contrato `CustomerOrderHistory`, como `OrderSummaries` | Manter o contrato |
 
 ---
@@ -399,7 +400,7 @@ Score = (
   - Fulfillment: [`ScheduleDeliveryUseCase`](../backend/app/Modules/Fulfillment/UseCases/ScheduleDeliveryUseCase.php), [`DeliverOrderUseCase`](../backend/app/Modules/Fulfillment/UseCases/DeliverOrderUseCase.php), o job [`DeliverOrder`](../backend/app/Modules/Fulfillment/Jobs/DeliverOrder.php) e o evento [`OrderDelivered`](../backend/app/Modules/Fulfillment/Events/OrderDelivered.php).
 - **Desvio da recomendação original:** a matriz sugeria que o Fulfillment escutasse `PaymentApproved`. Assim, a entrega e a marcação de pago correriam em paralelo; num retry ou atraso da fila, a entrega poderia rodar antes e o pedido ficaria preso em `payment_approved`. Por isso o Ordering publica `OrderPaid` **só depois** da transição, e o Fulfillment escuta esse evento.
 - **`OrderStatus` continua com 4 estados:** agora ele é a visão do Ordering sobre o ciclo de vida, e cada transição é disparada pelo evento do contexto responsável.
-- **Melhoria futura:** os eventos ainda carregam o model `Order` (padrão atual do projeto, com `SerializesModels`). Se os módulos chegarem a ter persistência separada, os eventos devem carregar só o id do pedido (Published Language). Ver as [pendências](#pendências-depois-do-plano).
+- **Eventos com dados:** ✅ desde o problema 11 (HEL-7), os eventos e o job `DeliverOrder` carregam o `orderId` e os valores de que o consumidor precisa, nunca o model `Order` (Published Language).
 - **Validação:** além do `OrderStatusFlowTest`, o fluxo foi exercitado com o worker real (Redis): `MarkOrderAsPaid` → `ScheduleOrderDelivery` → `DeliverOrder` (10 s depois) → `MarkOrderAsDelivered`.
 
 #### 6. ✅ Resolvido: checkout acessava o estoque pelo repositório
@@ -458,6 +459,11 @@ Score = (
 - **Fronteira verificada:** o [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) virou uma lista do que é permitido. Ele gera uma expectativa por pasta privada de cada módulo, a partir das pastas que existem, mais uma por classe da raiz de cada módulo. Também confere que todo `Contracts` só tem interfaces e que nenhuma assinatura de contrato usa model ou coleção do Eloquent. As regras de direção de antes continuam. Quatro violações de propósito (um model do Ordering no Payment, o service provider do Payment no Ordering, uma classe concreta em `Contracts` e um contrato devolvendo `Product`) fizeram o teste falhar, cada uma na sua regra.
 - **Exceções declaradas, uma por travessia:** o Backoffice lendo os repositories de quatro módulos, e a vitrine e a lista de estoque do admin com `Product::stock`, `Stock::product` e a regra de disponibilidade do Ordering. Todas apontam para a HEL-6. `DTOs`, `ValueObjects`, `Enums` e `Http` de outro módulo continuam permitidos até a HEL-10.
 - **Desvio do plano:** o pedido do pagamento é resolvido por um binding explícito da rota (`{payableOrder}`), pelo contrato `PayableOrders`, e não dentro do controller. Assim ele roda antes da validação do corpo, como fazia o route model binding, e um id inexistente continua `404` mesmo com corpo inválido, como exige o `MoneyInCentsTest`.
+- **Ajustes da revisão do PR #12** (09/10/2026):
+  - a regra "a senha só muda quando uma nova é enviada" saiu do `UserService`, que foi apagado, para o [`UpdateUserProfileDTO::toArray()`](../backend/app/Modules/Identity/DTOs/UpdateUserProfileDTO.php), ao lado do `CreateUserDTO::toArray()`. O `CustomerAccountRepository` deixou de depender de um service, e o `ModuleBoundariesTest` ganhou a regra `repositories do not use the module services` (uma expectativa por módulo com as duas pastas; uma violação de propósito no Ordering fez o teste falhar);
+  - a conta de cliente tem um único formato na API, o [`CustomerProfileResource`](../backend/app/Modules/Identity/Http/Resources/CustomerProfileResource.php) do Identity, alimentado pelo `CustomerAccount::toProfile()`. O `CustomerAccountResource` e a cópia do resource no Customers saíram;
+  - o `ProductRepository::findManyKeyedById` foi inlinado no `findMany` do `ProductCatalog`, seu único chamador, e o parâmetro `$withStock`, que ninguém passava, saiu;
+  - um deploy que muda o formato de um evento ou job precisa esvaziar a fila antes, porque o `queue-restart` não converte os payloads que já estão nela (ver o [README](../README.md#eventos-listeners-jobs-e-filas)).
 
 ### Prioridade baixa
 

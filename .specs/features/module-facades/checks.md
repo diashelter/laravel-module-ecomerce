@@ -433,5 +433,5 @@ Cost: 9 provas na própria camada (C22, C32 a C36, C45, C57, C66), sendo 3 novas
   - o `MoneyInCentsTest` "exposes order money in cents on every order route" passou a afirmar o `amount_cents` da tentativa na rota de pagamento (door 5), sem perder a checagem de chaves antigas de dinheiro;
   - as asserções de `items_count` em `OrderRepositoryTest` e `UserUseCasesTest` foram trocadas por asserções sobre o `OrderSummary`, que não tem itens (door 5);
   - `Payment::factory()->for($order)` virou `->create(['order_id' => ...])` nos testes, porque a relação `Payment::order()` saiu;
-  - o `ProductRepository::findManyKeyedById` ficou, porque o `findMany` do `ProductCatalog` o usa, e os seus testes continuam.
+  - o `ProductRepository::findManyKeyedById` ficou de início, porque o `findMany` do `ProductCatalog` o usava. A revisão do PR #12 (F3) mostrou que o `findMany` era o único chamador e que o `$withStock` nunca era passado: a consulta foi inlinada no `findMany`, os dois testes do método saíram e a linha do `TypedListSignaturesTest` passou para o `findMany`.
 - **Abandoned:** resolver o pedido do pagamento dentro do controller, porque o `422` do corpo passava a vir antes do `404`
