@@ -301,6 +301,23 @@ foreach (array_diff(MODULES, ['Shared']) as $module) {
         ->not->toUse("App\\Modules\\{$module}");
 }
 
+// Layers: a repository only reads and writes the database. The business rules (services) are
+// applied before it is called, so a repository never uses its own module services.
+$modulesWithRepositoriesAndServices = array_values(array_filter(
+    MODULES,
+    fn (string $module) => is_dir(MODULES_PATH."/{$module}/Repositories") && is_dir(MODULES_PATH."/{$module}/Services"),
+));
+
+foreach ($modulesWithRepositoriesAndServices as $module) {
+    arch("repositories do not use the module services: {$module}")
+        ->expect("App\\Modules\\{$module}\\Repositories")
+        ->not->toUse("App\\Modules\\{$module}\\Services");
+}
+
+it('repositories do not use the module services: every module with both layers is covered', function () use ($modulesWithRepositoriesAndServices) {
+    expect($modulesWithRepositoriesAndServices)->toBe(['Catalog', 'Customers', 'Inventory', 'Ordering', 'Payment']);
+});
+
 it('resolves the catalog order history to the order repository', function () {
     expect(app(ProductOrderHistory::class))->toBeInstanceOf(OrderRepository::class);
 });
