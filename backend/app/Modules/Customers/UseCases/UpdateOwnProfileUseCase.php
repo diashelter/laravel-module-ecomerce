@@ -4,23 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Customers\UseCases;
 
+use App\Modules\Identity\Contracts\CustomerAccounts;
 use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Repositories\CustomerAccountRepository;
-use App\Modules\Identity\Services\UserService;
+use App\Modules\Identity\ValueObjects\CustomerProfile;
 
 /**
  * Customer: updates their own name, e-mail and, optionally, password.
  */
 final class UpdateOwnProfileUseCase
 {
-    public function __construct(
-        private readonly CustomerAccountRepository $accounts,
-        private readonly UserService $userService,
-    ) {}
+    public function __construct(private readonly CustomerAccounts $accounts) {}
 
-    public function execute(CustomerAccount $account, UpdateUserProfileDTO $data): CustomerAccount
+    public function execute(int $customerId, UpdateUserProfileDTO $data): CustomerProfile
     {
-        return $this->accounts->update($account, $this->userService->profileChanges($data));
+        return $this->accounts->updateProfile($customerId, $data);
     }
 }

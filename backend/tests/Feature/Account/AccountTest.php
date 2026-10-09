@@ -18,11 +18,14 @@ it('shows the account summary', function () {
 it('updates name and email', function () {
     $user = customer();
 
-    $this->actingAs($user)->putJson('/api/account/profile', ['name' => 'Novo Nome', 'email' => 'novo@example.com'])
+    $response = $this->actingAs($user)->putJson('/api/account/profile', ['name' => 'Novo Nome', 'email' => 'novo@example.com'])
         ->assertOk()
-        ->assertJsonPath('data.name', 'Novo Nome');
+        ->assertJsonPath('data.name', 'Novo Nome')
+        ->assertJsonPath('data.email', 'novo@example.com')
+        ->assertJsonPath('message', 'Dados atualizados com sucesso.');
 
-    expect($user->fresh()->email)->toBe('novo@example.com');
+    expect(array_keys($response->json('data')))->toEqualCanonicalizing(['id', 'name', 'email', 'created_at'])
+        ->and($user->fresh()->email)->toBe('novo@example.com');
 });
 
 it('changes the password only with the current password', function () {

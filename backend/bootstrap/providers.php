@@ -3,6 +3,7 @@
 use App\Modules\Catalog\CatalogServiceProvider;
 use App\Modules\Customers\CustomersServiceProvider;
 use App\Modules\Fulfillment\FulfillmentServiceProvider;
+use App\Modules\Identity\IdentityServiceProvider;
 use App\Modules\Inventory\InventoryServiceProvider;
 use App\Modules\Ordering\OrderingServiceProvider;
 use App\Modules\Payment\PaymentServiceProvider;
@@ -13,6 +14,7 @@ return [
     CatalogServiceProvider::class,
     CustomersServiceProvider::class,
     FulfillmentServiceProvider::class,
+    IdentityServiceProvider::class,
     InventoryServiceProvider::class,
     OrderingServiceProvider::class,
     PaymentServiceProvider::class,

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\Policies;
 
-use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Models\Order;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 class OrderPolicy
 {
-    public function view(CustomerAccount $account, Order $order): bool
+    public function view(Authenticatable $account, Order $order): bool
     {
-        return $order->customer_id === $account->id;
+        return $order->customer_id === $account->getAuthIdentifier();
     }
 }
