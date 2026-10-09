@@ -426,3 +426,12 @@ Cost: 9 provas na própria camada (C22, C32 a C36, C45, C57, C66), sendo 3 novas
 
 - S1 = 2k, S2 = 7k, S3 = 3k, S4 = 11k, S5 = 10k, S6 = 7k e S7 = 9k: 49k de código e testes (`wc -c` dos arquivos que cada slice toca, dividido por 4), mais 32k do README, da análise de domínio e do `AGENTS.md`. Somam 81k, abaixo do budget de 150k - one builder
 - Mechanism: one builder (cabe no orçamento, sem pergunta)
+- **Boundary:** C1-C70 fechados no commit de documentação que encerra a feature (base da feature: `2e22ebd`)
+- **Settled mid-build:**
+  - o pedido do pagamento é resolvido por um binding explícito da rota (`{payableOrder}`, pelo `PayableOrders`), e não no controller, para manter a precedência de hoje (`404` antes do `422` do corpo, depois `403` e `409`). O `MoneyInCentsTest` "keeps 404 for unknown ids on the money routes" exige o `404` sem corpo. O `Flow` e as `Assumptions` do plano foram corrigidos no commit do pagamento;
+  - o `{customer}` do admin de clientes também é resolvido por `Route::bind`, pelo `CustomerAccounts`, no `CustomersServiceProvider`;
+  - o `MoneyInCentsTest` "exposes order money in cents on every order route" passou a afirmar o `amount_cents` da tentativa na rota de pagamento (door 5), sem perder a checagem de chaves antigas de dinheiro;
+  - as asserções de `items_count` em `OrderRepositoryTest` e `UserUseCasesTest` foram trocadas por asserções sobre o `OrderSummary`, que não tem itens (door 5);
+  - `Payment::factory()->for($order)` virou `->create(['order_id' => ...])` nos testes, porque a relação `Payment::order()` saiu;
+  - o `ProductRepository::findManyKeyedById` ficou, porque o `findMany` do `ProductCatalog` o usa, e os seus testes continuam.
+- **Abandoned:** resolver o pedido do pagamento dentro do controller, porque o `422` do corpo passava a vir antes do `404`
