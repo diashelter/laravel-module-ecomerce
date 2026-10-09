@@ -4,6 +4,7 @@ use App\Modules\Identity\Models\CustomerAccount;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Testing\TestResponse;
 
 // Sanctum only starts a session for "stateful" requests coming from the SPA domain.
 beforeEach(fn () => $this->withHeader('Origin', 'http://localhost'));
@@ -38,6 +39,35 @@ function accountRoutes(): array
         },
         'profile' => fn ($test, array $data) => $test->actingAs(customer())->putJson('/api/account/profile', ['name' => 'Ana', ...$data]),
     ];
+}
+
+/** The account routes of the customers module, each with the status it answers on success. */
+const CUSTOMER_ROUTES = [
+    'admin create' => ['admin create', 201],
+    'admin update' => ['admin update', 200],
+    'profile' => ['profile', 200],
+];
+
+/** Calls a customers account route on the given account: the one it updates (ignored on creation). */
+function customerRoute(string $route, $test, CustomerAccount $account, array $data): TestResponse
+{
+    return match ($route) {
+        'admin create' => $test->actingAs(admin())->postJson('/api/admin/customers', registerPayload($data)),
+        'admin update' => $test->actingAs(admin())->putJson("/api/admin/customers/{$account->id}", ['name' => 'Ana', ...$data]),
+        'profile' => $test->actingAs($account)->putJson('/api/account/profile', ['name' => 'Ana', ...$data]),
+    };
+}
+
+/** The account a customers route created (the newest one) or changed (the given one). */
+function accountAfter(string $route, CustomerAccount $account): CustomerAccount
+{
+    return $route === 'admin create' ? CustomerAccount::query()->latest('id')->firstOrFail() : $account->fresh();
+}
+
+/** A valid e-mail of exactly this many characters (at least 255). */
+function emailWithLength(int $length): string
+{
+    return str_repeat('a', 64).'@'.str_repeat('b', 62).'.'.str_repeat('c', 62).'.'.str_repeat('d', 62).'.'.str_repeat('e', $length - 254);
 }
 
 // S1 - e-mail as a single account
@@ -161,6 +191,68 @@ it('rejects an email that is not a string', function () {
         ->assertJsonValidationErrors('email');
 });
 
+// The customers module validates the account with its own adapters: same limits, same messages.
+
+it('normalizes an email with spaces and capitals on every customer route', function (string $route, int $status) {
+    $account = customer(['email' => 'mine@example.com']);
+
+    customerRoute($route, $this, $account, ['email' => '  Ana@Example.COM '])
+        ->assertStatus($status)
+        ->assertJsonPath('data.email', 'ana@example.com');
+
+    expect(accountAfter($route, $account)->email)->toBe('ana@example.com')
+        ->and(DB::table('customers')->where('email', 'ana@example.com')->count())->toBe(1);
+})->with(CUSTOMER_ROUTES);
+
+it('rejects the email of another customer in another case on every customer route', function (string $route) {
+    customer(['email' => 'ana@example.com']);
+    $account = customer(['email' => 'mine@example.com']);
+    $before = DB::table('customers')->orderBy('id')->get()->all();
+
+    customerRoute($route, $this, $account, ['email' => ' ANA@Example.com '])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.email', EMAIL_IN_USE);
+
+    expect(DB::table('customers')->orderBy('id')->get()->all())->toEqual($before);
+})->with(array_keys(CUSTOMER_ROUTES));
+
+it('rejects a malformed email on every customer route', function (string $route) {
+    customerRoute($route, $this, customer(), ['email' => 'not-an-email'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.email', ['O campo e-mail deve ser um e-mail válido.']);
+})->with(array_keys(CUSTOMER_ROUTES));
+
+it('bounds the email at 255 characters on every customer route', function (string $route, int $status) {
+    $account = customer();
+
+    expect(strlen(emailWithLength(255)))->toBe(255)->and(strlen(emailWithLength(256)))->toBe(256);
+
+    customerRoute($route, $this, $account, ['email' => emailWithLength(256)])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.email', ['O campo e-mail não pode ter mais de 255 caracteres.']);
+
+    customerRoute($route, $this, $account, ['email' => emailWithLength(255)])->assertStatus($status);
+
+    expect(accountAfter($route, $account)->email)->toBe(emailWithLength(255));
+})->with(CUSTOMER_ROUTES);
+
+it('rejects an email or a password that is not a string on every customer route', function (string $route) {
+    $account = customer();
+
+    customerRoute($route, $this, $account, ['email' => ['ana@example.com']])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('email');
+
+    customerRoute($route, $this, $account, [
+        'email' => 'ana@example.com',
+        'password' => ['abcd1234'],
+        'password_confirmation' => ['abcd1234'],
+        'current_password' => 'password',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('password');
+})->with(array_keys(CUSTOMER_ROUTES));
+
 // S2 - password policy in one place
 
 it('rejects a password shorter than 8 characters on every route that chooses one', function (string $route) {
@@ -168,8 +260,39 @@ it('rejects a password shorter than 8 characters on every route that chooses one
 
     accountRoutes()[$route]($this, [...$short, 'current_password' => 'password'])
         ->assertUnprocessable()
-        ->assertJsonPath('errors.password.0', 'O campo senha deve ter pelo menos 8 caracteres.');
+        ->assertJsonPath('errors.password', ['O campo senha deve ter pelo menos 8 caracteres.']);
 })->with(['register', 'admin create', 'admin update', 'profile']);
+
+it('accepts a password of 8 characters on every customer route', function (string $route, int $status) {
+    $account = customer();
+
+    customerRoute($route, $this, $account, [
+        'email' => 'ana@example.com',
+        'password' => 'abcd1234',
+        'password_confirmation' => 'abcd1234',
+        'current_password' => 'password',
+    ])->assertStatus($status);
+
+    expect(Hash::check('abcd1234', accountAfter($route, $account)->password))->toBeTrue();
+})->with(CUSTOMER_ROUTES);
+
+it('keeps the password when the profile is saved with a blank password', function () {
+    $account = customer(['email' => 'ana@example.com']);
+    $hash = $account->password;
+
+    $this->actingAs($account)->putJson('/api/account/profile', [
+        'name' => 'Ana Nova',
+        'email' => 'nova@example.com',
+        'password' => '',
+        'password_confirmation' => '',
+    ])->assertOk();
+
+    $stored = $account->fresh();
+
+    expect($stored->name)->toBe('Ana Nova')
+        ->and($stored->email)->toBe('nova@example.com')
+        ->and($stored->password)->toBe($hash);
+});
 
 it('stores the hash of a chosen password', function () {
     $this->postJson('/api/auth/register', registerPayload())->assertCreated();

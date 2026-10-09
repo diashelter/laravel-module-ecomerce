@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Customers\Http\Controllers;
 
+use App\Modules\Customers\Http\Resources\CustomerProfileResource;
 use App\Modules\Customers\Http\Resources\OrderSummaryResource;
 use App\Modules\Identity\Contracts\CustomerAccounts;
-use App\Modules\Identity\Http\Resources\CustomerProfileResource;
 use App\Modules\Ordering\Contracts\CustomerOrderHistory;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;

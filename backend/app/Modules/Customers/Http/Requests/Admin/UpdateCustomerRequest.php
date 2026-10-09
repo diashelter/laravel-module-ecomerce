@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Customers\Http\Requests\Admin;
 
+use App\Modules\Customers\Http\Requests\Concerns\NormalizesEmailInput;
+use App\Modules\Customers\Http\Rules\EmailRule;
+use App\Modules\Customers\Http\Rules\PasswordRule;
 use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
-use App\Modules\Identity\Http\Requests\Concerns\NormalizesEmailInput;
-use App\Modules\Identity\Http\Rules\EmailRule;
-use App\Modules\Identity\Http\Rules\PasswordRule;
 use App\Modules\Identity\ValueObjects\Email;
 use App\Modules\Identity\ValueObjects\Password;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;

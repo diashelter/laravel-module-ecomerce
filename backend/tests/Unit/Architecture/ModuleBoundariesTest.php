@@ -3,22 +3,48 @@
 use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
 use App\Modules\Catalog\Repositories\ProductRepository;
+use App\Modules\Catalog\ValueObjects\CatalogProducts;
+use App\Modules\Catalog\ValueObjects\CategoryIds;
+use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Customers\Repositories\CustomerAddressRepository;
 use App\Modules\Identity\Contracts\CustomerAccounts;
+use App\Modules\Identity\DTOs\CreateUserDTO;
+use App\Modules\Identity\DTOs\LoginCredentialsDTO;
+use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\Models\User;
 use App\Modules\Identity\Repositories\CustomerAccountRepository;
+use App\Modules\Identity\ValueObjects\CustomerProfile;
+use App\Modules\Identity\ValueObjects\Email;
+use App\Modules\Identity\ValueObjects\Password;
 use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockLevels;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Repositories\StockRepository;
+use App\Modules\Inventory\ValueObjects\StockQuantities;
 use App\Modules\Ordering\Contracts\CustomerOrderHistory;
 use App\Modules\Ordering\Contracts\DeliveryAddressBook;
 use App\Modules\Ordering\Contracts\PayableOrders;
+use App\Modules\Ordering\Enums\OrderStatus;
+use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Ordering\Repositories\OrderRepository;
+use App\Modules\Ordering\ValueObjects\DeliveryAddress;
+use App\Modules\Ordering\ValueObjects\OrderForPayment;
+use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\ProductQuantities;
+use App\Modules\Ordering\ValueObjects\ShippingQuote;
+use App\Modules\Ordering\ValueObjects\ValidatedCart;
+use App\Modules\Ordering\ValueObjects\ValidatedCartLine;
 use App\Modules\Payment\Contracts\PaymentGateway;
+use App\Modules\Payment\Enums\DeclineReason;
+use App\Modules\Payment\Events\PaymentApproved;
 use App\Modules\Payment\Gateways\FakePaymentGateway;
+use App\Modules\Shared\Enums\ApiErrorCode;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
+use Tests\Unit\Architecture\Fixtures\DocblockProbeContract;
+use Tests\Unit\Architecture\Fixtures\SignatureProbeContract;
+use Tests\Unit\Architecture\Fixtures\SignatureProbeEvent;
 
 /*
  * Boundaries between the modules (see docs/domain-analysis.md).
@@ -34,18 +60,27 @@ const MODULES_PATH = __DIR__.'/../../../app/Modules';
 
 /*
  * A module's facade is its Contracts and its Events: every other folder is private, so a new
- * folder is private without touching this file. DTOs, ValueObjects, Enums and Http stay
- * reachable until HEL-10 decides which of them are part of a module's public vocabulary.
+ * folder is private without touching this file. Http included: each module has its own
+ * adapters, even when they translate the same value object.
  */
-const PUBLIC_DIRECTORIES = ['Contracts', 'Events', 'DTOs', 'ValueObjects', 'Enums', 'Http'];
+const PUBLIC_DIRECTORIES = ['Contracts', 'Events'];
 
 /*
- * Crossings into private folders that stay until HEL-6 builds the read side: the dashboard read
- * model, and the storefront and stock list availability (Product::stock, Stock::product and the
- * one availability rule). Each entry: [source namespace, target namespace or class, issue].
+ * The folders where a module's vocabulary lives. A class in them is public only when the
+ * signatures of the module's facade reach it (see vocabularyOf), so the rule is computed on every
+ * run and never kept as a list here.
+ */
+const VOCABULARY_DIRECTORIES = ['DTOs', 'ValueObjects', 'Enums'];
+
+/*
+ * Crossings into private folders, or into classes outside the vocabulary, that stay until HEL-6
+ * builds the read side: the dashboard read model, and the storefront and stock list availability
+ * (Product::stock, Stock::product and the one availability rule). Each entry: [source namespace,
+ * target namespace or class, issue].
  */
 const BOUNDARY_EXCEPTIONS = [
     ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Repositories', 'HEL-6'],
+    ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Enums\\ProductStatus', 'HEL-6'],
     ['App\\Modules\\Backoffice', 'App\\Modules\\Identity\\Repositories', 'HEL-6'],
     ['App\\Modules\\Backoffice', 'App\\Modules\\Inventory\\Repositories', 'HEL-6'],
     ['App\\Modules\\Backoffice', 'App\\Modules\\Ordering\\Repositories', 'HEL-6'],
@@ -58,7 +93,95 @@ const BOUNDARY_EXCEPTIONS = [
 /** @return list<string> the folders of a module that no other module may use */
 function privateDirectoriesOf(string $module): array
 {
-    return array_values(array_diff(array_map('basename', glob(MODULES_PATH."/{$module}/*", GLOB_ONLYDIR)), PUBLIC_DIRECTORIES));
+    return array_values(array_diff(array_map('basename', glob(MODULES_PATH."/{$module}/*", GLOB_ONLYDIR)), PUBLIC_DIRECTORIES, VOCABULARY_DIRECTORIES));
+}
+
+/** @return list<class-string> the contract interfaces and the event classes of a module */
+function facadeOf(string $module): array
+{
+    return array_map(
+        fn (string $file) => 'App\\Modules\\'.$module.'\\'.basename(dirname($file)).'\\'.basename($file, '.php'),
+        [...glob(MODULES_PATH."/{$module}/Contracts/*.php"), ...glob(MODULES_PATH."/{$module}/Events/*.php")],
+    );
+}
+
+/** @return list<string> the names in a native type, with unions and intersections flattened */
+function namedTypesIn(?ReflectionType $type): array
+{
+    if ($type instanceof ReflectionUnionType || $type instanceof ReflectionIntersectionType) {
+        return array_merge(...array_map('namedTypesIn', $type->getTypes()));
+    }
+
+    return $type instanceof ReflectionNamedType ? [$type->getName()] : [];
+}
+
+/**
+ * The business module classes named by the native types of a class's public signature: the
+ * parameters and return types of its public methods (the constructor included) and the types
+ * of its public properties. Docblocks, built-in names, `self`, `static`, the framework and the
+ * Shared kernel never count.
+ *
+ * @return list<class-string>
+ */
+function signatureTypesOf(string $class): array
+{
+    $reflection = new ReflectionClass($class);
+    $types = array_map(fn (ReflectionProperty $property) => $property->getType(), $reflection->getProperties(ReflectionProperty::IS_PUBLIC));
+
+    foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+        $types = [...$types, $method->getReturnType(), ...array_map(fn (ReflectionParameter $parameter) => $parameter->getType(), $method->getParameters())];
+    }
+
+    return array_values(array_unique(array_filter(
+        array_merge(...array_map('namedTypesIn', $types)),
+        fn (string $name) => str_starts_with($name, 'App\\Modules\\') && ! str_starts_with($name, 'App\\Modules\\Shared\\'),
+    )));
+}
+
+/** @return list<class-string> every business module class the signatures of these classes reach, transitively */
+function reachedFrom(array $classes): array
+{
+    $reached = [];
+    $pending = $classes;
+
+    while ($pending !== []) {
+        foreach (signatureTypesOf(array_pop($pending)) as $type) {
+            if (! in_array($type, $reached, true)) {
+                $reached[] = $type;
+                $pending[] = $type;
+            }
+        }
+    }
+
+    return $reached;
+}
+
+/**
+ * A module's public vocabulary: the classes it declares that its own facade reaches. A contract
+ * of another module never makes them public, so B decides its vocabulary alone.
+ *
+ * @return list<class-string>
+ */
+function vocabularyOf(string $module): array
+{
+    return array_values(array_filter(
+        reachedFrom(facadeOf($module)),
+        fn (string $class) => str_starts_with($class, 'App\\Modules\\'.$module.'\\'),
+    ));
+}
+
+/** @return list<class-string> the classes in a module's vocabulary folders that its facade does not reach */
+function classesOutsideVocabularyOf(string $module): array
+{
+    $classes = [];
+
+    foreach (VOCABULARY_DIRECTORIES as $directory) {
+        foreach (glob(MODULES_PATH."/{$module}/{$directory}/*.php") as $file) {
+            $classes[] = 'App\\Modules\\'.$module.'\\'.$directory.'\\'.basename($file, '.php');
+        }
+    }
+
+    return array_values(array_diff($classes, vocabularyOf($module)));
 }
 
 /** @return list<string> the classes declared directly in a module folder (its service provider) */
@@ -103,9 +226,100 @@ foreach (MODULES as $source) {
 
 it('generates the private directory rules from the folders that exist', function () {
     $private = array_unique(array_merge(...array_map('privateDirectoriesOf', MODULES)));
+    $httpExceptions = array_filter(BOUNDARY_EXCEPTIONS, fn (array $exception) => preg_match('/\\\\Http(\\\\|$)/', $exception[1]) === 1);
 
-    expect($private)->toContain('Exceptions', 'Gateways', 'Jobs', 'Listeners', 'Models', 'Policies', 'Repositories', 'Services', 'UseCases')
-        ->and(array_intersect($private, PUBLIC_DIRECTORIES))->toBeEmpty();
+    expect(PUBLIC_DIRECTORIES)->toBe(['Contracts', 'Events'])
+        ->and($private)->toContain('Exceptions', 'Gateways', 'Http', 'Jobs', 'Listeners', 'Models', 'Policies', 'Repositories', 'Services', 'UseCases')
+        ->and($private)->not->toContain('Contracts')
+        ->and($private)->not->toContain('Events')
+        ->and($private)->not->toContain('DTOs')
+        ->and($private)->not->toContain('Enums')
+        ->and($private)->not->toContain('ValueObjects')
+        ->and($httpExceptions)->toBeEmpty();
+
+    // Every pair of modules gets the Http rule: each business module has its own Http folder.
+    foreach (array_diff(MODULES, ['Shared']) as $module) {
+        expect(privateDirectoriesOf($module))->toContain('Http');
+    }
+});
+
+// Vocabulary: a module uses another one's DTOs, ValueObjects and Enums only when that module's
+// facade exposes them (one class per expectation).
+foreach (array_diff(MODULES, ['Shared']) as $target) {
+    foreach (classesOutsideVocabularyOf($target) as $class) {
+        foreach (array_diff(MODULES, [$target]) as $source) {
+            $excepted = array_filter(BOUNDARY_EXCEPTIONS, fn (array $exception) => $exception[0] === 'App\\Modules\\'.$source && $exception[1] === $class);
+
+            if ($excepted !== []) {
+                continue;
+            }
+
+            arch("{$source} uses only the public vocabulary of {$target}: {$class}")
+                ->expect('App\\Modules\\'.$source)
+                ->not->toUse($class);
+        }
+    }
+}
+
+it('generates the vocabulary rules from the classes that exist', function () {
+    $outside = array_merge(...array_map('classesOutsideVocabularyOf', array_values(array_diff(MODULES, ['Shared']))));
+
+    expect(count($outside))->toBeGreaterThanOrEqual(23)
+        ->and($outside)->toContain(ValidatedCart::class, LoginCredentialsDTO::class, UserRole::class, CategoryIds::class)
+        ->and($outside)->not->toContain(Email::class)
+        ->and($outside)->not->toContain(OrderStatus::class)
+        ->and($outside)->not->toContain(CatalogProducts::class);
+});
+
+it('computes the vocabulary of a module from its own contracts and events', function () {
+    expect(facadeOf('Ordering'))->toContain(CustomerOrderHistory::class, OrderPlaced::class)
+        ->and(facadeOf('Payment'))->toContain(PaymentGateway::class, PaymentApproved::class)
+        ->and(vocabularyOf('Inventory'))->toContain(StockQuantities::class)
+        ->and(vocabularyOf('Inventory'))->not->toContain(ProductIds::class)
+        ->and(vocabularyOf('Catalog'))->toContain(ProductIds::class);
+});
+
+it('follows the native parameter, return and public property types transitively', function () {
+    $reached = reachedFrom([SignatureProbeContract::class, SignatureProbeEvent::class]);
+
+    expect($reached)->toContain(
+        OrderForPayment::class,
+        CustomerProfile::class,
+        ShippingQuote::class,
+        DeliveryAddress::class,
+        CreateUserDTO::class,
+        Email::class,
+        Password::class,
+        OrderStatus::class,
+    );
+
+    foreach ([CarbonImmutable::class, ApiErrorCode::class, 'int', 'void', 'static', ValidatedCartLine::class, OrderLines::class, ProductQuantities::class] as $left) {
+        expect($reached)->not->toContain($left);
+    }
+
+    // The event alone reaches the type of its public property, and nothing it keeps private.
+    expect(reachedFrom([SignatureProbeEvent::class]))->toBe([OrderStatus::class]);
+});
+
+it('keeps a type out of the vocabulary when only a docblock names it', function () {
+    $reached = reachedFrom([DocblockProbeContract::class]);
+
+    expect($reached)->not->toContain(ValidatedCart::class)
+        ->and($reached)->not->toContain(OrderLines::class);
+});
+
+it('computes the vocabulary the contracts expose today', function () {
+    expect(vocabularyOf('Identity'))->toContain(Email::class, Password::class)
+        ->and(vocabularyOf('Ordering'))->toContain(OrderStatus::class)
+        ->and(vocabularyOf('Payment'))->toContain(DeclineReason::class);
+
+    foreach ([ValidatedCart::class, OrderLines::class, ProductQuantities::class] as $private) {
+        expect(vocabularyOf('Ordering'))->not->toContain($private);
+    }
+
+    foreach ([LoginCredentialsDTO::class, UserRole::class] as $private) {
+        expect(vocabularyOf('Identity'))->not->toContain($private);
+    }
 });
 
 // A module root class (its service provider) is wiring, never something another module calls.
@@ -126,6 +340,7 @@ it('does not use another module root class: every module root is covered', funct
 it('declares exactly the HEL-6 exceptions', function () {
     expect(BOUNDARY_EXCEPTIONS)->toBe([
         ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Repositories', 'HEL-6'],
+        ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Enums\\ProductStatus', 'HEL-6'],
         ['App\\Modules\\Backoffice', 'App\\Modules\\Identity\\Repositories', 'HEL-6'],
         ['App\\Modules\\Backoffice', 'App\\Modules\\Inventory\\Repositories', 'HEL-6'],
         ['App\\Modules\\Backoffice', 'App\\Modules\\Ordering\\Repositories', 'HEL-6'],

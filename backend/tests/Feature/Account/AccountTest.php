@@ -112,5 +112,6 @@ it('returns the account summary under the customer key without a role', function
     $response = $this->actingAs($account)->getJson('/api/account')->assertOk();
 
     expect(array_keys($response->json('data')))->toEqualCanonicalizing(['customer', 'last_order', 'orders_count', 'recent_orders'])
-        ->and(array_keys($response->json('data.customer')))->toEqualCanonicalizing(['created_at', 'email', 'id', 'name']);
+        ->and(array_keys($response->json('data.customer')))->toEqualCanonicalizing(['created_at', 'email', 'id', 'name'])
+        ->and($response->json('data.customer.created_at'))->toBe($account->created_at->toIso8601String());
 });

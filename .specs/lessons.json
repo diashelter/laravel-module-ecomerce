@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 3,
+  "next_id": 6,
   "lessons": [
     {
       "id": "L-001",
@@ -40,6 +40,60 @@
       ],
       "created": "2026-10-07T00:33:38Z",
       "last_seen": "2026-10-07T00:33:38Z"
+    },
+    {
+      "id": "L-003",
+      "key": "surviving_mutant::a fault exercise for a computed rule must place the probe where the rule reads its input such as a native signature not only in a use statement or it also fails under the rejected alternative",
+      "text": "A fault exercise for a computed rule must place the probe where the rule reads its input, such as a native signature, not only in a use statement, or it also fails under the rejected alternative.",
+      "signal": "surviving_mutant",
+      "scope": "backend/tests/Unit/Architecture",
+      "status": "candidate",
+      "features": [
+        "module-vocabulary"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md F1; C10 (backend/tests/Unit/Architecture/ModuleBoundariesTest.php:168) (backend/tests/Unit/Architecture)"
+      ],
+      "created": "2026-10-09T16:32:07Z",
+      "last_seen": "2026-10-09T16:32:07Z"
+    },
+    {
+      "id": "L-004",
+      "key": "spec_precision_gap::when a check says every route that does something list those routes in the check and make the test dataset cover exactly that list",
+      "text": "When a check says every route that does something, list those routes in the check and make the test dataset cover exactly that list.",
+      "signal": "spec_precision_gap",
+      "scope": "backend/tests/Feature",
+      "status": "candidate",
+      "features": [
+        "module-vocabulary"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md gap 2; C21 (backend/tests/Feature/Auth/EmailAndPasswordTest.php:264) (backend/tests/Feature)"
+      ],
+      "created": "2026-10-09T16:32:07Z",
+      "last_seen": "2026-10-09T16:32:07Z"
+    },
+    {
+      "id": "L-005",
+      "key": "spec_precision_gap::when a computed rule is proven only by a temporary exercise add a permanent fixture proof or state in the checks that only the exercise protects the rule",
+      "text": "When a computed rule is proven only by a temporary exercise, add a permanent fixture proof or state in the checks that only the exercise protects the rule.",
+      "signal": "spec_precision_gap",
+      "scope": "backend/tests/Unit/Architecture",
+      "status": "candidate",
+      "features": [
+        "module-vocabulary"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md round 2 gap 1; C10 (backend/tests/Unit/Architecture/ModuleBoundariesTest.php:168) (backend/tests/Unit/Architecture)"
+      ],
+      "created": "2026-10-09T16:44:55Z",
+      "last_seen": "2026-10-09T16:44:55Z"
     }
   ]
 }
