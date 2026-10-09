@@ -23,6 +23,18 @@ it('normalizes the state of the quote', function () {
         ->assertJsonPath('data.delivery_business_days', 2);
 });
 
+it('normalizes a state with spaces in the quote', function () {
+    $this->getJson('/api/shipping/quote?state=%20sp%20')
+        ->assertOk()
+        ->assertJsonPath('data.state', 'SP');
+});
+
+it('rejects a state that is not a string in the quote', function () {
+    $this->getJson('/api/shipping/quote?state[]=SP')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('state');
+});
+
 it('rejects a quote without a valid state', function (string $query) {
     $this->getJson("/api/shipping/quote{$query}")
         ->assertUnprocessable()

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Customers\Http\Requests;
 
 use App\Modules\Customers\DTOs\CustomerAddressDTO;
+use App\Modules\Customers\Http\Requests\Concerns\NormalizesStateInput;
 use App\Modules\Ordering\Enums\BrazilianState;
-use App\Modules\Ordering\Http\Requests\Concerns\NormalizesStateInput;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;

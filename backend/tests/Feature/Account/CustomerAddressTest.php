@@ -105,6 +105,33 @@ it('rejects a state outside the 27 states', function (array $override) {
     'missing state' => [[]],
 ]);
 
+it('rejects a state outside the 27 states when updating an address', function () {
+    $user = customer();
+    $address = addressOf($user, ['state' => 'SP']);
+    $before = $address->fresh()->toArray();
+
+    $this->actingAs($user)->putJson("/api/account/addresses/{$address->id}", addressPayload(['state' => 'XX']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('state');
+
+    expect(CustomerAddress::query()->count())->toBe(1)
+        ->and($address->fresh()->toArray())->toBe($before);
+});
+
+it('rejects a state that is not a string on every address route', function (string $method) {
+    $user = customer();
+    $address = addressOf($user, ['state' => 'SP']);
+    $before = $address->fresh()->toArray();
+    $uri = $method === 'post' ? '/api/account/addresses' : "/api/account/addresses/{$address->id}";
+
+    $this->actingAs($user)->json($method, $uri, addressPayload(['state' => ['SP']]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('state');
+
+    expect(CustomerAddress::query()->count())->toBe(1)
+        ->and($address->fresh()->toArray())->toBe($before);
+})->with(['post', 'put']);
+
 it('requires every address field but the complement', function (string $field, bool $sent) {
     $payload = addressPayload();
 
@@ -172,6 +199,17 @@ it('updates an address of the customer', function () {
     expect($stored->state->value)->toBe('RJ')
         ->and($stored->city)->toBe('Rio de Janeiro')
         ->and($stored->postal_code)->toBe('01310100');
+});
+
+it('normalizes the state when updating an address', function () {
+    $user = customer();
+    $address = addressOf($user, ['state' => 'RJ']);
+
+    $this->actingAs($user)->putJson("/api/account/addresses/{$address->id}", addressPayload(['state' => ' sp ']))
+        ->assertOk()
+        ->assertJsonPath('data.state', 'SP');
+
+    expect($address->fresh()->state->value)->toBe('SP');
 });
 
 it('requires the full address on update', function () {
