@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Fulfillment\UseCases;
 
 use App\Modules\Fulfillment\Events\OrderDelivered;
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -14,11 +13,11 @@ use Illuminate\Support\Facades\Log;
  */
 final class DeliverOrderUseCase
 {
-    public function execute(Order $order): void
+    public function execute(int $orderId): void
     {
-        Log::info('Carrier delivered the order.', ['order_id' => $order->id]);
+        Log::info('Carrier delivered the order.', ['order_id' => $orderId]);
 
         // A retried job announces the delivery again: the ordering side ignores duplicates.
-        OrderDelivered::dispatch($order);
+        OrderDelivered::dispatch($orderId);
     }
 }

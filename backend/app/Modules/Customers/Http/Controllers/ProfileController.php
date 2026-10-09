@@ -6,15 +6,15 @@ namespace App\Modules\Customers\Http\Controllers;
 
 use App\Modules\Customers\Http\Requests\UpdateProfileRequest;
 use App\Modules\Customers\UseCases\UpdateOwnProfileUseCase;
-use App\Modules\Identity\Http\Resources\CustomerAccountResource;
+use App\Modules\Identity\Http\Resources\CustomerProfileResource;
 use App\Modules\Shared\Http\Controllers\Controller;
 
 class ProfileController extends Controller
 {
-    public function update(UpdateProfileRequest $request, UpdateOwnProfileUseCase $updateOwnProfile): CustomerAccountResource
+    public function update(UpdateProfileRequest $request, UpdateOwnProfileUseCase $updateOwnProfile): CustomerProfileResource
     {
-        $account = $updateOwnProfile->execute($request->user('customer'), $request->toDto());
+        $profile = $updateOwnProfile->execute($request->user('customer')->getAuthIdentifier(), $request->toDto());
 
-        return CustomerAccountResource::make($account)->additional(['message' => 'Dados atualizados com sucesso.']);
+        return CustomerProfileResource::make($profile)->additional(['message' => 'Dados atualizados com sucesso.']);
     }
 }

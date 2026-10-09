@@ -3,7 +3,7 @@
 use App\Modules\Catalog\Models\Product;
 
 it('recalculates the cart in cents from database prices', function () {
-    $product = productWithStock(10, ['price_cents' => 1990]);
+    $product = productWithStock(10, ['price_cents' => 1990, 'name' => 'Teclado mecânico', 'image_url' => 'https://example.com/teclado.png']);
 
     $this->postJson('/api/cart/validate', [
         'items' => [['product_id' => $product->id, 'quantity' => 3, 'price' => '0.01', 'unit_price' => 1, 'total_cents' => 1]],
@@ -11,8 +11,12 @@ it('recalculates the cart in cents from database prices', function () {
         ->assertOk()
         ->assertJsonPath('data.is_valid', true)
         ->assertJsonPath('data.total_cents', 5970)
+        ->assertJsonPath('data.items.0.name', 'Teclado mecânico')
+        ->assertJsonPath('data.items.0.image_url', 'https://example.com/teclado.png')
         ->assertJsonPath('data.items.0.unit_price_cents', 1990)
         ->assertJsonPath('data.items.0.subtotal_cents', 5970)
+        ->assertJsonPath('data.items.0.available_quantity', 10)
+        ->assertJsonPath('data.items.0.is_available', true)
         ->assertJsonPath('data.items.0.problem', null);
 });
 
@@ -29,9 +33,25 @@ it('reports problems for each item', function () {
     ])->assertOk()->assertJsonPath('data.is_valid', false);
 
     $problems = collect($response->json('data.items'))->pluck('problem', 'product_id');
-    expect($problems[$lowStock->id])->toBe('Estoque insuficiente. Disponível: 2.')
+    expect(collect($response->json('data.items'))->pluck('available_quantity', 'product_id')[$lowStock->id])->toBe(2)
+        ->and($problems[$lowStock->id])->toBe('Estoque insuficiente. Disponível: 2.')
         ->and($problems[$inactive->id])->toBe('Produto indisponível.')
         ->and($problems[999999])->toBe('Produto não encontrado.');
+});
+
+it('treats a product without a stock row as unavailable in the cart', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->postJson('/api/cart/validate', ['items' => [['product_id' => $product->id, 'quantity' => 1]]])
+        ->assertOk()
+        ->assertJsonPath('data.is_valid', false);
+
+    expect($response->json('data.items.0'))->toMatchArray([
+        'product_id' => $product->id,
+        'available_quantity' => 0,
+        'is_available' => false,
+        'problem' => 'Produto indisponível.',
+    ]);
 });
 
 it('validates the cart payload', function () {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Payment\DTOs\ChargeResult;
@@ -14,21 +15,26 @@ use App\Modules\Shared\Exceptions\BusinessRuleException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 
-beforeEach(fn () => Event::fake([PaymentApproved::class]));
+beforeEach(function () {
+    Event::fake([PaymentApproved::class]);
+    $this->forPayment = fn (Order $order) => app(PayableOrders::class)->findForPayment($order->id);
+});
 
 it('dispatches PaymentApproved for an order awaiting payment', function () {
     $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
 
-    $result = app(PayOrderUseCase::class)->execute($order, new PayOrderDTO('fake_card_approved'));
+    $result = app(PayOrderUseCase::class)->execute(($this->forPayment)($order), new PayOrderDTO('fake_card_approved'));
 
-    expect($result->relationLoaded('items'))->toBeTrue();
-    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->order->is($order));
+    expect($result)->toBeInstanceOf(Payment::class)
+        ->and($result->order_id)->toBe($order->id)
+        ->and($result->status)->toBe(PaymentStatus::Approved);
+    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->orderId === $order->id);
 });
 
 it('does not dispatch PaymentApproved for orders that are not awaiting payment', function (OrderStatus $status) {
     $order = Order::factory()->status($status)->create();
 
-    expect(fn () => app(PayOrderUseCase::class)->execute($order, new PayOrderDTO('fake_card_approved')))
+    expect(fn () => app(PayOrderUseCase::class)->execute(($this->forPayment)($order), new PayOrderDTO('fake_card_approved')))
         ->toThrow(BusinessRuleException::class, 'Este pedido não está aguardando pagamento.');
 
     Event::assertNotDispatched(PaymentApproved::class);
@@ -40,7 +46,7 @@ it('keeps the declined payment after raising the decline', function () {
 
     $declined = null;
     try {
-        app(PayOrderUseCase::class)->execute($order, new PayOrderDTO('fake_card_declined'));
+        app(PayOrderUseCase::class)->execute(($this->forPayment)($order), new PayOrderDTO('fake_card_declined'));
     } catch (PaymentDeclinedException $e) {
         $declined = $e;
     }
@@ -58,12 +64,12 @@ it('keeps the declined payment after raising the decline', function () {
 it('raises a conflict when a concurrent approval wins the race', function () {
     $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 5000]);
     spyPaymentGateway(function () use ($order): ChargeResult {
-        Payment::factory()->for($order)->approved()->create();
+        Payment::factory()->approved()->create(['order_id' => $order->id]);
 
         return new ChargeResult(PaymentStatus::Approved, null, 'fake_loser', 'fake');
     });
 
-    expect(fn () => app(PayOrderUseCase::class)->execute($order, new PayOrderDTO('fake_card_approved')))
+    expect(fn () => app(PayOrderUseCase::class)->execute(($this->forPayment)($order), new PayOrderDTO('fake_card_approved')))
         ->toThrow(BusinessRuleException::class, 'Este pedido não está aguardando pagamento.');
 
     expect(DB::table('payments')->where('order_id', $order->id)->where('status', 'approved')->count())->toBe(1);

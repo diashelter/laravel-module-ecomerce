@@ -222,7 +222,10 @@ it('exposes order money in cents on every order route', function () {
     $this->actingAs($user);
     $assertOrder($this->getJson('/api/orders')->assertOk()->json('data.0'));
     $assertOrder($this->getJson("/api/orders/{$order->id}")->assertOk()->assertJsonCount(1, 'data.items')->json('data'));
-    $assertOrder($this->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])->assertAccepted()->json('data'));
+    // The payment route answers the payment attempt, whose money is the order total in cents.
+    $attempt = $this->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])->assertAccepted()->json('data');
+    expect($attempt['amount_cents'])->toBe(94980);
+    assertNoLegacyMoneyKeys($attempt);
     $assertOrder($this->getJson('/api/account')->assertOk()->json('data.last_order'));
 
     $this->actingAs(admin());

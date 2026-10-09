@@ -15,7 +15,7 @@ it('accepts the tenth address in the use case', function () {
     $user = customer();
     CustomerAddress::factory()->count(9)->create(['customer_id' => $user->id]);
 
-    $address = app(CreateCustomerAddressUseCase::class)->execute($user, addressData());
+    $address = app(CreateCustomerAddressUseCase::class)->execute($user->id, addressData());
 
     expect($address->customer_id)->toBe($user->id)
         ->and(CustomerAddress::query()->where('customer_id', $user->id)->count())->toBe(10);
@@ -25,7 +25,7 @@ it('refuses the eleventh address in the use case', function () {
     $user = customer();
     CustomerAddress::factory()->count(10)->create(['customer_id' => $user->id]);
 
-    expect(fn () => app(CreateCustomerAddressUseCase::class)->execute($user, addressData()))
+    expect(fn () => app(CreateCustomerAddressUseCase::class)->execute($user->id, addressData()))
         ->toThrow(BusinessRuleException::class, 'Você pode cadastrar até 10 endereços.');
 
     expect(CustomerAddress::query()->where('customer_id', $user->id)->count())->toBe(10);

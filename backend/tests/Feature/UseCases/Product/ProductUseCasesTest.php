@@ -59,6 +59,17 @@ it('rolls back the product when the categories cannot be synced', function () {
         ->and(Stock::query()->count())->toBe(0);
 });
 
+it('rolls back the product when the stock cannot be opened', function () {
+    $category = Category::factory()->create();
+
+    // A negative quantity is refused by the stocks CHECK constraint, inside the same transaction.
+    expect(fn () => app(CreateProductUseCase::class)->execute(new CreateProductDTO(($this->product)([$category->id]), -1)))
+        ->toThrow(QueryException::class);
+
+    expect(Product::query()->count())->toBe(0)
+        ->and(Stock::query()->count())->toBe(0);
+});
+
 it('updates the product and its categories without touching the stock', function () {
     $product = productWithStock(4);
     $product->categories()->attach(Category::factory()->create());

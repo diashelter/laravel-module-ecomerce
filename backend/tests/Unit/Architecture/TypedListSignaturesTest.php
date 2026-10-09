@@ -1,9 +1,14 @@
 <?php
 
+use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\DTOs\ProductDTO;
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Customers\UseCases\ListCustomersUseCase;
+use App\Modules\Identity\Contracts\CustomerAccounts;
+use App\Modules\Inventory\Contracts\StockLevels;
 use App\Modules\Inventory\Contracts\StockReservation;
+use App\Modules\Ordering\Contracts\CustomerOrderHistory;
+use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\DTOs\CartDTO;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\Services\CartValidationService;
@@ -35,8 +40,13 @@ it('declares no array in the domain list signatures', function (string $class, ?
     [PlaceOrderUseCase::class, null],
     [ListCustomersUseCase::class, null],
     [StockReservation::class, null],
+    [StockLevels::class, null],
+    [ProductCatalog::class, null],
+    [PayableOrders::class, null],
+    [CustomerOrderHistory::class, null],
+    [CustomerAccounts::class, null],
     [ProductDTO::class, '__construct'],
-    [ProductRepository::class, 'findManyKeyedById'],
+    [ProductRepository::class, 'findMany'],
     [ProductRepository::class, 'syncCategories'],
     [OrderRepository::class, 'countPerCustomer'],
     [OrderRepository::class, 'createWithItems'],

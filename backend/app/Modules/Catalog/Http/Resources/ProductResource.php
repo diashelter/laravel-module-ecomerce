@@ -25,8 +25,8 @@ class ProductResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             // Availability is always decided by the backend (active AND stock > 0).
-            'is_available' => $this->whenLoaded('stock', fn () => $availability->isAvailable($this->resource, $this->stock)),
-            'available_quantity' => $this->whenLoaded('stock', fn () => $availability->availableQuantity($this->stock)),
+            'is_available' => $this->whenLoaded('stock', fn () => $availability->isAvailable($this->isActive(), $this->stock?->quantity)),
+            'available_quantity' => $this->whenLoaded('stock', fn () => $availability->availableQuantity($this->stock?->quantity)),
             'stock' => $this->whenLoaded('stock', fn () => $this->stock ? [
                 'id' => $this->stock->id,
                 'quantity' => $this->stock->quantity,

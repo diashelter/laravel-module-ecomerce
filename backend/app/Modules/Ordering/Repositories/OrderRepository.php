@@ -5,29 +5,34 @@ declare(strict_types=1);
 namespace App\Modules\Ordering\Repositories;
 
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
+use App\Modules\Ordering\Contracts\CustomerOrderHistory;
+use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Ordering\ValueObjects\CustomerIds;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\OrderCountsByCustomer;
+use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\OrderSummaries;
+use App\Modules\Ordering\ValueObjects\OrderSummary;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as BaseCollection;
 
 /**
- * Also answers the catalog's ProductOrderHistory contract (bound in OrderingServiceProvider).
+ * Also answers the catalog's ProductOrderHistory contract and the ordering contracts other modules
+ * use (bound in OrderingServiceProvider).
  *
  * @extends BaseRepository<Order>
  */
-class OrderRepository extends BaseRepository implements ProductOrderHistory
+class OrderRepository extends BaseRepository implements CustomerOrderHistory, PayableOrders, ProductOrderHistory
 {
     protected function model(): string
     {
@@ -51,13 +56,13 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
             ->paginate($perPage);
     }
 
-    /** @return Collection<int, Order> */
-    public function recentForCustomer(int $customerId, int $limit): Collection
+    public function recentForCustomer(int $customerId, int $limit): OrderSummaries
     {
-        return $this->newestFirst($this->forCustomer($customerId))
-            ->withCount('items')
+        return new OrderSummaries(...$this->newestFirst($this->forCustomer($customerId))
             ->limit($limit)
-            ->get();
+            ->get()
+            ->map(fn (Order $order) => new OrderSummary($order->id, $order->status, $order->total_cents, $order->created_at->toImmutable()))
+            ->all());
     }
 
     public function countForCustomer(int $customerId): int
@@ -123,6 +128,18 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
         ], iterator_to_array($lines)));
 
         return $order;
+    }
+
+    public function findForPayment(int $orderId): ?OrderForPayment
+    {
+        $order = $this->query()->find($orderId);
+
+        return $order === null ? null : new OrderForPayment($order->id, $order->customer_id, $order->total_cents, $order->status);
+    }
+
+    public function findOrFail(int $id): Order
+    {
+        return $this->query()->findOrFail($id);
     }
 
     /**

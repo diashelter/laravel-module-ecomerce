@@ -1,8 +1,11 @@
 <?php
 
+use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
+use App\Modules\Catalog\ValueObjects\CatalogProduct;
+use App\Modules\Catalog\ValueObjects\CatalogProducts;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Catalog\ValueObjects\ProductIds;
 
@@ -77,24 +80,17 @@ it('syncs the product categories', function () {
         ->toBe(collect([$kept->id, $new->id])->sort()->values()->all());
 });
 
-it('finds many products keyed by id', function () {
-    $first = productWithStock(4);
-    $second = productWithStock(2);
-    productWithStock(1);
+it('finds catalog products by id for other modules', function () {
+    $active = productWithStock(3, ['name' => 'Teclado', 'price_cents' => 15990, 'image_url' => 'https://example.com/teclado.png']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Mouse', 'price_cents' => 4990, 'image_url' => null]);
 
-    $products = $this->repository->findManyKeyedById(new ProductIds($second->id, $first->id, 999999));
+    $products = app(ProductCatalog::class)->findMany(new ProductIds($active->id, $inactive->id, 999999));
 
-    expect($products->keys()->sort()->values()->all())->toBe(collect([$first->id, $second->id])->sort()->values()->all())
-        ->and($products->get($first->id)->relationLoaded('stock'))->toBeFalse();
-});
-
-it('optionally eager loads the stock when finding many products', function () {
-    $product = productWithStock(4);
-
-    $products = $this->repository->findManyKeyedById(new ProductIds($product->id), withStock: true);
-
-    expect($products->get($product->id)->relationLoaded('stock'))->toBeTrue()
-        ->and($products->get($product->id)->stock->quantity)->toBe(4);
+    expect($products)->toBeInstanceOf(CatalogProducts::class)
+        ->and($products)->toHaveCount(2)
+        ->and($products->find($active->id))->toEqual(new CatalogProduct($active->id, 'Teclado', 'https://example.com/teclado.png', 15990, true))
+        ->and($products->find($inactive->id))->toEqual(new CatalogProduct($inactive->id, 'Mouse', null, 4990, false))
+        ->and($products->find(999999))->toBeNull();
 });
 
 it('counts products by status', function () {

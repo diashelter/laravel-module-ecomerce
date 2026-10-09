@@ -8,7 +8,6 @@ use App\Modules\Customers\DTOs\CustomerAddressDTO;
 use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Customers\Repositories\CustomerAddressRepository;
 use App\Modules\Customers\Services\CustomerAddressService;
-use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
 
 /**
@@ -24,10 +23,10 @@ final class CreateCustomerAddressUseCase
     /**
      * @throws BusinessRuleException
      */
-    public function execute(CustomerAccount $account, CustomerAddressDTO $data): CustomerAddress
+    public function execute(int $customerId, CustomerAddressDTO $data): CustomerAddress
     {
-        $this->rules->assertHasRoomForAnother($this->addresses->countForCustomer($account->id));
+        $this->rules->assertHasRoomForAnother($this->addresses->countForCustomer($customerId));
 
-        return $this->addresses->create(['customer_id' => $account->id, ...$data->toArray()]);
+        return $this->addresses->create(['customer_id' => $customerId, ...$data->toArray()]);
     }
 }

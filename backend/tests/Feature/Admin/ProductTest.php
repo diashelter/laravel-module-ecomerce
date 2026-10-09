@@ -2,6 +2,7 @@
 
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Inventory\Models\Stock;
 use App\Modules\Ordering\Models\OrderItem;
 
 beforeEach(fn () => $this->actingAs(admin()));
@@ -16,6 +17,12 @@ it('creates a product with its price in cents', function () {
 
     $product = Product::query()->findOrFail($response->json('data.id'));
     expect($product->image_url)->toBe("https://picsum.photos/seed/product-{$product->id}/600/600");
+});
+
+it('opens the stock of a new product with the given quantity', function () {
+    $response = $this->postJson('/api/admin/products', productPayload(['stock_quantity' => 7]))->assertCreated();
+
+    expect(Stock::query()->where('product_id', $response->json('data.id'))->pluck('quantity')->all())->toBe([7]);
 });
 
 it('creates a product in exactly the given categories', function () {

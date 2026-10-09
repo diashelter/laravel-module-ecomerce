@@ -57,15 +57,19 @@ Atualize a documentação sempre que a mudança:
 - **Documentação em português do Brasil:** `.md`, guias, decisões e planos.
 - **Textos de interface e mensagens de negócio da API** podem ser em português.
 - **Módulos do backend:** todo código de negócio fica em `backend/app/Modules/<Módulo>` (Catalog, Inventory, Ordering, Payment, Fulfillment, Identity, Customers, Backoffice, Shared). Antes de criar uma classe, decida a qual contexto ela pertence ([análise de domínio](docs/domain-analysis.md)). Não recrie pastas por camada na raiz de `app/`.
-- **Camadas dentro de cada módulo** (ver o README): controllers finos, casos de uso em `UseCases/`, regras puras em `Services/` (sem banco, transação ou eventos) e acesso a dados só em `Repositories/`.
+- **Camadas dentro de cada módulo** (ver o README): controllers finos, casos de uso em `UseCases/`, regras puras em `Services/` (sem banco, transação ou eventos) e acesso a dados só em `Repositories/`, que não usam os services do módulo (o `ModuleBoundariesTest` cobra).
 - **Ligações explícitas:** um model novo declara a sua factory com `#[UseFactory]` (e a factory declara `protected $model`), e a sua policy com `#[UsePolicy]`. As convenções de namespace do Laravel (`App\Models`) não valem para os módulos.
 - **Fronteiras entre contextos** (ver a [análise de domínio](docs/domain-analysis.md)):
-  - Fora do próprio estoque, use os contratos de `App\Modules\Inventory\Contracts` (`StockInitializer`, `StockReservation`), nunca o `StockRepository`.
+  - **A facade de um módulo é o seu `Contracts/` mais os seus `Events/`.** Um módulo só usa outro por eles; as demais pastas (`Models`, `Repositories`, `Services`, `UseCases`, `Policies`, `Jobs`, `Listeners`, uma pasta nova...) e o service provider são privados. Até a HEL-10, `DTOs`, `ValueObjects`, `Enums` e `Http` de outro módulo continuam permitidos.
+  - Contratos e eventos falam em **dados** (ids, value objects, enums), nunca em models ou coleções do Eloquent. Um contrato só existe para uma travessia real e leva o nome do papel de que o chamador precisa. É implementado por um repositório do módulo dono e ligado no service provider dele. Quando o fornecedor já depende do consumidor, o consumidor define o contrato.
+  - Fora do Identity, o cliente autenticado é um id: as policies recebem o `Authenticatable` do framework. Um parâmetro de rota que aponta para o registro de outro módulo é resolvido pelo contrato do dono (`Route::bind`), nunca por route model binding.
+  - As exceções que existem (o dashboard, a vitrine e a lista de estoque do admin, até a HEL-6) ficam declaradas no `ModuleBoundariesTest`. Não crie exceção nova para fazer o teste passar.
+  - Fora do próprio estoque, use os contratos de `App\Modules\Inventory\Contracts` (`StockInitializer`, `StockLevels`, `StockReservation`), nunca o `StockRepository`.
   - Só a parte de pedidos altera o status do pedido. Pagamento e entrega apenas publicam eventos (`PaymentApproved`, `OrderDelivered`).
   - O `User` é identidade e não conhece pedidos. O lado de pedidos usa o `Customer`, que é somente leitura.
   - O Catalog não usa models nem repositories do Ordering. Quando precisar de algo dos pedidos, use o contrato que ele mesmo define (`ProductOrderHistory`), implementado pelo Ordering.
   - O módulo `Shared` é só infraestrutura e não depende de nenhum módulo de negócio.
-  - O teste de arquitetura `ModuleBoundariesTest` cobra essas regras. Ao criar uma regra nova, use **um namespace por expectativa**: com uma lista de namespaces, o `not->toUse` do Pest nunca falha. Confirme também que a regra falha com uma violação de propósito.
+  - O teste de arquitetura `ModuleBoundariesTest` cobra essas regras: a privacidade das pastas é gerada a partir das pastas que existem, e as regras de direção são escritas uma a uma. Ao criar uma regra nova, use **um namespace por expectativa**: com uma lista de namespaces, o `not->toUse` do Pest nunca falha. Confirme também que a regra falha com uma violação de propósito.
 - **Commits** em inglês, no formato `feat:`, `fix:`, `refactor:`, `test:`, `docs:`.
 
 ---

@@ -48,7 +48,7 @@ Route::middleware('auth:customer')->group(function (): void {
     Route::get('orders', [OrderController::class, 'index']);
     Route::post('orders', [OrderController::class, 'store'])->middleware('throttle:20,1');
     Route::get('orders/{order}', [OrderController::class, 'show']);
-    Route::post('orders/{order}/payment', [PaymentController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('orders/{payableOrder}/payment', [PaymentController::class, 'store'])->middleware('throttle:20,1');
 
     Route::get('account', [AccountController::class, 'show']);
     Route::put('account/profile', [ProfileController::class, 'update']);

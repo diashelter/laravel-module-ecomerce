@@ -30,7 +30,7 @@ class CustomerAddressController extends Controller
 
     public function store(CustomerAddressRequest $request, CreateCustomerAddressUseCase $createAddress): JsonResponse
     {
-        $address = $createAddress->execute($request->user('customer'), $request->toDto());
+        $address = $createAddress->execute($request->user('customer')->getAuthIdentifier(), $request->toDto());
 
         return CustomerAddressResource::make($address)
             ->additional(['message' => 'Endereço cadastrado com sucesso.'])

@@ -23,7 +23,7 @@ class StockResource extends JsonResource
                 'image_url' => $this->product->image_url,
                 'status' => $this->product->status->value,
                 'status_label' => $this->product->status->label(),
-                'is_available' => app(PurchaseAvailabilityService::class)->isAvailable($this->product, $this->resource),
+                'is_available' => app(PurchaseAvailabilityService::class)->isAvailable($this->product->isActive(), $this->quantity),
             ]),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

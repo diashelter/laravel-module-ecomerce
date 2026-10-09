@@ -6,7 +6,6 @@ namespace App\Modules\Ordering\UseCases;
 
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Events\OrderPaid;
-use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use Illuminate\Support\Facades\Log;
 
@@ -18,8 +17,10 @@ final class MarkOrderAsPaidUseCase
 {
     public function __construct(private readonly OrderRepository $orders) {}
 
-    public function execute(Order $order): void
+    public function execute(int $orderId): void
     {
+        $order = $this->orders->findOrFail($orderId);
+
         // A duplicated or late PaymentApproved does nothing, so OrderPaid is fired only once.
         if (! $this->orders->transitionStatus($order, OrderStatus::AwaitingPayment, OrderStatus::PaymentApproved)) {
             return;
@@ -27,6 +28,6 @@ final class MarkOrderAsPaidUseCase
 
         Log::info('Order payment approved.', ['order_id' => $order->id]);
 
-        OrderPaid::dispatch($order);
+        OrderPaid::dispatch($order->id, $order->delivery_business_days);
     }
 }

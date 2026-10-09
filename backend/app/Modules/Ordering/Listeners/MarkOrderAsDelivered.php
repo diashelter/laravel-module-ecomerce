@@ -17,6 +17,6 @@ class MarkOrderAsDelivered implements ShouldQueue
 
     public function handle(OrderDelivered $event): void
     {
-        app(MarkOrderAsDeliveredUseCase::class)->execute($event->order);
+        app(MarkOrderAsDeliveredUseCase::class)->execute($event->orderId);
     }
 }

@@ -45,15 +45,21 @@ it('creates a customer from the admin', function (Closure $member) {
     $this->actingAs($member());
     $users = User::query()->count();
 
-    $this->postJson('/api/admin/customers', [
+    $response = $this->postJson('/api/admin/customers', [
         'name' => 'Novo Cliente',
-        'email' => 'novo@example.com',
+        'email' => 'NOVO.Cliente@Example.com',
         'password' => 'secret123',
         'password_confirmation' => 'secret123',
         'role' => 'admin',
-    ])->assertCreated()->assertJsonMissingPath('data.role');
+    ])->assertCreated()
+        ->assertJsonMissingPath('data.role')
+        ->assertJsonPath('data.name', 'Novo Cliente')
+        ->assertJsonPath('data.email', 'novo.cliente@example.com')
+        ->assertJsonPath('data.orders_count', 0);
 
-    expect(CustomerAccount::query()->where('email', 'novo@example.com')->count())->toBe(1)
+    $account = CustomerAccount::query()->where('email', 'novo.cliente@example.com')->sole();
+    expect($response->json('data.id'))->toBe($account->id)
+        ->and($response->json('data.created_at'))->toBe($account->created_at->toIso8601String())
         ->and(User::query()->count())->toBe($users);
 })->with('staff roles');
 
@@ -112,6 +118,24 @@ it('updates a customer from the admin', function (Closure $member) {
 
     expect($account->fresh()->name)->toBe('Novo Nome');
 })->with('staff roles');
+
+it('answers 404 to an unknown customer in the admin', function () {
+    $this->actingAs(admin());
+
+    $this->getJson('/api/admin/customers/999999')->assertNotFound();
+    $this->putJson('/api/admin/customers/999999', ['name' => 'Novo Nome', 'email' => 'novo@example.com'])->assertNotFound();
+});
+
+it('pages customers fifteen at a time, newest first', function () {
+    $this->actingAs(admin());
+    $accounts = collect(range(1, 16))->map(fn (int $minutes) => customer(['created_at' => now()->subMinutes($minutes)]));
+
+    $response = $this->getJson('/api/admin/customers')->assertOk();
+
+    expect($response->json('meta.total'))->toBe(16)
+        ->and(collect($response->json('data'))->pluck('id')->all())->toBe($accounts->take(15)->pluck('id')->all())
+        ->and(collect($response->json('data'))->pluck('orders_count')->unique()->all())->toBe([0]);
+});
 
 it('does not delete customers', function () {
     $this->actingAs(admin());

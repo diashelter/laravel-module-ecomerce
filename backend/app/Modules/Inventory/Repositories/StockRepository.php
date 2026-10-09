@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Repositories;
 
-use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Inventory\Contracts\StockInitializer;
+use App\Modules\Inventory\Contracts\StockLevels;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Models\Stock;
+use App\Modules\Inventory\ValueObjects\StockQuantities;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
 
 /**
  * The inventory's data access. Other parts of the system never use this class directly:
- * the catalog and the checkout depend on the StockInitializer and StockReservation contracts.
+ * the catalog, the cart and the checkout depend on the StockInitializer, StockLevels and
+ * StockReservation contracts.
  *
  * @extends BaseRepository<Stock>
  */
-class StockRepository extends BaseRepository implements StockInitializer, StockReservation
+class StockRepository extends BaseRepository implements StockInitializer, StockLevels, StockReservation
 {
     protected function model(): string
     {
@@ -29,9 +30,9 @@ class StockRepository extends BaseRepository implements StockInitializer, StockR
     /**
      * Product 1:1 Stock: the stock row is created together with the product.
      */
-    public function createForProduct(Product $product, int $quantity): Stock
+    public function createForProduct(int $productId, int $quantity): void
     {
-        return $product->stock()->create(['quantity' => $quantity]);
+        $this->create(['product_id' => $productId, 'quantity' => $quantity]);
     }
 
     /** @return LengthAwarePaginator<int, Stock> */
@@ -44,20 +45,25 @@ class StockRepository extends BaseRepository implements StockInitializer, StockR
             ->paginate($perPage);
     }
 
+    public function quantitiesFor(ProductIds $productIds): StockQuantities
+    {
+        return new StockQuantities($this->query()
+            ->whereIn('product_id', $productIds->all())
+            ->orderBy('product_id')
+            ->pluck('quantity', 'product_id'));
+    }
+
     /**
      * SELECT ... FOR UPDATE on the stock rows of the given products. Must run inside a
      * transaction. Rows are always locked in the same order (by product_id) to avoid deadlocks.
-     *
-     * @return Collection<int, Stock> keyed by product_id
      */
-    public function lockForProducts(ProductIds $productIds): Collection
+    public function lockForProducts(ProductIds $productIds): StockQuantities
     {
-        return $this->query()
+        return new StockQuantities($this->query()
             ->whereIn('product_id', $productIds->all())
             ->orderBy('product_id')
             ->lockForUpdate()
-            ->get()
-            ->keyBy('product_id');
+            ->pluck('quantity', 'product_id'));
     }
 
     /**
@@ -71,9 +77,9 @@ class StockRepository extends BaseRepository implements StockInitializer, StockR
     /**
      * UPDATE stocks SET quantity = quantity - ? (safe only while the row is locked).
      */
-    public function decrement(Stock $stock, int $quantity): void
+    public function decrement(int $productId, int $quantity): void
     {
-        $stock->decrement('quantity', $quantity);
+        $this->query()->where('product_id', $productId)->decrement('quantity', $quantity);
     }
 
     public function countInStock(): int

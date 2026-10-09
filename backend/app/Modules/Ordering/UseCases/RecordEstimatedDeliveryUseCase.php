@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\UseCases;
 
-use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
@@ -17,8 +16,10 @@ final class RecordEstimatedDeliveryUseCase
 {
     public function __construct(private readonly OrderRepository $orders) {}
 
-    public function execute(Order $order, CarbonImmutable $estimatedOn): void
+    public function execute(int $orderId, CarbonImmutable $estimatedOn): void
     {
+        $order = $this->orders->findOrFail($orderId);
+
         if ($this->orders->recordEstimatedDelivery($order, $estimatedOn)) {
             Log::info('Order estimated delivery recorded.', [
                 'order_id' => $order->id,

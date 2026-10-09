@@ -38,10 +38,34 @@ it('approves the payment of an order awaiting payment', function () {
     $order = orderAwaitingPayment($user);
 
     $this->actingAs($user);
-    payOrder($order, ['card_token' => 'fake_card_approved'])
+    $response = payOrder($order, ['card_token' => 'fake_card_approved'])
         ->assertAccepted()
-        ->assertJsonPath('data.id', $order->id)
+        ->assertJsonPath('data.order_id', $order->id)
+        ->assertJsonPath('data.status', 'approved')
+        ->assertJsonPath('data.amount_cents', 12345)
         ->assertJsonPath('message', 'Pagamento aprovado. O pedido será atualizado em instantes.');
+
+    expect($response->json('data.id'))->toBe(paymentRows($order)[0]->id);
+});
+
+it('answers the payment attempt without card data', function () {
+    $user = customer();
+    $order = orderAwaitingPayment($user);
+
+    $this->actingAs($user);
+    $data = payOrder($order, ['card_token' => 'fake_card_approved'])->assertAccepted()->json('data');
+
+    expect(array_keys($data))->toEqualCanonicalizing(['id', 'order_id', 'status', 'amount_cents']);
+});
+
+it('answers 404 to the payment of an unknown order', function () {
+    $gateway = spyPaymentGateway();
+
+    $this->actingAs(customer())->postJson('/api/orders/999999/payment', ['card_token' => 'fake_card_approved'])
+        ->assertNotFound();
+
+    expect(DB::table('payments')->count())->toBe(0)
+        ->and($gateway->charges)->toBeEmpty();
 });
 
 it('records the approved payment and announces it once', function () {
@@ -61,7 +85,7 @@ it('records the approved payment and announces it once', function () {
         ->and($rows[0]->gateway_transaction_id)->toStartWith('fake_');
 
     Event::assertDispatchedTimes(PaymentApproved::class, 1);
-    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->order->is($order));
+    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->orderId === $order->id);
 });
 
 it('declines the payment and keeps the order awaiting payment', function (string $cardToken, string $reason, string $message) {
@@ -146,7 +170,7 @@ it('rejects payment for orders that are not awaiting payment', function (OrderSt
 it('rejects a second payment while the queue has not moved the order', function () {
     $user = customer();
     $order = orderAwaitingPayment($user);
-    Payment::factory()->for($order)->approved()->create();
+    Payment::factory()->approved()->create(['order_id' => $order->id]);
     $gateway = spyPaymentGateway();
 
     $this->actingAs($user);
@@ -164,7 +188,7 @@ it('loses the race to a concurrent approval with 409', function () {
 
     // The concurrent request that won records its approval while this one is being charged.
     spyPaymentGateway(function (ChargeRequest $request) use ($order): ChargeResult {
-        Payment::factory()->for($order)->approved()->create();
+        Payment::factory()->approved()->create(['order_id' => $order->id]);
 
         return new ChargeResult(PaymentStatus::Approved, null, 'fake_loser', 'fake');
     });
@@ -194,24 +218,38 @@ it('charges the order total and ignores amounts in the request', function () {
 
 it('forbids paying an order of another customer', function () {
     $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
+    // Not payable either: the owner is checked before the status, so it is still 403, never 409.
+    $placed = Order::factory()->status(OrderStatus::Placed)->create();
     $gateway = spyPaymentGateway();
 
-    $this->actingAs(customer())->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])
-        ->assertForbidden();
+    $this->actingAs(customer());
+    $this->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])->assertForbidden();
+    $this->postJson("/api/orders/{$placed->id}/payment", ['card_token' => 'fake_card_approved'])->assertForbidden();
 
     expect(paymentRows($order))->toBeEmpty()
+        ->and(paymentRows($placed))->toBeEmpty()
         ->and($gateway->charges)->toBeEmpty();
     Event::assertNotDispatched(PaymentApproved::class);
 });
 
+it('validates the payment body before checking the order owner', function () {
+    $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
+
+    $this->actingAs(customer())->postJson("/api/orders/{$order->id}/payment", [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('card_token');
+
+    expect(paymentRows($order))->toBeEmpty();
+});
+
 it('allows only one approved payment per order in the database', function () {
     $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
-    Payment::factory()->for($order)->approved()->create();
+    Payment::factory()->approved()->create(['order_id' => $order->id]);
 
-    expect(fn () => DB::transaction(fn () => Payment::factory()->for($order)->approved()->create()))
+    expect(fn () => DB::transaction(fn () => Payment::factory()->approved()->create(['order_id' => $order->id])))
         ->toThrow(QueryException::class);
 
-    Payment::factory()->for($order)->declined()->create();
+    Payment::factory()->declined()->create(['order_id' => $order->id]);
 
     expect(paymentRows($order))->toHaveCount(2);
 });
@@ -235,7 +273,7 @@ it('rejects inconsistent payment rows in the database', function (array $attribu
 
 it('ties payments to existing orders and keeps orders that have payments', function () {
     $paid = Order::factory()->create();
-    Payment::factory()->for($paid)->declined()->create();
+    Payment::factory()->declined()->create(['order_id' => $paid->id]);
     $unpaid = Order::factory()->create();
 
     expect(fn () => DB::transaction(fn () => Payment::factory()->create(['order_id' => 999999])))

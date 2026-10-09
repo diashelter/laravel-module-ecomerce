@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Payment\Models;
 
-use App\Modules\Ordering\Models\Order;
 use App\Modules\Payment\Enums\DeclineReason;
 use App\Modules\Payment\Enums\PaymentStatus;
 use Database\Factories\PaymentFactory;
@@ -12,7 +11,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One attempt to charge an order. Approved and declined are final: the row is never updated.
@@ -31,11 +29,5 @@ class Payment extends Model
             'status' => PaymentStatus::class,
             'decline_reason' => DeclineReason::class,
         ];
-    }
-
-    /** @return BelongsTo<Order, $this> */
-    public function order(): BelongsTo
-    {
-        return $this->belongsTo(Order::class);
     }
 }

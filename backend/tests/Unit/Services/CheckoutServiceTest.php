@@ -1,42 +1,34 @@
 <?php
 
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Inventory\Models\Stock;
+use App\Modules\Catalog\ValueObjects\CatalogProduct;
+use App\Modules\Catalog\ValueObjects\CatalogProducts;
+use App\Modules\Inventory\ValueObjects\StockQuantities;
 use App\Modules\Ordering\DTOs\CartItemDTO;
 use App\Modules\Ordering\Exceptions\InsufficientStockException;
 use App\Modules\Ordering\Services\CheckoutService;
 use App\Modules\Ordering\Services\PurchaseAvailabilityService;
 use App\Modules\Ordering\ValueObjects\ProductQuantities;
-use Illuminate\Database\Eloquent\Collection;
 
 beforeEach(function () {
     $this->service = new CheckoutService(new PurchaseAvailabilityService);
     $this->quantities = fn (array $byProduct) => new ProductQuantities(
         ...array_map(fn (int $id) => new CartItemDTO($id, $byProduct[$id]), array_keys($byProduct)),
     );
-    $this->product = function (int $id, int $priceCents, int $stock, ProductStatus $status = ProductStatus::Active): Product {
-        $product = new Product(['name' => "Produto {$id}", 'price_cents' => $priceCents, 'status' => $status]);
-        $product->id = $id;
-
-        return $product->setRelation('stock', new Stock(['quantity' => $stock]));
-    };
+    $this->product = fn (int $id, int $priceCents, bool $isActive = true) => new CatalogProduct($id, "Produto {$id}", null, $priceCents, $isActive);
+    $this->stock = fn (array $byProduct) => new StockQuantities(collect($byProduct));
 });
 
 it('accepts quantities that the stock can fulfil', function () {
-    $products = new Collection([1 => ($this->product)(1, 1000, 3)]);
+    $products = new CatalogProducts(($this->product)(1, 1000));
 
-    $this->service->assertCanFulfil(($this->quantities)([1 => 3]), $products);
+    $this->service->assertCanFulfil(($this->quantities)([1 => 3]), $products, ($this->stock)([1 => 3]));
 })->throwsNoExceptions();
 
 it('reports every product that cannot be bought, keyed by item', function () {
-    $products = new Collection([
-        1 => ($this->product)(1, 1000, 2),
-        2 => ($this->product)(2, 1000, 5, ProductStatus::Inactive),
-    ]);
+    $products = new CatalogProducts(($this->product)(1, 1000), ($this->product)(2, 1000, isActive: false));
 
     try {
-        $this->service->assertCanFulfil(($this->quantities)([1 => 3, 2 => 1, 3 => 1]), $products);
+        $this->service->assertCanFulfil(($this->quantities)([1 => 3, 2 => 1, 3 => 1]), $products, ($this->stock)([1 => 2, 2 => 5]));
         $this->fail('InsufficientStockException was not thrown.');
     } catch (InsufficientStockException $e) {
         expect($e->errors())->toBe([
@@ -48,10 +40,7 @@ it('reports every product that cannot be bought, keyed by item', function () {
 });
 
 it('builds the order lines and total in cents', function () {
-    $products = new Collection([
-        1 => ($this->product)(1, 1990, 10),
-        2 => ($this->product)(2, 10, 10),
-    ]);
+    $products = new CatalogProducts(($this->product)(1, 1990), ($this->product)(2, 10));
 
     $lines = $this->service->buildOrderLines(($this->quantities)([1 => 3, 2 => 3]), $products);
 

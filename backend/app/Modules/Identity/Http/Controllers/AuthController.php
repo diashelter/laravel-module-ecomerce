@@ -7,7 +7,7 @@ namespace App\Modules\Identity\Http\Controllers;
 use App\Modules\Identity\Http\Controllers\Concerns\EndsBrowserSession;
 use App\Modules\Identity\Http\Requests\LoginRequest;
 use App\Modules\Identity\Http\Requests\RegisterRequest;
-use App\Modules\Identity\Http\Resources\CustomerAccountResource;
+use App\Modules\Identity\Http\Resources\CustomerProfileResource;
 use App\Modules\Identity\UseCases\RegisterCustomerUseCase;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -31,10 +31,10 @@ class AuthController extends Controller
         Auth::guard('customer')->login($account);
         $request->session()->regenerate();
 
-        return CustomerAccountResource::make($account)->response()->setStatusCode(Response::HTTP_CREATED);
+        return CustomerProfileResource::make($account->toProfile())->response()->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function login(LoginRequest $request): CustomerAccountResource
+    public function login(LoginRequest $request): CustomerProfileResource
     {
         if (! Auth::guard('customer')->attempt($request->toDto()->toArray())) {
             throw ValidationException::withMessages([
@@ -45,7 +45,7 @@ class AuthController extends Controller
         // Prevents session fixation.
         $request->session()->regenerate();
 
-        return CustomerAccountResource::make($request->user('customer'));
+        return CustomerProfileResource::make($request->user('customer')->toProfile());
     }
 
     /**
@@ -56,8 +56,8 @@ class AuthController extends Controller
         return $this->endBrowserSession($request);
     }
 
-    public function me(Request $request): CustomerAccountResource
+    public function me(Request $request): CustomerProfileResource
     {
-        return CustomerAccountResource::make($request->user('customer'));
+        return CustomerProfileResource::make($request->user('customer')->toProfile());
     }
 }

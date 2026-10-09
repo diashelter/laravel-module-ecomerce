@@ -34,7 +34,7 @@ class ProductController extends Controller
     {
         $product->load(['categories', 'stock']);
 
-        abort_unless($availability->isAvailable($product, $product->stock), 404, 'Produto indisponível.');
+        abort_unless($availability->isAvailable($product->isActive(), $product->stock?->quantity), 404, 'Produto indisponível.');
 
         return ProductResource::make($product);
     }

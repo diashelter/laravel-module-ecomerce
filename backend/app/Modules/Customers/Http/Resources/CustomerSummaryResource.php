@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Customers\Http\Resources;
 
 use App\Modules\Customers\DTOs\CustomerSummaryDTO;
-use App\Modules\Identity\Http\Resources\CustomerAccountResource;
-use App\Modules\Ordering\Http\Resources\OrderResource;
+use App\Modules\Identity\Http\Resources\CustomerProfileResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Account fields (same shape as CustomerAccountResource) plus the purchase history.
+ * Account fields (see CustomerProfileResource) plus the purchase history.
  *
  * @property CustomerSummaryDTO $resource
  */
@@ -22,11 +21,11 @@ class CustomerSummaryResource extends JsonResource
         $summary = $this->resource;
 
         return [
-            ...CustomerAccountResource::make($summary->account)->resolve($request),
+            ...CustomerProfileResource::make($summary->account)->resolve($request),
             'orders_count' => $summary->ordersCount,
             'orders' => $this->when(
                 $summary->recentOrders !== null,
-                fn () => OrderResource::collection($summary->recentOrders),
+                fn () => OrderSummaryResource::collection(iterator_to_array($summary->recentOrders)),
             ),
         ];
     }

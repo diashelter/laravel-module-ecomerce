@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Repositories;
 
+use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Catalog\ValueObjects\CatalogProduct;
+use App\Modules\Catalog\ValueObjects\CatalogProducts;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as BaseCollection;
 
 /**
  * @extends BaseRepository<Product>
  */
-class ProductRepository extends BaseRepository
+class ProductRepository extends BaseRepository implements ProductCatalog
 {
     protected function model(): string
     {
@@ -58,16 +60,15 @@ class ProductRepository extends BaseRepository
         $product->categories()->sync($categoryIds->all());
     }
 
-    /**
-     * @return Collection<int, Product>
-     */
-    public function findManyKeyedById(ProductIds $ids, bool $withStock = false): Collection
+    public function findMany(ProductIds $ids): CatalogProducts
     {
-        return $this->query()
-            ->when($withStock, fn (Builder $query) => $query->with('stock'))
-            ->whereIn('id', $ids->all())
-            ->get()
-            ->keyBy('id');
+        return new CatalogProducts(...$this->query()->whereIn('id', $ids->all())->get()->map(fn (Product $product) => new CatalogProduct(
+            $product->id,
+            $product->name,
+            $product->image_url,
+            $product->price_cents,
+            $product->isActive(),
+        ))->all());
     }
 
     /** @return BaseCollection<string, int> [status => total] */

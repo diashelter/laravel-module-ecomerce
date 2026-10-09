@@ -17,6 +17,6 @@ class ScheduleOrderDelivery implements ShouldQueue
 
     public function handle(OrderPaid $event): void
     {
-        app(ScheduleDeliveryUseCase::class)->execute($event->order);
+        app(ScheduleDeliveryUseCase::class)->execute($event->orderId, $event->deliveryBusinessDays);
     }
 }
