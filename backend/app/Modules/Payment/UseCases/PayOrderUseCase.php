@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Payment\UseCases;
 
-use App\Modules\Ordering\Models\Order;
+use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\DTOs\ChargeRequest;
 use App\Modules\Payment\DTOs\PayOrderDTO;
@@ -36,12 +36,12 @@ final class PayOrderUseCase
      * @throws BusinessRuleException when the order cannot be paid (409)
      * @throws PaymentDeclinedException when the gateway declines the charge (402)
      */
-    public function execute(Order $order, PayOrderDTO $data): Order
+    public function execute(OrderForPayment $order, PayOrderDTO $data): Payment
     {
         $this->rules->ensureCanBePaid($order, $this->payments->hasApprovedForOrder($order->id));
 
         // The amount always comes from the order, never from the request.
-        $request = new ChargeRequest($order->id, $order->total_cents, $data->cardToken);
+        $request = new ChargeRequest($order->id, $order->totalCents, $data->cardToken);
         $result = $this->gateway->charge($request);
 
         try {
@@ -67,6 +67,6 @@ final class PayOrderUseCase
 
         PaymentApproved::dispatch($order->id);
 
-        return $order->load('items');
+        return $payment;
     }
 }

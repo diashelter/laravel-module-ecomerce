@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Enums\BrazilianState;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
@@ -7,6 +8,7 @@ use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\ValueObjects\CustomerIds;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
+use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
@@ -46,6 +48,15 @@ it('returns the most recent orders of a customer, using the id as tie breaker', 
 
     expect($recent->pluck('id')->all())->toBe($orders->pluck('id')->reverse()->take(3)->values()->all())
         ->and($recent->first()->items_count)->toBe(0);
+});
+
+it('finds an order for payment by id', function () {
+    $user = customer();
+    $order = Order::factory()->for($user, 'customer')->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 15990]);
+
+    expect(app(PayableOrders::class)->findForPayment($order->id))
+        ->toEqual(new OrderForPayment($order->id, $user->id, 15990, OrderStatus::AwaitingPayment))
+        ->and(app(PayableOrders::class)->findForPayment(999999))->toBeNull();
 });
 
 it('counts the orders of a customer', function () {

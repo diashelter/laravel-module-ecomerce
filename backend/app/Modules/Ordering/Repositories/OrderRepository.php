@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Ordering\Repositories;
 
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
+use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Ordering\ValueObjects\CustomerIds;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\OrderCountsByCustomer;
+use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Ordering\ValueObjects\OrderLine;
 use App\Modules\Ordering\ValueObjects\OrderLines;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
@@ -23,11 +25,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as BaseCollection;
 
 /**
- * Also answers the catalog's ProductOrderHistory contract (bound in OrderingServiceProvider).
+ * Also answers the catalog's ProductOrderHistory contract and the ordering contracts other modules
+ * use (bound in OrderingServiceProvider).
  *
  * @extends BaseRepository<Order>
  */
-class OrderRepository extends BaseRepository implements ProductOrderHistory
+class OrderRepository extends BaseRepository implements PayableOrders, ProductOrderHistory
 {
     protected function model(): string
     {
@@ -131,6 +134,13 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
      * The conditional UPDATE makes queued listeners/jobs idempotent: if a job runs twice
      * (retry) or out of order, it simply does nothing.
      */
+    public function findForPayment(int $orderId): ?OrderForPayment
+    {
+        $order = $this->query()->find($orderId);
+
+        return $order === null ? null : new OrderForPayment($order->id, $order->customer_id, $order->total_cents, $order->status);
+    }
+
     public function findOrFail(int $id): Order
     {
         return $this->query()->findOrFail($id);

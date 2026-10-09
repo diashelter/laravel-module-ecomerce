@@ -4,7 +4,7 @@ import { ref } from 'vue'
 import { ApiError } from '@/services/api'
 import { orderService } from '@/services/orderService'
 import { useNotificationStore } from '@/stores/notifications'
-import type { Order, OrderStatus } from '@/types'
+import type { Order, OrderStatus, PaymentAttempt } from '@/types'
 import { usePayment } from './usePayment'
 
 const push = vi.fn()
@@ -14,6 +14,10 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }))
 vi.mock('@/services/orderService', () => ({
   orderService: { pay: vi.fn(), find: vi.fn() },
 }))
+
+function attempt(): PaymentAttempt {
+  return { id: 3, order_id: 7, status: 'approved', amount_cents: 12345 }
+}
 
 function order(status: OrderStatus): Order {
   return {
@@ -68,7 +72,7 @@ describe('usePayment', () => {
   })
 
   it('pays with the selected card and locks the button while paying', async () => {
-    let resolve!: (value: { order: Order; message: string }) => void
+    let resolve!: (value: { payment: PaymentAttempt; message: string }) => void
     vi.mocked(orderService.pay).mockReturnValue(new Promise((r) => (resolve = r)))
     const { payment } = setup()
 
@@ -81,13 +85,13 @@ describe('usePayment', () => {
     expect(payment.canSubmit.value).toBe(false)
     expect(payment.submitLabel.value).toBe('Pagando...')
 
-    resolve({ order: order('awaiting_payment'), message: 'ok' })
+    resolve({ payment: attempt(), message: 'ok' })
     await paying
   })
 
   it('navigates to the order after an approved payment', async () => {
     vi.mocked(orderService.pay).mockResolvedValue({
-      order: order('awaiting_payment'),
+      payment: attempt(),
       message: 'Pagamento aprovado. O pedido será atualizado em instantes.',
     })
     const notifications = useNotificationStore()

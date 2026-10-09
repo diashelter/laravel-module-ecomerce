@@ -42,7 +42,7 @@ flowchart LR
 Os dois caminhos que este trabalho reescreve:
 
 1. Checkout: `POST /api/orders` -> `Ordering` (exists) pega a cópia do endereço (`DeliveryAddressBook`, exists) e o frete (`ShippingQuoter`, exists). Abre a transação e bloqueia o estoque pelo `StockReservation` (door 3), que devolve as quantidades lidas sob o bloqueio. Lê os produtos pelo `ProductCatalog` (door 2), confere a disponibilidade pelo `PurchaseAvailabilityService` (exists), baixa por `product_id` (door 3) e grava `orders` e `order_items`. Depois do commit, publica `OrderPlaced(orderId)` (door 4).
-2. Pagamento: `POST /api/orders/{order}/payment` -> `Payment` (exists) busca o pedido pelo `PayableOrders` (door 2): `404` se não existe, `403` se é de outro cliente, `409` se não está aguardando pagamento. Depois cobra pelo `PaymentGateway` (exists), grava a tentativa, publica `PaymentApproved(orderId)` (door 4) e responde `202` com a tentativa (door 5).
+2. Pagamento: `POST /api/orders/{order}/payment` -> `Payment` (exists) resolve o pedido da rota pelo `PayableOrders` (door 2) num binding explícito, antes da validação do corpo, como fazia o route model binding: `404` se não existe. Depois vêm o `422` do corpo, o `403` se é de outro cliente e o `409` se não está aguardando pagamento. Então cobra pelo `PaymentGateway` (exists), grava a tentativa, publica `PaymentApproved(orderId)` (door 4) e responde `202` com a tentativa (door 5).
 
 ## Impact
 
@@ -228,7 +228,7 @@ A conta e o admin de clientes mostram a contagem e os pedidos recentes pelo cont
 | nomes dos métodos e dos value objects | os da Landing (doors 2 a 4) | evitam colisão com o `BaseRepository` (`create`, `update`, `delete`, `count`) e reaproveitam os nomes que o `OrderRepository` e o `CustomerAccountRepository` já usam | n |
 | mensagem do `404` no pagamento e no admin de clientes | a genérica do `ApiExceptionRenderer` | é a que o route model binding dá hoje | n |
 | mensagem do `403` no pagamento | a padrão do `ApiErrorResponse`, como a `OrderPolicy` dá hoje | o `PaymentTest` só confere o código | n |
-| ordem das recusas no pagamento | `404`, depois `403`, depois `409`, depois a validação do corpo como hoje | é a ordem do route model binding, da policy e da regra de hoje | n |
+| ordem das recusas no pagamento | `404`, depois a validação do corpo (`422`), depois `403`, depois `409`, como hoje. O pedido é resolvido pelo `PayableOrders` num binding explícito da rota (parâmetro `{payableOrder}`), que roda antes da validação | é a ordem do route model binding, do Form Request, da policy e da regra de hoje, e o `MoneyInCentsTest` exige o `404` para um id inexistente sem corpo | n |
 | o pedido do evento não existe mais | o listener falha o job, como acontecia quando o model sumia | pedidos nunca são apagados | n |
 | regras de direção que a regra nova já cobre | ficam no teste | o retrospecto do Packwerk: a direção das dependências é o que importa, e apagar uma regra é enfraquecer o teste | n |
 | assinatura do `PurchaseAvailabilityService` | passa a receber se o produto está ativo e a quantidade (e a quantidade pedida); continua o único lugar da regra, e as exceções da HEL-6 passam esses valores a partir dos models | a regra fica escrita uma vez (Key decision 7 da discovery) e o Ordering deixa de importar `Product` e `Stock` | n |

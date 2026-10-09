@@ -113,6 +113,14 @@ export interface OrderDelivery {
   address: AddressFields
 }
 
+/** One payment attempt, as returned by `POST /orders/{id}/payment`. */
+export interface PaymentAttempt {
+  id: number
+  order_id: number
+  status: 'approved' | 'declined'
+  amount_cents: number
+}
+
 export interface Order {
   id: number
   /** What is charged: the items plus the shipping. */

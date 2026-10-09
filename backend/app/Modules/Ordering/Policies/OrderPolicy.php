@@ -13,9 +13,4 @@ class OrderPolicy
     {
         return $order->customer_id === $account->id;
     }
-
-    public function pay(CustomerAccount $account, Order $order): bool
-    {
-        return $order->customer_id === $account->id;
-    }
 }
