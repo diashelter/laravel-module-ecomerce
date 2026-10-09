@@ -131,6 +131,11 @@ class OrderRepository extends BaseRepository implements ProductOrderHistory
      * The conditional UPDATE makes queued listeners/jobs idempotent: if a job runs twice
      * (retry) or out of order, it simply does nothing.
      */
+    public function findOrFail(int $id): Order
+    {
+        return $this->query()->findOrFail($id);
+    }
+
     public function transitionStatus(Order $order, OrderStatus $from, OrderStatus $to): bool
     {
         $updated = $this->query()

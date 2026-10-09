@@ -61,7 +61,7 @@ it('records the approved payment and announces it once', function () {
         ->and($rows[0]->gateway_transaction_id)->toStartWith('fake_');
 
     Event::assertDispatchedTimes(PaymentApproved::class, 1);
-    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->order->is($order));
+    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->orderId === $order->id);
 });
 
 it('declines the payment and keeps the order awaiting payment', function (string $cardToken, string $reason, string $message) {

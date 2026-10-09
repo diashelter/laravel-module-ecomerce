@@ -77,7 +77,7 @@ final class PlaceOrderUseCase
         });
 
         // 6. Only after COMMIT: the queued listener moves the order to "awaiting_payment".
-        OrderPlaced::dispatch($order);
+        OrderPlaced::dispatch($order->id);
 
         return $order->load('items');
     }

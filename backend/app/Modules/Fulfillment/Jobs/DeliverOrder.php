@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Fulfillment\Jobs;
 
 use App\Modules\Fulfillment\UseCases\DeliverOrderUseCase;
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -18,10 +17,10 @@ class DeliverOrder implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public Order $order) {}
+    public function __construct(public int $orderId) {}
 
     public function handle(): void
     {
-        app(DeliverOrderUseCase::class)->execute($this->order);
+        app(DeliverOrderUseCase::class)->execute($this->orderId);
     }
 }

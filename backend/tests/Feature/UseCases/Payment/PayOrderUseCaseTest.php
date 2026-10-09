@@ -22,7 +22,7 @@ it('dispatches PaymentApproved for an order awaiting payment', function () {
     $result = app(PayOrderUseCase::class)->execute($order, new PayOrderDTO('fake_card_approved'));
 
     expect($result->relationLoaded('items'))->toBeTrue();
-    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->order->is($order));
+    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->orderId === $order->id);
 });
 
 it('does not dispatch PaymentApproved for orders that are not awaiting payment', function (OrderStatus $status) {

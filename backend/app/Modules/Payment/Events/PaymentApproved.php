@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Payment\Events;
 
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
 
 /**
  * Payment: the (fake) payment of an order was approved. Ordering reacts by marking the order
@@ -15,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
  */
 class PaymentApproved implements ShouldDispatchAfterCommit
 {
-    use Dispatchable, SerializesModels;
+    use Dispatchable;
 
-    public function __construct(public Order $order) {}
+    public function __construct(public int $orderId) {}
 }

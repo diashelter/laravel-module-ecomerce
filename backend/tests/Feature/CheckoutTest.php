@@ -55,7 +55,18 @@ it('places an order with every value in cents, decrements stock and stores a sna
         ->unit_price_cents->toBe(25000)
         ->subtotal_cents->toBe(75000);
 
-    Event::assertDispatched(OrderPlaced::class, fn (OrderPlaced $event) => $event->order->is($order));
+    Event::assertDispatched(OrderPlaced::class, fn (OrderPlaced $event) => $event->orderId === $order->id);
+});
+
+it('announces the placed order by id', function () {
+    Event::fake([OrderPlaced::class]);
+    $product = productWithStock(5);
+    $this->actingAs(customer());
+
+    $orderId = checkout([['product_id' => $product->id, 'quantity' => 1]])->assertCreated()->json('data.id');
+
+    Event::assertDispatchedTimes(OrderPlaced::class, 1);
+    Event::assertDispatched(OrderPlaced::class, fn (OrderPlaced $event) => $event->orderId === $orderId);
 });
 
 it('keeps the historical snapshot when the product changes later', function () {

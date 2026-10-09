@@ -65,7 +65,7 @@ final class PayOrderUseCase
             throw new PaymentDeclinedException($result->declineReason);
         }
 
-        PaymentApproved::dispatch($order);
+        PaymentApproved::dispatch($order->id);
 
         return $order->load('items');
     }

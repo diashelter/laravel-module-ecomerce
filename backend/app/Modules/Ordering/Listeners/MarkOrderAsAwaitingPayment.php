@@ -17,6 +17,6 @@ class MarkOrderAsAwaitingPayment implements ShouldQueue
 
     public function handle(OrderPlaced $event): void
     {
-        app(MarkOrderAsAwaitingPaymentUseCase::class)->execute($event->order);
+        app(MarkOrderAsAwaitingPaymentUseCase::class)->execute($event->orderId);
     }
 }

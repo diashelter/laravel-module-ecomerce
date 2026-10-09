@@ -17,6 +17,6 @@ class MarkOrderAsPaid implements ShouldQueue
 
     public function handle(PaymentApproved $event): void
     {
-        app(MarkOrderAsPaidUseCase::class)->execute($event->order);
+        app(MarkOrderAsPaidUseCase::class)->execute($event->orderId);
     }
 }

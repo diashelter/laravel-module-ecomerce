@@ -17,6 +17,6 @@ class RecordEstimatedDelivery implements ShouldQueue
 
     public function handle(DeliveryScheduled $event): void
     {
-        app(RecordEstimatedDeliveryUseCase::class)->execute($event->order, $event->estimatedDeliveryOn);
+        app(RecordEstimatedDeliveryUseCase::class)->execute($event->orderId, $event->estimatedDeliveryOn);
     }
 }

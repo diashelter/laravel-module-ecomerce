@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Fulfillment\Events;
 
-use App\Modules\Ordering\Models\Order;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
 
 /**
  * Fulfillment: the delivery of a paid order was scheduled for an estimated day. Ordering reacts by
@@ -16,7 +14,7 @@ use Illuminate\Queue\SerializesModels;
  */
 class DeliveryScheduled implements ShouldDispatchAfterCommit
 {
-    use Dispatchable, SerializesModels;
+    use Dispatchable;
 
-    public function __construct(public Order $order, public CarbonImmutable $estimatedDeliveryOn) {}
+    public function __construct(public int $orderId, public CarbonImmutable $estimatedDeliveryOn) {}
 }
