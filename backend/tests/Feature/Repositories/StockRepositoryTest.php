@@ -12,10 +12,9 @@ beforeEach(fn () => $this->repository = app(StockRepository::class));
 it('creates the stock row of a product', function () {
     $product = Product::factory()->create();
 
-    $stock = $this->repository->createForProduct($product, 7);
+    $this->repository->createForProduct($product->id, 7);
 
-    expect($stock->product_id)->toBe($product->id)
-        ->and($stock->quantity)->toBe(7);
+    expect(Stock::query()->where('product_id', $product->id)->pluck('quantity')->all())->toBe([7]);
 });
 
 it('paginates stocks by quantity ascending', function () {

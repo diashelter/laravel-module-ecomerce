@@ -34,7 +34,7 @@ final class CreateProductUseCase
             }
 
             $this->products->syncCategories($product, $data->product->categoryIds);
-            $this->stockInitializer->createForProduct($product, $data->stockQuantity);
+            $this->stockInitializer->createForProduct($product->id, $data->stockQuantity);
 
             return $product;
         });

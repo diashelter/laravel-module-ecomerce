@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Repositories;
 
-use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockReservation;
@@ -29,9 +28,9 @@ class StockRepository extends BaseRepository implements StockInitializer, StockR
     /**
      * Product 1:1 Stock: the stock row is created together with the product.
      */
-    public function createForProduct(Product $product, int $quantity): Stock
+    public function createForProduct(int $productId, int $quantity): void
     {
-        return $product->stock()->create(['quantity' => $quantity]);
+        $this->create(['product_id' => $productId, 'quantity' => $quantity]);
     }
 
     /** @return LengthAwarePaginator<int, Stock> */
