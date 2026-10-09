@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Models;
 
+use App\Modules\Identity\ValueObjects\CustomerProfile;
 use Database\Factories\CustomerAccountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -29,5 +30,13 @@ class CustomerAccount extends Authenticatable
     protected function casts(): array
     {
         return ['password' => 'hashed'];
+    }
+
+    /**
+     * What identity hands to the HTTP layer and to other modules: the account without credentials.
+     */
+    public function toProfile(): CustomerProfile
+    {
+        return new CustomerProfile($this->id, $this->name, $this->email, $this->created_at->toImmutable());
     }
 }

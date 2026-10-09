@@ -8,7 +8,6 @@ use App\Modules\Identity\Contracts\CustomerAccounts;
 use App\Modules\Identity\DTOs\CreateUserDTO;
 use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
 use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Services\UserService;
 use App\Modules\Identity\ValueObjects\CustomerProfile;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -20,8 +19,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  */
 class CustomerAccountRepository extends BaseRepository implements CustomerAccounts
 {
-    public function __construct(private readonly UserService $userService) {}
-
     protected function model(): string
     {
         return CustomerAccount::class;
@@ -29,21 +26,19 @@ class CustomerAccountRepository extends BaseRepository implements CustomerAccoun
 
     public function register(CreateUserDTO $data): CustomerProfile
     {
-        return $this->profileOf($this->create($data->toArray()));
+        return $this->create($data->toArray())->toProfile();
     }
 
     public function updateProfile(int $customerId, UpdateUserProfileDTO $data): CustomerProfile
     {
         $account = $this->query()->findOrFail($customerId);
 
-        return $this->profileOf($this->update($account, $this->userService->profileChanges($data)));
+        return $this->update($account, $data->toArray())->toProfile();
     }
 
     public function findProfile(int $customerId): ?CustomerProfile
     {
-        $account = $this->query()->find($customerId);
-
-        return $account === null ? null : $this->profileOf($account);
+        return $this->query()->find($customerId)?->toProfile();
     }
 
     /** @return LengthAwarePaginator<int, CustomerProfile> */
@@ -53,11 +48,6 @@ class CustomerAccountRepository extends BaseRepository implements CustomerAccoun
             ->latest()
             ->latest('id')
             ->paginate($perPage)
-            ->through(fn (CustomerAccount $account) => $this->profileOf($account));
-    }
-
-    private function profileOf(CustomerAccount $account): CustomerProfile
-    {
-        return new CustomerProfile($account->id, $account->name, $account->email, $account->created_at->toImmutable());
+            ->through(fn (CustomerAccount $account) => $account->toProfile());
     }
 }

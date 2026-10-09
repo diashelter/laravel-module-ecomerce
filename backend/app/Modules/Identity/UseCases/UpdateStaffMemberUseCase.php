@@ -7,7 +7,6 @@ namespace App\Modules\Identity\UseCases;
 use App\Modules\Identity\DTOs\UpdateStaffMemberDTO;
 use App\Modules\Identity\Models\User;
 use App\Modules\Identity\Repositories\UserRepository;
-use App\Modules\Identity\Services\UserService;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
 
 /**
@@ -16,10 +15,7 @@ use App\Modules\Shared\Exceptions\BusinessRuleException;
  */
 final class UpdateStaffMemberUseCase
 {
-    public function __construct(
-        private readonly UserRepository $users,
-        private readonly UserService $userService,
-    ) {}
+    public function __construct(private readonly UserRepository $users) {}
 
     /**
      * @throws BusinessRuleException
@@ -30,6 +26,6 @@ final class UpdateStaffMemberUseCase
             throw new BusinessRuleException('Você não pode alterar o próprio papel.');
         }
 
-        return $this->users->updateWithRole($target, $this->userService->profileChanges($data->profile), $data->role);
+        return $this->users->updateWithRole($target, $data->profile->toArray(), $data->role);
     }
 }

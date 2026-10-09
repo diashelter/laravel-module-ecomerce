@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Customers\Http\Resources;
+namespace App\Modules\Identity\Http\Resources;
 
 use App\Modules\Identity\ValueObjects\CustomerProfile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The shopper's account fields, from the profile identity hands over (see CustomerAccounts).
+ * The shopper's account fields, the one shape of the account in the API: the store session
+ * (AuthController) and the customers module (account and admin screens) both render it.
  *
  * @property CustomerProfile $resource
  */
