@@ -23,7 +23,7 @@ onMounted(async () => {
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <RouterLink :to="{ name: 'admin.orders' }" class="text-sm text-indigo-600 hover:underline">← Pedidos</RouterLink>
-        <h1 class="page-title mt-1">Pedido #{{ order.id }}</h1>
+        <h1 class="page-title mt-1">Pedido #{{ order.code }}</h1>
         <p class="text-sm text-slate-500">{{ formatDateTime(order.created_at) }}</p>
       </div>
       <OrderStatusBadge :status="order.status" :label="order.status_label" />

@@ -150,7 +150,7 @@ export function useCheckout() {
     try {
       const order = await orderService.place(cart.payload, selectedAddressId.value)
       cart.clear()
-      notifications.success(`Pedido #${order.id} criado com sucesso!`)
+      notifications.success(`Pedido #${order.code} criado com sucesso!`)
       await router.push({ name: 'payment', params: { orderId: order.id } })
     } catch (error) {
       if (!(error instanceof ApiError)) throw error

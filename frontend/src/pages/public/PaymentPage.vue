@@ -50,7 +50,7 @@ onMounted(async () => {
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p class="text-sm text-slate-500">Pedido</p>
-            <p class="text-2xl font-bold">#{{ order.id }}</p>
+            <p class="text-2xl font-bold">#{{ order.code }}</p>
           </div>
           <div class="text-right">
             <p class="text-sm text-slate-500">Valor</p>

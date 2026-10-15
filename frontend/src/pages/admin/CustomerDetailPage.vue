@@ -42,7 +42,7 @@ onMounted(async () => {
           </thead>
           <tbody>
             <tr v-for="order in customer.orders" :key="order.id">
-              <td><RouterLink :to="{ name: 'admin.orders.show', params: { id: order.id } }" class="font-medium text-indigo-600 hover:underline">#{{ order.id }}</RouterLink></td>
+              <td><RouterLink :to="{ name: 'admin.orders.show', params: { id: order.id } }" class="font-medium text-indigo-600 hover:underline">#{{ order.code }}</RouterLink></td>
               <td>{{ formatDateTime(order.created_at) }}</td>
               <td class="text-right">{{ formatCents(order.total_cents) }}</td>
               <td><OrderStatusBadge :status="order.status" :label="order.status_label" /></td>

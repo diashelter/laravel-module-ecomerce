@@ -6,6 +6,7 @@ import { cartService } from '@/services/cartService'
 import { orderService } from '@/services/orderService'
 import { shippingService } from '@/services/shippingService'
 import { useCartStore } from '@/stores/cart'
+import { useNotificationStore } from '@/stores/notifications'
 import type { AddressPayload, BrazilianState, CustomerAddress, Order, Product, ShippingQuote } from '@/types'
 import { useCheckout } from './useCheckout'
 
@@ -166,6 +167,27 @@ describe('useCheckout', () => {
     await checkout.confirm()
 
     expect(orderService.place).toHaveBeenCalledWith(items, uid(2))
+    expect(push).toHaveBeenCalledWith({ name: 'payment', params: { orderId: uid(33) } })
+  })
+
+  it('announces the order by its code', async () => {
+    const { checkout } = setup([address(2, 'RJ')])
+    vi.mocked(orderService.place).mockResolvedValue({ id: uid(33), code: 'K7Q2M9XA' } as Order)
+    const success = vi.spyOn(useNotificationStore(), 'success')
+    await checkout.init()
+
+    await checkout.confirm()
+
+    expect(success).toHaveBeenCalledWith('Pedido #K7Q2M9XA criado com sucesso!')
+  })
+
+  it('goes to the payment of the order by its id', async () => {
+    const { checkout } = setup([address(2, 'RJ')])
+    vi.mocked(orderService.place).mockResolvedValue({ id: uid(33), code: 'K7Q2M9XA' } as Order)
+    await checkout.init()
+
+    await checkout.confirm()
+
     expect(push).toHaveBeenCalledWith({ name: 'payment', params: { orderId: uid(33) } })
   })
 

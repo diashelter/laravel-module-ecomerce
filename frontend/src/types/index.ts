@@ -116,6 +116,8 @@ export interface OrderDelivery {
 /** An order as the account screens list it (account summary and the admin customer page). */
 export interface OrderSummary {
   id: string
+  /** What the screens show (`#K7Q2M9XA`); the id stays in the URLs. */
+  code: string
   status: OrderStatus
   status_label: string
   total_cents: number
@@ -132,6 +134,8 @@ export interface PaymentAttempt {
 
 export interface Order {
   id: string
+  /** What the screens show (`#K7Q2M9XA`); the id stays in the URLs. */
+  code: string
   /** What is charged: the items plus the shipping. */
   total_cents: number
   items_total_cents: number

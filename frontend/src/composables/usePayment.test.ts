@@ -25,6 +25,7 @@ function attempt(): PaymentAttempt {
 function order(status: OrderStatus): Order {
   return {
     id: ORDER_ID,
+    code: 'K7Q2M9XA',
     total_cents: 12345,
     items_total_cents: 12345,
     shipping_cents: 0,
