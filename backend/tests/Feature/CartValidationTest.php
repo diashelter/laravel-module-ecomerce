@@ -132,3 +132,14 @@ it('keeps the exact cart validation response shape', function () {
             'subtotal_cents', 'available_quantity', 'is_available', 'problem',
         ]);
 });
+
+it('throttles the cart validation after 60 requests per minute', function () {
+    $product = productWithStock(10);
+    $body = ['items' => [['product_id' => $product->id, 'quantity' => 1]]];
+
+    for ($i = 0; $i < 60; $i++) {
+        $this->postJson('/api/cart/validate', $body)->assertOk();
+    }
+
+    assertApiError($this->postJson('/api/cart/validate', $body)->assertStatus(429), 'TOO_MANY_REQUESTS', 'Muitas tentativas. Aguarde um momento e tente novamente.');
+});

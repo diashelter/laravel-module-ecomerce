@@ -12,6 +12,7 @@ use App\Modules\Ordering\Contracts\DeliveryAddressBook;
 use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Events\OrderPaid;
 use App\Modules\Ordering\Events\OrderPlaced;
+use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Payment\Events\PaymentApproved;
 
 function isIdName(string $name): bool
@@ -44,6 +45,14 @@ it('types every id of the contracts as a string', function (string $contract, st
     [DeliveryAddressBook::class, 'find'],
     [PayableOrders::class, 'findForPayment'],
 ]);
+
+it('declares the owner in the payable orders contract', function () {
+    $method = new ReflectionMethod(PayableOrders::class, 'findForPayment');
+    $parameters = array_map(fn (ReflectionParameter $parameter) => [$parameter->getName(), (string) $parameter->getType()], $method->getParameters());
+
+    expect($parameters)->toBe([['customerId', 'string'], ['orderId', 'string']])
+        ->and((string) $method->getReturnType())->toBe('?'.OrderForPayment::class);
+});
 
 it('carries the order id as a string in the order events and the delivery job', function (string $class) {
     $type = (new ReflectionProperty($class, 'orderId'))->getType();
