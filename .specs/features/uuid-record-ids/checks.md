@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/uuid-record-ids/plan.md`
 
-65 checks em 4 slices, a documentação e o fechamento · 5 one-way doors · 0 open
+66 checks em 4 slices, a documentação e o fechamento · 5 one-way doors · 0 open
 
 Comandos: o backend roda via `docker compose exec -T api ./vendor/bin/pest --filter="<nome do teste>"`, no mesmo container do `make test` que o CI executa. O Pint roda via `docker compose exec -T api ./vendor/bin/pint --test`, como no CI. O frontend roda via `docker compose exec -T frontend npx vitest run <arquivo> -t "<nome do teste>"` e `docker compose exec -T frontend npm run type-check`; o CI não roda o frontend, então essas provas rodam só localmente. Os nomes de teste novos não usam parênteses, colchetes nem barras, porque o `--filter` do Pest é uma expressão regular.
 
@@ -120,12 +120,15 @@ Proof: `docker compose exec -T frontend npx vitest run src/stores/cart.test.ts -
 Proof: `! grep -nE -e '\b(id|[a-z_]+_id)\??: number' frontend/src/types/index.ts`
 Proof: `docker compose exec -T frontend npm run type-check`
 
+**C66** - Os três mapas por id usam o UUID canônico como chave de texto (plano, Impact, termo "id"). Com 2 UUIDs v7 distintos, `StockQuantities::of` e `OrderCountsByCustomer::countFor` devolvem a quantidade e o total de cada um, e `0` para um terceiro UUID ausente, e o iterador e o `count()` trazem só os 2 presentes. `ProductQuantities`, montado com os itens `(B, 1)`, `(A, 2)` e `(B, 5)` em que A < B, soma o `B` repetido numa só entrada (`A => 2`, `B => 6`), itera em ordem crescente do UUID e devolve `productIds()` na mesma ordem. O teste é table-driven sobre os 3 mapas
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="keys the id maps by canonical uuid"`
+
 ### S2 - orders.code · 22 arquivos · 79 KB · ~20k
 
 **C22** - `POST /api/orders` responde `201` com `data.code` casando `^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$`, igual a `orders.code` do pedido gravado (AC 22, door 3)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="returns the order code on checkout"`
 
-**C23** - Uma gravação direta em `orders` (com `orderRow()`) é recusada com `QueryException` quando o `code` é nulo, tem 7 ou 9 caracteres, ou contém `0`, `O`, `1`, `I`, `L` ou uma letra minúscula. Fora o nulo, a exceção cita `orders_code_format`. O código `K7Q2M9XA` é aceito. O teste é table-driven sobre os 9 casos recusados e o aceito (AC 23, door 3)
+**C23** - Uma gravação direta em `orders` (com `orderRow()`) é recusada com `QueryException` quando o `code` é nulo, tem 7 ou 9 caracteres, ou contém `0`, `O`, `1`, `I`, `L` ou uma letra minúscula. Nos 7 casos de formato (7 caracteres, `0`, `O`, `1`, `I`, `L` e minúscula) a exceção cita `orders_code_format`. O nulo e o código de 9 caracteres só são provados como recusados: o PostgreSQL recusa os 9 caracteres numa `char(8)` com `value too long for type character(8)` (SQLSTATE 22001) antes de conferir a constraint, e o nulo cai na `NOT NULL`. O código `K7Q2M9XA` é aceito. O teste é table-driven sobre os 9 casos recusados e o aceito (AC 23, door 3)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="guards the order code format in the orders table"`
 
 **C24** - Uma segunda gravação direta em `orders` com um `code` que já existe é recusada com `QueryException` citando `orders_code_unique` (AC 24, door 3)
@@ -304,12 +307,12 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="constrains every 
 
 **C63** - O README, a análise de domínio e o `AGENTS.md` descrevem o estado novo e não citam mais o antigo (plano, Impact, linha docs):
 - o README e o `AGENTS.md` não citam as três policies, `payableOrder` nem `Route::bind`;
-- a tabela da API no README não tem `403` em nenhuma linha de `/api/orders/{id}` nem de `/api/account/addresses/{id}`;
+- a tabela da API no README não tem `403` em nenhuma linha de `/api/orders/{order}` nem de `/api/account/addresses/{address}` (o padrão aceita também o `{id}` antigo, e uma linha com `403` plantada numa cópia do README o faz falhar);
 - a análise de domínio tem o problema `#### 13. ✅ Resolvido:` e a linha "Última atualização" cita a HEL-11;
 - a análise de domínio não diz mais que o pedido do pagamento é "resolvido por um binding explícito da rota".
 
 Proof: `! grep -nE -e 'OrderPolicy|CustomerAddressPolicy|OrderPaymentPolicy|payableOrder|Route::bind' README.md AGENTS.md`
-Proof: `! grep -nE -e '^\| [A-Z]+ \| ./api/(orders|account/addresses)/\{id\}.*.403.' README.md`
+Proof: `! grep -nE -e '^\| [A-Z]+ \| ./api/(orders|account/addresses)/\{(id|order|address)\}.*.403.' README.md`
 Proof: `grep -qE -e '^#### 13\. ✅ Resolvido:' docs/domain-analysis.md`
 Proof: `grep -m1 -e 'Última atualização' docs/domain-analysis.md | grep -q -e 'HEL-11'`
 Proof: `! grep -q -e 'resolvido por um binding explícito da rota' docs/domain-analysis.md`
@@ -363,6 +366,7 @@ Proof: `docker compose exec -T frontend npm test`
 | resources (13) | `CategoryResource` C5 · `ProductResource` C5 · `CustomerAddressResource` C5 · `CustomerProfileResource` do Customers C5 · `OrderSummaryResource` C5, C31 · `CustomerSummaryResource` C5, C31 · `CustomerProfileResource` do Identity C5 · `StaffMemberResource` C5 · `StockResource` C5 · `OrderResource` C5, C30 · `OrderItemResource` C5 · `ValidatedCartResource` C5 · `PaymentResource` C5 | - |
 | métodos de contrato com id (9) | `hasBeenOrdered` C6 · `updateProfile` C6 · `findProfile` C6 · `createForProduct` C6 · `decrement` C6 · `countForCustomer` C6 · `recentForCustomer` C6 · `DeliveryAddressBook::find` C6 · `findForPayment` C6, C56 | - |
 | eventos e job com `orderId` (6) | `OrderPlaced` C7 · `OrderPaid` C7 · `PaymentApproved` C7 · `DeliveryScheduled` C7 · `OrderDelivered` C7 · `DeliverOrder` C7 | - |
+| mapas por id (3) | `StockQuantities` C66 · `OrderCountsByCustomer` C66 · `ProductQuantities` C66 | - |
 | listas tipadas de ids (3) | `ProductIds` C9 · `CategoryIds` C9 · `CustomerIds` C9 | - |
 | linhas das listas tipadas (6) | canônico aceito C9 · `"1"` C9 · `""` C9 · `"abc"` C9 · maiúsculas C9 · repetido C9 | - |
 | ids no corpo (3) | `items.*.product_id` C10, C13, C14 · `address_id` C11, C15 · `category_ids.*` C12, C16 | - |
@@ -464,3 +468,4 @@ Cost: 10 provas na própria camada (C9, C27, C28, C47 com 3 testes, C57 com 3 te
     - o C64 ganhou um teste novo, "throttles the cart validation after 60 requests per minute" no `CartValidationTest`: o único `429` de validação do carrinho que existia estava dentro de um `describe` do `MoneyInCentsTest`, com outro nome
     - documentação inteira atualizada, inclusive o que o lote 1 deixou: README (ids UUID, `code`, `cart-v3`, rotas do frontend, tabela da API com nomes de parâmetro e sem os `403`, testes e decisões), análise de domínio (problema 13, entrada em "Depois do plano", "Última atualização" e o desvio do pagamento desfeito) e `AGENTS.md` (as Key decisions 4 e 5 do design)
   - Abandoned: nada
+- Round 1 do Verifier: FAIL por 3 lacunas dos próprios checks, corrigidas em 2026-10-15 com o aval de diashelter: o texto do C23 (nulo e 9 caracteres só como recusados), o grep do C63 (agora também `{order}` e `{address}`, e vê-se falhar com um `403` plantado) e o C66 novo, com a linha `mapas por id` no Coverage, para `StockQuantities`, `OrderCountsByCustomer` e `ProductQuantities`. Round 2 escopado a esse delta
