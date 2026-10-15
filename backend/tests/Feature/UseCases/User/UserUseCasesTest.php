@@ -36,7 +36,7 @@ it('registers a customer account', function () {
 it('finds no profile for an unknown customer', function () {
     $account = customer(['name' => 'Maria']);
 
-    expect(app(CustomerAccounts::class)->findProfile(999999))->toBeNull()
+    expect(app(CustomerAccounts::class)->findProfile(unknownId()))->toBeNull()
         ->and(app(CustomerAccounts::class)->findProfile($account->id))
         ->toEqual(new CustomerProfile($account->id, 'Maria', $account->email, $account->created_at->toImmutable()));
 });

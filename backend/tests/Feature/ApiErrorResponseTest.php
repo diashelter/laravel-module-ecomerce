@@ -58,7 +58,7 @@ it('maps http errors to stable codes', function () {
 });
 
 it('forbids caching of error responses', function () {
-    $this->getJson('/api/products/999999')
+    $this->getJson('/api/products/'.unknownId())
         ->assertNotFound()
         ->assertHeader('Cache-Control', 'no-store, private');
 });

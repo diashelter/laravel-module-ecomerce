@@ -61,7 +61,7 @@ it('answers the payment attempt without card data', function () {
 it('answers 404 to the payment of an unknown order', function () {
     $gateway = spyPaymentGateway();
 
-    $this->actingAs(customer())->postJson('/api/orders/999999/payment', ['card_token' => 'fake_card_approved'])
+    $this->actingAs(customer())->postJson('/api/orders/'.unknownId().'/payment', ['card_token' => 'fake_card_approved'])
         ->assertNotFound();
 
     expect(DB::table('payments')->count())->toBe(0)
@@ -276,7 +276,7 @@ it('ties payments to existing orders and keeps orders that have payments', funct
     Payment::factory()->declined()->create(['order_id' => $paid->id]);
     $unpaid = Order::factory()->create();
 
-    expect(fn () => DB::transaction(fn () => Payment::factory()->create(['order_id' => 999999])))
+    expect(fn () => DB::transaction(fn () => Payment::factory()->create(['order_id' => unknownId()])))
         ->toThrow(QueryException::class);
     expect(fn () => DB::transaction(fn () => DB::table('orders')->where('id', $paid->id)->delete()))
         ->toThrow(QueryException::class);

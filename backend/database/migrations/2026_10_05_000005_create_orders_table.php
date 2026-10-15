@@ -16,9 +16,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             // restrictOnDelete: a customer with orders cannot be removed (order history must be kept).
-            $table->foreignId('customer_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('customer_id')->constrained()->restrictOnDelete();
             // Money is stored as an integer amount of cents.
             // total_cents = the sum of the items + shipping_cents.
             $table->bigInteger('total_cents');

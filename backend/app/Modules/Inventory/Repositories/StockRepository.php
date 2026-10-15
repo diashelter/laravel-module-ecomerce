@@ -30,7 +30,7 @@ class StockRepository extends BaseRepository implements StockInitializer, StockL
     /**
      * Product 1:1 Stock: the stock row is created together with the product.
      */
-    public function createForProduct(int $productId, int $quantity): void
+    public function createForProduct(string $productId, int $quantity): void
     {
         $this->create(['product_id' => $productId, 'quantity' => $quantity]);
     }
@@ -69,7 +69,7 @@ class StockRepository extends BaseRepository implements StockInitializer, StockL
     /**
      * Re-reads a single stock row with a lock. Must run inside a transaction.
      */
-    public function lockById(int $id): Stock
+    public function lockById(string $id): Stock
     {
         return $this->query()->whereKey($id)->lockForUpdate()->firstOrFail();
     }
@@ -77,7 +77,7 @@ class StockRepository extends BaseRepository implements StockInitializer, StockL
     /**
      * UPDATE stocks SET quantity = quantity - ? (safe only while the row is locked).
      */
-    public function decrement(int $productId, int $quantity): void
+    public function decrement(string $productId, int $quantity): void
     {
         $this->query()->where('product_id', $productId)->decrement('quantity', $quantity);
     }

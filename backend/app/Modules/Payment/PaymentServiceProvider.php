@@ -29,7 +29,7 @@ class PaymentServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Route::bind('payableOrder', fn (string $id): OrderForPayment => $this->app->make(PayableOrders::class)
-            ->findForPayment((int) $id) ?? abort(404));
+            ->findForPayment($id) ?? abort(404));
 
         Gate::policy(OrderForPayment::class, OrderPaymentPolicy::class);
     }

@@ -17,7 +17,7 @@ class DeliverOrder implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public int $orderId) {}
+    public function __construct(public string $orderId) {}
 
     public function handle(): void
     {

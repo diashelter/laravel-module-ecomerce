@@ -21,6 +21,7 @@ it('recalculates the cart in cents from database prices', function () {
 });
 
 it('reports problems for each item', function () {
+    $unknown = unknownId();
     $lowStock = productWithStock(2);
     $inactive = Product::factory()->inactive()->withStock(10)->create();
 
@@ -28,7 +29,7 @@ it('reports problems for each item', function () {
         'items' => [
             ['product_id' => $lowStock->id, 'quantity' => 5],
             ['product_id' => $inactive->id, 'quantity' => 1],
-            ['product_id' => 999999, 'quantity' => 1],
+            ['product_id' => $unknown, 'quantity' => 1],
         ],
     ])->assertOk()->assertJsonPath('data.is_valid', false);
 
@@ -36,7 +37,7 @@ it('reports problems for each item', function () {
     expect(collect($response->json('data.items'))->pluck('available_quantity', 'product_id')[$lowStock->id])->toBe(2)
         ->and($problems[$lowStock->id])->toBe('Estoque insuficiente. Disponível: 2.')
         ->and($problems[$inactive->id])->toBe('Produto indisponível.')
-        ->and($problems[999999])->toBe('Produto não encontrado.');
+        ->and($problems[$unknown])->toBe('Produto não encontrado.');
 });
 
 it('treats a product without a stock row as unavailable in the cart', function () {
@@ -80,14 +81,16 @@ it('merges repeated lines and totals the cart in product order', function () {
 
 it('keeps a missing product line out of the cart total', function () {
     $product = productWithStock(10, ['price_cents' => 1000]);
+    // Drawn after the product: the cart lines are sorted by id, and the unknown one must come second.
+    $unknown = unknownId();
 
     $this->postJson('/api/cart/validate', ['items' => [
         ['product_id' => $product->id, 'quantity' => 1],
-        ['product_id' => 999999, 'quantity' => 2],
+        ['product_id' => $unknown, 'quantity' => 2],
     ]])
         ->assertOk()
         ->assertJsonPath('data.items.1', [
-            'product_id' => 999999,
+            'product_id' => $unknown,
             'name' => null,
             'image_url' => null,
             'unit_price_cents' => null,

@@ -12,15 +12,21 @@ use App\Modules\Ordering\ValueObjects\ProductQuantities;
 use App\Modules\Ordering\ValueObjects\ValidatedCart;
 use App\Modules\Ordering\ValueObjects\ValidatedCartLine;
 
-it('groups the cart into product quantities in ascending product order', function () {
-    $cart = new CartDTO(new CartItemDTO(7, 1), new CartItemDTO(3, 1), new CartItemDTO(7, 5));
+const FIRST_ID = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a';
 
-    expect(iterator_to_array($cart->quantities()))->toBe([3 => 1, 7 => 6])
-        ->and($cart->quantities()->productIds()->all())->toBe([3, 7]);
+const SECOND_ID = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0b';
+
+const UPPERCASE_UUID = '0199E3B0-4C2A-7D10-9A3B-5F6E7D8C9B0A';
+
+it('groups the cart into product quantities in ascending product order', function () {
+    $cart = new CartDTO(new CartItemDTO(SECOND_ID, 1), new CartItemDTO(FIRST_ID, 1), new CartItemDTO(SECOND_ID, 5));
+
+    expect(iterator_to_array($cart->quantities()))->toBe([FIRST_ID => 1, SECOND_ID => 6])
+        ->and($cart->quantities()->productIds()->all())->toBe([FIRST_ID, SECOND_ID]);
 });
 
 $line = fn (?string $problem, int $unitPrice, int $quantity = 1) => new ValidatedCartLine(
-    productId: 1, name: 'P', imageUrl: null, unitPriceCents: $unitPrice, quantity: $quantity,
+    productId: FIRST_ID, name: 'P', imageUrl: null, unitPriceCents: $unitPrice, quantity: $quantity,
     availableQuantity: 5, isAvailable: true, problem: $problem,
 );
 
@@ -37,10 +43,10 @@ it('treats an empty validated cart as invalid', function () {
 });
 
 it('derives the order line subtotal and the order total', function () {
-    $line = new OrderLine(1, 'Phone', 19990, 3);
+    $line = new OrderLine(FIRST_ID, 'Phone', 19990, 3);
 
     expect($line->subtotalCents())->toBe(59970)
-        ->and((new OrderLines($line, new OrderLine(2, 'Case', 1000, 2)))->totalCents())->toBe(61970);
+        ->and((new OrderLines($line, new OrderLine(SECOND_ID, 'Case', 1000, 2)))->totalCents())->toBe(61970);
 });
 
 it('refuses an element of another type in a typed list', function (string $class) {
@@ -50,13 +56,26 @@ it('refuses an element of another type in a typed list', function (string $class
 it('refuses an invalid id in a typed id list', function (string $class, array $ids) {
     new $class(...$ids);
 })->with([ProductIds::class, CategoryIds::class, CustomerIds::class])
-    ->with(['zero' => [[0]], 'negative' => [[-1]], 'repeated' => [[4, 4]]])
+    ->with([
+        'numeric string' => [['1']],
+        'empty string' => [['']],
+        'word' => [['abc']],
+        'uppercase uuid' => [[UPPERCASE_UUID]],
+        'repeated' => [[FIRST_ID, FIRST_ID]],
+    ])
     ->throws(InvalidArgumentException::class);
 
-it('answers zero orders for a customer without orders', function () {
-    $counts = new OrderCountsByCustomer(collect([5 => 3]));
+it('accepts canonical uuids in a typed id list', function (string $class) {
+    $list = new $class(SECOND_ID, FIRST_ID);
 
-    expect($counts->countFor(5))->toBe(3)->and($counts->countFor(6))->toBe(0);
+    expect($list->all())->toBe([SECOND_ID, FIRST_ID])
+        ->and($list->count())->toBe(2);
+})->with([ProductIds::class, CategoryIds::class, CustomerIds::class]);
+
+it('answers zero orders for a customer without orders', function () {
+    $counts = new OrderCountsByCustomer(collect([FIRST_ID => 3]));
+
+    expect($counts->countFor(FIRST_ID))->toBe(3)->and($counts->countFor(SECOND_ID))->toBe(0);
 });
 
 it('typed lists are final readonly iterable and countable', function (string $class, bool $isList) {

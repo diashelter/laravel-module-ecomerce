@@ -9,6 +9,7 @@ use App\Modules\Payment\Enums\PaymentStatus;
 use Database\Factories\PaymentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 class Payment extends Model
 {
     /** @use HasFactory<PaymentFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected function casts(): array
     {

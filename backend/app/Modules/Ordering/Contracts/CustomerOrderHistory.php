@@ -14,11 +14,11 @@ use App\Modules\Ordering\ValueObjects\OrderSummaries;
  */
 interface CustomerOrderHistory
 {
-    public function countForCustomer(int $customerId): int;
+    public function countForCustomer(string $customerId): int;
 
     /** One query for the whole list, whatever its size. */
     public function countPerCustomer(CustomerIds $customerIds): OrderCountsByCustomer;
 
     /** Newest first, with the id as tie breaker. */
-    public function recentForCustomer(int $customerId, int $limit): OrderSummaries;
+    public function recentForCustomer(string $customerId, int $limit): OrderSummaries;
 }

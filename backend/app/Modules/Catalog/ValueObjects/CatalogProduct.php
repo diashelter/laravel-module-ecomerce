@@ -10,7 +10,7 @@ namespace App\Modules\Catalog\ValueObjects;
 final readonly class CatalogProduct
 {
     public function __construct(
-        public int $id,
+        public string $id,
         public string $name,
         public ?string $imageUrl,
         public int $priceCents,

@@ -137,7 +137,7 @@ it('exposes price_cents as an integer on the public catalog', function () {
 
 describe('cart validation', function () {
     it('returns null cents for a product that does not exist', function () {
-        $this->postJson('/api/cart/validate', ['items' => [['product_id' => 999999, 'quantity' => 2]]])
+        $this->postJson('/api/cart/validate', ['items' => [['product_id' => unknownId(), 'quantity' => 2]]])
             ->assertOk()
             ->assertJsonPath('data.items.0.unit_price_cents', null)
             ->assertJsonPath('data.items.0.subtotal_cents', null)
@@ -175,11 +175,13 @@ describe('cart validation', function () {
     })->with(['price', 'unit_price', 'total', 'unit_price_cents', 'total_cents']);
 
     it('throttles cart validation at 60 requests per minute', function () {
+        $unknown = unknownId();
+
         for ($i = 0; $i < 60; $i++) {
-            $this->postJson('/api/cart/validate', ['items' => [['product_id' => 1, 'quantity' => 1]]])->assertOk();
+            $this->postJson('/api/cart/validate', ['items' => [['product_id' => $unknown, 'quantity' => 1]]])->assertOk();
         }
 
-        $this->postJson('/api/cart/validate', ['items' => [['product_id' => 1, 'quantity' => 1]]])
+        $this->postJson('/api/cart/validate', ['items' => [['product_id' => $unknown, 'quantity' => 1]]])
             ->assertStatus(429);
     });
 });
@@ -269,6 +271,9 @@ dataset('guarded money routes', function () {
 });
 
 it('keeps 401 for guests on the money routes', function (string $method, string $uri) {
+    // The route patterns only match a canonical id, so the `1` of the dataset stands for one.
+    $uri = str_replace('/1', '/'.unknownId(), $uri);
+
     $this->json($method, $uri)->assertUnauthorized();
 })->with('guarded money routes');
 
@@ -293,7 +298,7 @@ it('keeps 401 for customer sessions on the admin money routes', function (string
 it('keeps 404 for unknown ids on the money routes', function (string $method, string $uri) {
     // Both areas are signed in, because each route only answers to the session of its own area.
     $this->actingAs(admin())->actingAs(customer());
-    $uri = str_replace('/1', '/999999', $uri);
+    $uri = str_replace('/1', '/'.unknownId(), $uri);
 
     $this->json($method, $uri)->assertNotFound();
 })->with([

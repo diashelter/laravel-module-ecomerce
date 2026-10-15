@@ -13,7 +13,7 @@ use Carbon\CarbonImmutable;
 final readonly class OrderSummary
 {
     public function __construct(
-        public int $id,
+        public string $id,
         public OrderStatus $status,
         public int $totalCents,
         public CarbonImmutable $createdAt,

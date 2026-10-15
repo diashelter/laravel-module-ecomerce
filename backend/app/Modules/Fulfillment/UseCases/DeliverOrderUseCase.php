@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  */
 final class DeliverOrderUseCase
 {
-    public function execute(int $orderId): void
+    public function execute(string $orderId): void
     {
         Log::info('Carrier delivered the order.', ['order_id' => $orderId]);
 

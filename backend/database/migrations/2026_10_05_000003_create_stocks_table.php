@@ -10,9 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('stocks', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             // unique() enforces the 1:1 relationship between products and stocks.
-            $table->foreignId('product_id')->unique()->constrained()->cascadeOnDelete();
+            $table->foreignUuid('product_id')->unique()->constrained()->cascadeOnDelete();
             $table->unsignedInteger('quantity')->default(0);
             $table->timestamps();
         });

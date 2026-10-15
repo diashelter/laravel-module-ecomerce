@@ -7,7 +7,7 @@ namespace App\Modules\Ordering\DTOs;
 final readonly class CartItemDTO
 {
     public function __construct(
-        public int $productId,
+        public string $productId,
         public int $quantity,
     ) {}
 }

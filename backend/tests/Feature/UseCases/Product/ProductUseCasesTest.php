@@ -52,7 +52,7 @@ it('keeps the image url when one is given', function () {
 });
 
 it('rolls back the product when the categories cannot be synced', function () {
-    expect(fn () => app(CreateProductUseCase::class)->execute(new CreateProductDTO(($this->product)([999999]), 5)))
+    expect(fn () => app(CreateProductUseCase::class)->execute(new CreateProductDTO(($this->product)([unknownId()]), 5)))
         ->toThrow(QueryException::class);
 
     expect(Product::query()->count())->toBe(0)

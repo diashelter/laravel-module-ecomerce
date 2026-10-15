@@ -137,14 +137,15 @@ it('returns 409 and changes nothing when stock is insufficient', function () {
 it('rejects inactive and out of stock products', function () {
     $inactive = Product::factory()->inactive()->withStock(10)->create();
     $empty = productWithStock(0);
+    $unknown = unknownId();
     $this->actingAs(customer());
 
     expect(checkout([['product_id' => $inactive->id, 'quantity' => 1]])->assertConflict()->json('errors'))
         ->toBe(["items.{$inactive->id}" => ['Produto indisponível.']])
         ->and(checkout([['product_id' => $empty->id, 'quantity' => 1]])->assertConflict()->json('errors'))
         ->toBe(["items.{$empty->id}" => ['Produto indisponível.']])
-        ->and(checkout([['product_id' => 999999, 'quantity' => 1]])->assertConflict()->json('errors'))
-        ->toBe(['items.999999' => ['Produto não encontrado.']]);
+        ->and(checkout([['product_id' => $unknown, 'quantity' => 1]])->assertConflict()->json('errors'))
+        ->toBe(["items.{$unknown}" => ['Produto não encontrado.']]);
 
     expect(Order::query()->count())->toBe(0)
         ->and($inactive->stock->fresh()->quantity)->toBe(10)

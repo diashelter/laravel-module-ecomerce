@@ -99,7 +99,7 @@ it('requires a delivery address to place an order', function () {
 it('refuses a delivery address that is not in the customer address book', function (string $kind) {
     Event::fake([OrderPlaced::class]);
     $product = productWithStock(10);
-    $addressId = $kind === 'another customer' ? addressOf(customer())->id : 999999;
+    $addressId = $kind === 'another customer' ? addressOf(customer())->id : unknownId();
 
     $response = $this->actingAs(customer())
         ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]], 'address_id' => $addressId])
@@ -163,6 +163,6 @@ it('answers 404 to an unknown order', function (string $area, string $uri) {
 
     $this->getJson($uri)->assertNotFound();
 })->with([
-    'store' => ['customer', '/api/orders/999999'],
-    'admin' => ['staff', '/api/admin/orders/999999'],
+    'store' => ['customer', '/api/orders/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
+    'admin' => ['staff', '/api/admin/orders/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
 ]);

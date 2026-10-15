@@ -23,7 +23,7 @@ class CustomerAddressRepository extends BaseRepository implements DeliveryAddres
     }
 
     /** @return Collection<int, CustomerAddress> */
-    public function newestFirstForCustomer(int $customerId): Collection
+    public function newestFirstForCustomer(string $customerId): Collection
     {
         return $this->query()
             ->where('customer_id', $customerId)
@@ -32,7 +32,7 @@ class CustomerAddressRepository extends BaseRepository implements DeliveryAddres
             ->get();
     }
 
-    public function countForCustomer(int $customerId): int
+    public function countForCustomer(string $customerId): int
     {
         return $this->query()->where('customer_id', $customerId)->count();
     }
@@ -41,7 +41,7 @@ class CustomerAddressRepository extends BaseRepository implements DeliveryAddres
      * The copy of one address, only when it is in that customer's own book: the id of another
      * customer's address answers the same as one that does not exist.
      */
-    public function find(int $customerId, int $addressId): ?DeliveryAddress
+    public function find(string $customerId, string $addressId): ?DeliveryAddress
     {
         $address = $this->query()->where('customer_id', $customerId)->find($addressId);
 

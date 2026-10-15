@@ -16,7 +16,7 @@ final class RecordEstimatedDeliveryUseCase
 {
     public function __construct(private readonly OrderRepository $orders) {}
 
-    public function execute(int $orderId, CarbonImmutable $estimatedOn): void
+    public function execute(string $orderId, CarbonImmutable $estimatedOn): void
     {
         $order = $this->orders->findOrFail($orderId);
 

@@ -11,7 +11,7 @@ namespace App\Modules\Payment\DTOs;
 final readonly class ChargeRequest
 {
     public function __construct(
-        public int $orderId,
+        public string $orderId,
         public int $amountCents,
         public string $cardToken,
     ) {}

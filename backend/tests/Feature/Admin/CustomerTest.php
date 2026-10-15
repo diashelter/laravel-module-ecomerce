@@ -148,8 +148,8 @@ it('renders the account fields on every admin customer route', function () {
 it('answers 404 to an unknown customer in the admin', function () {
     $this->actingAs(admin());
 
-    $this->getJson('/api/admin/customers/999999')->assertNotFound();
-    $this->putJson('/api/admin/customers/999999', ['name' => 'Novo Nome', 'email' => 'novo@example.com'])->assertNotFound();
+    $this->getJson('/api/admin/customers/'.unknownId())->assertNotFound();
+    $this->putJson('/api/admin/customers/'.unknownId(), ['name' => 'Novo Nome', 'email' => 'novo@example.com'])->assertNotFound();
 });
 
 it('pages customers fifteen at a time, newest first', function () {

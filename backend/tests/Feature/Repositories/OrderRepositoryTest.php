@@ -62,7 +62,7 @@ it('finds an order for payment by id', function () {
 
     expect(app(PayableOrders::class)->findForPayment($order->id))
         ->toEqual(new OrderForPayment($order->id, $user->id, 15990, OrderStatus::AwaitingPayment))
-        ->and(app(PayableOrders::class)->findForPayment(999999))->toBeNull();
+        ->and(app(PayableOrders::class)->findForPayment(unknownId()))->toBeNull();
 });
 
 it('counts the orders of a customer', function () {

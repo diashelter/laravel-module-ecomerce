@@ -117,7 +117,7 @@ it('forbids a customer from seeing another customer order', function () {
 });
 
 it('returns 404 with the standard error shape for unknown resources', function () {
-    assertApiError($this->getJson('/api/products/999999')->assertNotFound(), 'NOT_FOUND', 'Recurso não encontrado.');
+    assertApiError($this->getJson('/api/products/'.unknownId())->assertNotFound(), 'NOT_FOUND', 'Recurso não encontrado.');
 
     $this->getJson('/api/products/abc')->assertNotFound();
 });

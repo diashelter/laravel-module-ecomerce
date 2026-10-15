@@ -29,15 +29,17 @@ function validatedRequest(string $class, array $data, ?Authenticatable $user = n
 }
 
 it('converts cart items into typed DTOs grouped by product', function () {
+    $first = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a';
+    $second = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0b';
     $cart = validatedRequest(ValidateCartRequest::class, ['items' => [
-        ['product_id' => '7', 'quantity' => '2'],
-        ['product_id' => 3, 'quantity' => 1],
-        ['product_id' => 7, 'quantity' => 4],
+        ['product_id' => $second, 'quantity' => '2'],
+        ['product_id' => $first, 'quantity' => 1],
+        ['product_id' => $second, 'quantity' => 4],
     ]])->toDto();
 
     expect($cart)->toHaveCount(3)
-        ->and(iterator_to_array($cart)[0])->toEqual(new CartItemDTO(7, 2))
-        ->and(iterator_to_array($cart->quantities()))->toBe([3 => 1, 7 => 6]);
+        ->and(iterator_to_array($cart)[0])->toEqual(new CartItemDTO($second, 2))
+        ->and(iterator_to_array($cart->quantities()))->toBe([$first => 1, $second => 6]);
 });
 
 it('converts the product payload into a CreateProductDTO', function () {
@@ -48,7 +50,7 @@ it('converts the product payload into a CreateProductDTO', function () {
         'price_cents' => '129990',
         'description' => 'Monitor IPS',
         'status' => 'active',
-        'category_ids' => $categories->pluck('id')->map(fn (int $id) => (string) $id)->all(),
+        'category_ids' => $categories->pluck('id')->all(),
         'stock_quantity' => '5',
     ])->toDto();
 

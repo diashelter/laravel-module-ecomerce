@@ -245,7 +245,7 @@ it('forbids changing an address of another customer', function (string $method) 
 })->with(['put', 'delete']);
 
 it('answers 404 to an unknown address', function (string $method) {
-    $this->actingAs(customer())->json($method, '/api/account/addresses/999999', addressPayload())->assertNotFound();
+    $this->actingAs(customer())->json($method, '/api/account/addresses/'.unknownId(), addressPayload())->assertNotFound();
 })->with(['put', 'delete']);
 
 it('answers 401 to a guest on every address route', function (string $method, string $uri) {

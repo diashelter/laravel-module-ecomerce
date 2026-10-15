@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('name')->index();
             // Money is stored as an integer amount of cents, never as float or decimal.
             $table->bigInteger('price_cents');

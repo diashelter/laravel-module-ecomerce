@@ -21,7 +21,7 @@ it('replaces request ids that are not safe to log', function (string $incoming) 
 })->with(['too short' => 'abc', 'invalid characters' => 'id with spaces <script>']);
 
 it('returns the request id in the error body', function () {
-    $response = $this->withHeader('X-Request-ID', 'trace-me-please')->getJson('/api/products/999999');
+    $response = $this->withHeader('X-Request-ID', 'trace-me-please')->getJson('/api/products/'.unknownId());
 
     expect($response->json('request_id'))->toBe('trace-me-please');
 });

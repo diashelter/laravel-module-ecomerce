@@ -16,5 +16,5 @@ class OrderPaid implements ShouldDispatchAfterCommit
 {
     use Dispatchable;
 
-    public function __construct(public int $orderId, public int $deliveryBusinessDays) {}
+    public function __construct(public string $orderId, public int $deliveryBusinessDays) {}
 }

@@ -11,9 +11,9 @@ class ProductService
     /**
      * Placeholder image used when a product is created without one.
      */
-    public function defaultImageUrl(int $productId): string
+    public function defaultImageUrl(string $productId): string
     {
-        return sprintf('https://picsum.photos/seed/product-%d/600/600', $productId);
+        return sprintf('https://picsum.photos/seed/product-%s/600/600', $productId);
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Modules\Shared\Support\RecordId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -20,14 +21,10 @@ class AppServiceProvider extends ServiceProvider
         // Fails fast in development when a relationship is lazy loaded (N+1 queries).
         Model::preventLazyLoading(! $this->app->isProduction());
 
-        // Route parameters are numeric ids: "/api/products/abc" returns 404 instead of a database error.
-        Route::pattern('product', '[0-9]+');
-        Route::pattern('category', '[0-9]+');
-        Route::pattern('stock', '[0-9]+');
-        Route::pattern('user', '[0-9]+');
-        Route::pattern('customer', '[0-9]+');
-        Route::pattern('order', '[0-9]+');
-        Route::pattern('payableOrder', '[0-9]+');
-        Route::pattern('address', '[0-9]+');
+        // Route parameters are canonical UUIDs: "/api/products/abc" returns 404 before any query,
+        // instead of a database error (PostgreSQL refuses a non-UUID compared with a `uuid` column).
+        foreach (['product', 'category', 'stock', 'user', 'customer', 'order', 'payableOrder', 'address'] as $parameter) {
+            Route::pattern($parameter, RecordId::PATTERN);
+        }
     }
 }

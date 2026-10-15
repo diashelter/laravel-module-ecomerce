@@ -15,20 +15,20 @@ use Traversable;
  * so this class answers zero for them instead of leaving every caller to remember `?? 0`.
  * Iterates only the customers that have orders: `customer_id => total`.
  *
- * @implements IteratorAggregate<int, int>
+ * @implements IteratorAggregate<string, int>
  */
 final readonly class OrderCountsByCustomer implements Countable, IteratorAggregate
 {
-    /** @var array<int, int> */
+    /** @var array<string, int> */
     private array $totals;
 
-    /** @param  Collection<int, int>  $totalsByCustomerId  `customer_id => total`, as plucked from the query */
+    /** @param  Collection<string, int>  $totalsByCustomerId  `customer_id => total`, as plucked from the query */
     public function __construct(Collection $totalsByCustomerId)
     {
         $this->totals = $totalsByCustomerId->map(fn ($total) => (int) $total)->all();
     }
 
-    public function countFor(int $customerId): int
+    public function countFor(string $customerId): int
     {
         return $this->totals[$customerId] ?? 0;
     }
@@ -38,7 +38,7 @@ final readonly class OrderCountsByCustomer implements Countable, IteratorAggrega
         return count($this->totals);
     }
 
-    /** @return Traversable<int, int> */
+    /** @return Traversable<string, int> */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->totals);

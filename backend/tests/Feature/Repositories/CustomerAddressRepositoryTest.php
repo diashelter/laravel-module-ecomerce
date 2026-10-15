@@ -21,7 +21,7 @@ it('finds a delivery address only in the customer own book', function (string $c
     $found = match ($case) {
         'own address' => $repository->find($owner->id, $address->id),
         'address of another customer' => $repository->find(customer()->id, $address->id),
-        'unknown id' => $repository->find($owner->id, 999999),
+        'unknown id' => $repository->find($owner->id, unknownId()),
     };
 
     if ($case !== 'own address') {

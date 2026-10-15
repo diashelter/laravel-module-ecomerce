@@ -15,5 +15,5 @@ interface PayableOrders
     /**
      * Null when there is no such order.
      */
-    public function findForPayment(int $orderId): ?OrderForPayment;
+    public function findForPayment(string $orderId): ?OrderForPayment;
 }

@@ -15,9 +15,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payments', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             // restrictOnDelete: the payment attempts of an order must be kept.
-            $table->foreignId('order_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('order_id')->constrained()->restrictOnDelete();
             // Copy of orders.total_cents at the moment of the attempt, in cents.
             $table->bigInteger('amount_cents');
             $table->string('status', 20);

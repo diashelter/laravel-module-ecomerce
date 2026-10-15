@@ -38,7 +38,7 @@ final class PlaceOrderUseCase
      * @throws InsufficientStockException
      * @throws ValidationException when the address is not in the customer's own address book
      */
-    public function execute(int $customerId, CartDTO $cart, int $addressId): Order
+    public function execute(string $customerId, CartDTO $cart, string $addressId): Order
     {
         // The address comes first: an unknown one must never lock or touch the stock.
         $address = $this->addressBook->find($customerId, $addressId)

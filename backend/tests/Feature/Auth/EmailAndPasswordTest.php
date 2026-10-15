@@ -84,7 +84,7 @@ it('keeps the email normalized constraint on both account tables', function (str
 it('rejects a non normalized email written directly', function () {
     // The nested transaction is a savepoint: Postgres aborts the test transaction after a failed statement.
     expect(fn () => DB::transaction(fn () => DB::table('customers')->insert([
-        'name' => 'Ana', 'email' => 'Ana@x.com', 'password' => 'x',
+        'id' => unknownId(), 'name' => 'Ana', 'email' => 'Ana@x.com', 'password' => 'x',
     ])))->toThrow(QueryException::class, 'customers_email_normalized');
 
     expect(DB::table('customers')->whereRaw('lower(email) = ?', ['ana@x.com'])->count())->toBe(0);

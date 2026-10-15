@@ -10,6 +10,7 @@ use App\Modules\Payment\DTOs\ChargeRequest;
 use App\Modules\Payment\DTOs\ChargeResult;
 use App\Modules\Payment\Gateways\FakePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -46,10 +47,17 @@ function addressPayload(array $overrides = []): array
     ], $overrides);
 }
 
+/** A canonical UUID v7 that is in no table: what the tests send as an unknown id. */
+function unknownId(): string
+{
+    return Str::uuid7()->toString();
+}
+
 /** A complete row for `orders`, written straight to the table with no model in between. */
-function orderRow(int $customerId, array $overrides = []): array
+function orderRow(string $customerId, array $overrides = []): array
 {
     return array_merge([
+        'id' => unknownId(),
         'customer_id' => $customerId,
         'total_cents' => 0,
         'shipping_cents' => 0,

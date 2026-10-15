@@ -23,7 +23,7 @@ function fixedAddressBook(?DeliveryAddress $address): DeliveryAddressBook
     {
         public function __construct(private readonly ?DeliveryAddress $address) {}
 
-        public function find(int $customerId, int $addressId): ?DeliveryAddress
+        public function find(string $customerId, string $addressId): ?DeliveryAddress
         {
             return $this->address;
         }
@@ -57,7 +57,7 @@ it('places the order with the quote of the delivery state', function () {
     $address = new DeliveryAddress('Beto', '30140071', 'Av. Afonso Pena', '5', null, 'Centro', 'Belo Horizonte', BrazilianState::MG);
 
     $order = placeOrderWith(fixedAddressBook($address), countingQuoter())
-        ->execute($user->id, new CartDTO(new CartItemDTO($product->id, 2)), 123);
+        ->execute($user->id, new CartDTO(new CartItemDTO($product->id, 2)), unknownId());
 
     expect($order->shipping_cents)->toBe(999)
         ->and($order->delivery_business_days)->toBe(3)
@@ -71,7 +71,7 @@ it('refuses an unknown delivery address before touching the stock', function () 
     DB::enableQueryLog();
 
     expect(fn () => placeOrderWith(fixedAddressBook(null), $quoter)
-        ->execute(customer()->id, new CartDTO(new CartItemDTO($product->id, 2)), 123))
+        ->execute(customer()->id, new CartDTO(new CartItemDTO($product->id, 2)), unknownId()))
         ->toThrow(function (ValidationException $e) {
             expect($e->errors())->toBe(['address_id' => ['Endereço de entrega não encontrado.']]);
         });

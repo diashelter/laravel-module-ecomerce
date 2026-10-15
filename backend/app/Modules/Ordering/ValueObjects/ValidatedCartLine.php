@@ -11,7 +11,7 @@ namespace App\Modules\Ordering\ValueObjects;
 final readonly class ValidatedCartLine
 {
     public function __construct(
-        public int $productId,
+        public string $productId,
         public ?string $name,
         public ?string $imageUrl,
         public ?int $unitPriceCents,

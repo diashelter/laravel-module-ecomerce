@@ -25,6 +25,6 @@ class CustomersServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Route::bind('customer', fn (string $id): CustomerProfile => $this->app->make(CustomerAccounts::class)
-            ->findProfile((int) $id) ?? abort(404));
+            ->findProfile($id) ?? abort(404));
     }
 }

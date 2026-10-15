@@ -18,6 +18,11 @@ class Customer extends Model
 {
     protected $table = 'customers';
 
+    // The primary key is a UUID in text form, assigned by the account side (CustomerAccount).
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     /** Only the data the ordering side needs, never credentials. */
     protected $visible = ['id', 'name', 'email'];
 

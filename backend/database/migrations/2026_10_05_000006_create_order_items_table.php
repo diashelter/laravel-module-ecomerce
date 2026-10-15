@@ -10,10 +10,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('order_items', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('order_id')->constrained()->cascadeOnDelete();
             // restrictOnDelete: products present in past orders cannot be deleted.
-            $table->foreignId('product_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('product_id')->constrained()->restrictOnDelete();
             // Historical snapshot: later product changes must not affect past orders.
             $table->string('product_name');
             $table->bigInteger('unit_price_cents');

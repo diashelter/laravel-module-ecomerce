@@ -49,14 +49,14 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
     }
 
     /** @return LengthAwarePaginator<int, Order> */
-    public function paginateForCustomer(int $customerId, int $perPage): LengthAwarePaginator
+    public function paginateForCustomer(string $customerId, int $perPage): LengthAwarePaginator
     {
         return $this->newestFirst($this->forCustomer($customerId))
             ->withCount('items')
             ->paginate($perPage);
     }
 
-    public function recentForCustomer(int $customerId, int $limit): OrderSummaries
+    public function recentForCustomer(string $customerId, int $limit): OrderSummaries
     {
         return new OrderSummaries(...$this->newestFirst($this->forCustomer($customerId))
             ->limit($limit)
@@ -65,7 +65,7 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
             ->all());
     }
 
-    public function countForCustomer(int $customerId): int
+    public function countForCustomer(string $customerId): int
     {
         return $this->forCustomer($customerId)->count();
     }
@@ -87,7 +87,7 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
      * Whether the product appears in any order. Items keep a snapshot of the product, but the
      * catalog must not delete a product that order history still points to.
      */
-    public function hasBeenOrdered(int $productId): bool
+    public function hasBeenOrdered(string $productId): bool
     {
         return OrderItem::query()->where('product_id', $productId)->exists();
     }
@@ -98,7 +98,7 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
      * the shipping calculate, so it cannot diverge from them.
      */
     public function createWithItems(
-        int $customerId,
+        string $customerId,
         OrderStatus $status,
         OrderLines $lines,
         DeliveryAddress $address,
@@ -130,14 +130,14 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
         return $order;
     }
 
-    public function findForPayment(int $orderId): ?OrderForPayment
+    public function findForPayment(string $orderId): ?OrderForPayment
     {
         $order = $this->query()->find($orderId);
 
         return $order === null ? null : new OrderForPayment($order->id, $order->customer_id, $order->total_cents, $order->status);
     }
 
-    public function findOrFail(int $id): Order
+    public function findOrFail(string $id): Order
     {
         return $this->query()->findOrFail($id);
     }
@@ -207,7 +207,7 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
     }
 
     /** @return Builder<Order> */
-    protected function forCustomer(int $customerId): Builder
+    protected function forCustomer(string $customerId): Builder
     {
         return $this->query()->where('customer_id', $customerId);
     }

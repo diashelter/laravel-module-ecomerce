@@ -23,7 +23,7 @@ final class CreateCustomerAddressUseCase
     /**
      * @throws BusinessRuleException
      */
-    public function execute(int $customerId, CustomerAddressDTO $data): CustomerAddress
+    public function execute(string $customerId, CustomerAddressDTO $data): CustomerAddress
     {
         $this->rules->assertHasRoomForAnother($this->addresses->countForCustomer($customerId));
 
