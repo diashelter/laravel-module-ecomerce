@@ -6,7 +6,6 @@ use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Shared\Support\RecordId;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 const CANONICAL_ID = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
@@ -40,16 +39,6 @@ function idPathsIn(mixed $json, string $path = ''): array
     }
 
     return $found;
-}
-
-/** @return list<string> the SQL of every query of the request */
-function queriesDuring(Closure $request): array
-{
-    DB::flushQueryLog();
-    DB::enableQueryLog();
-    $request();
-
-    return array_column(DB::getQueryLog(), 'query');
 }
 
 it('returns every id as a uuid string', function (Closure $scenario) {

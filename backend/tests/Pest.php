@@ -11,6 +11,7 @@ use App\Modules\Payment\DTOs\ChargeRequest;
 use App\Modules\Payment\DTOs\ChargeResult;
 use App\Modules\Payment\Gateways\FakePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -103,6 +104,21 @@ function forceOrderCodes(array $codes): OrderCodeGenerator
     app()->instance(OrderCodeGenerator::class, $generator);
 
     return $generator;
+}
+
+/**
+ * The SQL of every query the closure runs, in order. Sign in and create the data before calling it,
+ * so only the request itself is counted.
+ *
+ * @return list<string>
+ */
+function queriesDuring(Closure $request): array
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $request();
+
+    return array_column(DB::getQueryLog(), 'query');
 }
 
 function admin(array $attributes = []): User
