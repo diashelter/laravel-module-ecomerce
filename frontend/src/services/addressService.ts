@@ -14,12 +14,12 @@ export const addressService = {
   },
 
   /** Replaces the whole address: every required field is sent again. */
-  async update(id: number, payload: AddressPayload): Promise<CustomerAddress> {
+  async update(id: string, payload: AddressPayload): Promise<CustomerAddress> {
     const { data } = await api.put<{ data: CustomerAddress }>(`account/addresses/${id}`, payload)
     return data.data
   },
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await api.delete(`account/addresses/${id}`)
   },
 }

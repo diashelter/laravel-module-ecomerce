@@ -7,7 +7,7 @@ export interface ProductPayload {
   description: string
   image_url: string | null
   status: ProductStatus
-  category_ids: number[]
+  category_ids: string[]
 }
 
 export interface CreateProductPayload extends ProductPayload {
@@ -20,7 +20,7 @@ export const adminProductService = {
     return data
   },
 
-  async find(id: number): Promise<Product> {
+  async find(id: string): Promise<Product> {
     const { data } = await api.get<{ data: Product }>(`admin/products/${id}`)
     return data.data
   },
@@ -30,17 +30,17 @@ export const adminProductService = {
     return data.data
   },
 
-  async update(id: number, payload: ProductPayload): Promise<Product> {
+  async update(id: string, payload: ProductPayload): Promise<Product> {
     const { data } = await api.put<{ data: Product }>(`admin/products/${id}`, payload)
     return data.data
   },
 
-  async updateStatus(id: number, status: ProductStatus): Promise<Product> {
+  async updateStatus(id: string, status: ProductStatus): Promise<Product> {
     const { data } = await api.patch<{ data: Product }>(`admin/products/${id}/status`, { status })
     return data.data
   },
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await api.delete(`admin/products/${id}`)
   },
 }

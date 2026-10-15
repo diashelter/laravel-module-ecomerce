@@ -9,7 +9,7 @@ export const adminStockService = {
     return data
   },
 
-  async adjust(id: number, operation: StockOperation, quantity: number): Promise<Stock> {
+  async adjust(id: string, operation: StockOperation, quantity: number): Promise<Stock> {
     const { data } = await api.put<{ data: Stock }>(`admin/stocks/${id}`, { operation, quantity })
     return data.data
   },

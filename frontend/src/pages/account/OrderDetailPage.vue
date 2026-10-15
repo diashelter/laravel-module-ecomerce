@@ -12,7 +12,7 @@ import { orderService } from '@/services/orderService'
 import type { Order, OrderStatus } from '@/types'
 import { formatDateTime } from '@/utils/date'
 
-const props = defineProps<{ id: number }>()
+const props = defineProps<{ id: string }>()
 
 const route = useRoute()
 const order = ref<Order | null>(null)

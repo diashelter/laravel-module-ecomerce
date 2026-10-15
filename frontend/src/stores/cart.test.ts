@@ -4,7 +4,10 @@ import { nextTick } from 'vue'
 import type { Product } from '@/types'
 import { useCartStore } from './cart'
 
-function product(id: number, priceCents: number): Product {
+const FIRST_ID = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'
+const SECOND_ID = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0b'
+
+function product(id: string, priceCents: number): Product {
   return {
     id,
     name: `Product ${id}`,
@@ -48,19 +51,28 @@ describe('cart store', () => {
     expect(cart.isEmpty).toBe(true)
   })
 
-  it('persists the cart only under cart-v2', async () => {
+  it('drops the cart saved under cart-v2', () => {
+    storage.set('cart-v2', JSON.stringify([{ product_id: 1, name: 'Numeric id', price_cents: 1990, quantity: 2, max_quantity: 5 }]))
+
     const cart = freshStore()
-    cart.add(product(1, 1990), 2)
+
+    expect(storage.has('cart-v2')).toBe(false)
+    expect(cart.isEmpty).toBe(true)
+  })
+
+  it('persists the cart only under cart-v3', async () => {
+    const cart = freshStore()
+    cart.add(product(FIRST_ID, 1990), 2)
     await nextTick()
 
-    expect([...storage.keys()]).toEqual(['cart-v2'])
-    expect(JSON.parse(storage.get('cart-v2') ?? '[]')[0]).toMatchObject({ product_id: 1, price_cents: 1990, quantity: 2 })
+    expect([...storage.keys()]).toEqual(['cart-v3'])
+    expect(JSON.parse(storage.get('cart-v3') ?? '[]')[0]).toMatchObject({ product_id: FIRST_ID, price_cents: 1990, quantity: 2 })
   })
 
   it('totals price_cents times quantity', () => {
     const cart = freshStore()
-    cart.add(product(1, 1990), 3)
-    cart.add(product(2, 25000), 1)
+    cart.add(product(FIRST_ID, 1990), 3)
+    cart.add(product(SECOND_ID, 25000), 1)
 
     expect(cart.totalCents).toBe(30970)
   })

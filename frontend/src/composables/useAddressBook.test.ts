@@ -8,9 +8,12 @@ vi.mock('@/services/addressService', () => ({
   addressService: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
 }))
 
-function address(id: number, name = 'Ana Souza'): CustomerAddress {
+/** The tests label their addresses 1, 2, 3...; each label stands for one UUID. */
+const uid = (label: number): string => `0199e3b0-4c2a-7d10-9a3b-${String(label).padStart(12, '0')}`
+
+function address(label: number, name = 'Ana Souza'): CustomerAddress {
   return {
-    id,
+    id: uid(label),
     recipient_name: name,
     postal_code: '01310100',
     street: 'Avenida Paulista',
@@ -64,7 +67,7 @@ describe('useAddressBook', () => {
     vi.mocked(addressService.list).mockResolvedValue([address(5), address(2), address(9)])
     await book.load()
     expect(book.isEmpty.value).toBe(false)
-    expect(book.addresses.value.map((current) => current.id)).toEqual([5, 2, 9])
+    expect(book.addresses.value.map((current) => current.id)).toEqual([5, 2, 9].map(uid))
   })
 
   it('maps address form errors from the API', async () => {
@@ -92,11 +95,11 @@ describe('useAddressBook', () => {
 
     vi.mocked(addressService.create).mockResolvedValue(address(3))
     await book.save(payload)
-    expect(book.addresses.value.map((current) => current.id)).toEqual([3, 2, 1])
+    expect(book.addresses.value.map((current) => current.id)).toEqual([3, 2, 1].map(uid))
 
     vi.mocked(addressService.update).mockResolvedValue(address(2, 'Beto'))
-    await book.save(payload, 2)
-    expect(addressService.update).toHaveBeenCalledWith(2, payload)
+    await book.save(payload, uid(2))
+    expect(addressService.update).toHaveBeenCalledWith(uid(2), payload)
     expect(book.addresses.value.map((current) => current.recipient_name)).toEqual(['Ana Souza', 'Beto', 'Ana Souza'])
   })
 
@@ -116,8 +119,8 @@ describe('useAddressBook', () => {
 
     confirm.mockReturnValue(true)
     expect(await book.remove(address(1))).toBe(true)
-    expect(addressService.remove).toHaveBeenCalledWith(1)
-    expect(book.addresses.value.map((current) => current.id)).toEqual([2])
+    expect(addressService.remove).toHaveBeenCalledWith(uid(1))
+    expect(book.addresses.value.map((current) => current.id)).toEqual([2].map(uid))
 
     vi.unstubAllGlobals()
   })
@@ -131,7 +134,7 @@ describe('useAddressBook', () => {
 
     expect(await book.remove(address(1))).toBe(false)
     expect(book.formMessage.value).toBe('Registro não encontrado.')
-    expect(book.addresses.value.map((current) => current.id)).toEqual([1])
+    expect(book.addresses.value.map((current) => current.id)).toEqual([1].map(uid))
 
     vi.unstubAllGlobals()
   })
@@ -190,14 +193,14 @@ describe('useAddressBook', () => {
 
     await book.load()
     expect(book.loadError.value).toBeNull()
-    expect(book.addresses.value.map((current) => current.id)).toEqual([1])
+    expect(book.addresses.value.map((current) => current.id)).toEqual([1].map(uid))
   })
 
   it('shows the API message when saving an address that no longer exists', async () => {
     vi.mocked(addressService.update).mockRejectedValueOnce(new ApiError(404, 'Registro não encontrado.'))
     const book = useAddressBook()
 
-    expect(await book.save(payload, 3)).toBeNull()
+    expect(await book.save(payload, uid(3))).toBeNull()
     expect(book.formMessage.value).toBe('Registro não encontrado.')
   })
 

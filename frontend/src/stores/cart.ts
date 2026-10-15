@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { CartItemPayload, CartValidation, Product } from '@/types'
 
 export interface CartItem {
-  product_id: number
+  product_id: string
   name: string
   image_url: string | null
   price_cents: number
@@ -12,13 +12,13 @@ export interface CartItem {
   max_quantity: number
 }
 
-const STORAGE_KEY = 'cart-v2'
-const LEGACY_STORAGE_KEY = 'cart'
+const STORAGE_KEY = 'cart-v3'
+// Older carts cannot be read: `cart` stored decimal prices and `cart-v2` numeric product ids.
+const LEGACY_STORAGE_KEYS = ['cart', 'cart-v2']
 
 function loadItems(): CartItem[] {
   try {
-    // The old cart stored prices as decimal strings and cannot be read as cents: drop it.
-    localStorage.removeItem(LEGACY_STORAGE_KEY)
+    for (const key of LEGACY_STORAGE_KEYS) localStorage.removeItem(key)
     const raw = localStorage.getItem(STORAGE_KEY)
     const parsed: unknown = raw ? JSON.parse(raw) : []
     return Array.isArray(parsed) ? (parsed as CartItem[]) : []
@@ -57,7 +57,7 @@ export const useCartStore = defineStore('cart', () => {
     return item.price_cents * item.quantity
   }
 
-  function find(productId: number): CartItem | undefined {
+  function find(productId: string): CartItem | undefined {
     return items.value.find((item) => item.product_id === productId)
   }
 
@@ -83,19 +83,19 @@ export const useCartStore = defineStore('cart', () => {
     return true
   }
 
-  function increment(productId: number): void {
+  function increment(productId: string): void {
     const item = find(productId)
     if (item && item.quantity < item.max_quantity) item.quantity++
   }
 
-  function decrement(productId: number): void {
+  function decrement(productId: string): void {
     const item = find(productId)
     if (!item) return
     if (item.quantity > 1) item.quantity--
     else remove(productId)
   }
 
-  function remove(productId: number): void {
+  function remove(productId: string): void {
     items.value = items.value.filter((item) => item.product_id !== productId)
   }
 

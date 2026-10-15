@@ -7,7 +7,7 @@ export const adminOrderService = {
     return data
   },
 
-  async find(id: number): Promise<Order> {
+  async find(id: string): Promise<Order> {
     const { data } = await api.get<{ data: Order }>(`admin/orders/${id}`)
     return data.data
   },

@@ -9,7 +9,7 @@ import { adminStaffService } from '@/services/admin/staffService'
 import { useNotificationStore } from '@/stores/notifications'
 import type { StaffRole } from '@/types'
 
-const props = defineProps<{ id?: number }>()
+const props = defineProps<{ id?: string }>()
 
 const router = useRouter()
 const notifications = useNotificationStore()

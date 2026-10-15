@@ -15,7 +15,7 @@ export const adminStaffService = {
     return data
   },
 
-  async find(id: number): Promise<StaffMember> {
+  async find(id: string): Promise<StaffMember> {
     const { data } = await api.get<{ data: StaffMember }>(`admin/users/${id}`)
     return data.data
   },
@@ -25,12 +25,12 @@ export const adminStaffService = {
     return data.data
   },
 
-  async update(id: number, payload: StaffPayload): Promise<StaffMember> {
+  async update(id: string, payload: StaffPayload): Promise<StaffMember> {
     const { data } = await api.put<{ data: StaffMember }>(`admin/users/${id}`, payload)
     return data.data
   },
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await api.delete(`admin/users/${id}`)
   },
 }

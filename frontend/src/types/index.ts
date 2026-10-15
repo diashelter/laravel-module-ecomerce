@@ -7,7 +7,7 @@ export type BrazilianState =
 
 /** A shopper account (`customers`). It has no role. */
 export interface Customer {
-  id: number
+  id: string
   name: string
   email: string
   orders_count?: number
@@ -17,7 +17,7 @@ export interface Customer {
 
 /** A staff member (`users`) of the admin area. */
 export interface StaffMember {
-  id: number
+  id: string
   name: string
   email: string
   role: StaffRole
@@ -26,14 +26,14 @@ export interface StaffMember {
 }
 
 export interface Category {
-  id: number
+  id: string
   name: string
   slug: string
   products_count?: number
 }
 
 export interface Product {
-  id: number
+  id: string
   name: string
   price_cents: number
   description: string
@@ -42,17 +42,17 @@ export interface Product {
   status_label: string
   is_available: boolean
   available_quantity: number
-  stock: { id: number; quantity: number } | null
+  stock: { id: string; quantity: number } | null
   categories: Category[]
   created_at: string
   updated_at: string
 }
 
 export interface Stock {
-  id: number
+  id: string
   quantity: number
   product: {
-    id: number
+    id: string
     name: string
     image_url: string | null
     status: ProductStatus
@@ -63,8 +63,8 @@ export interface Stock {
 }
 
 export interface OrderItem {
-  id: number
-  product_id: number
+  id: string
+  product_id: string
   product_name: string
   unit_price_cents: number
   quantity: number
@@ -92,7 +92,7 @@ export interface AddressFields {
 
 /** An address of the customer's own book. */
 export interface CustomerAddress extends AddressFields {
-  id: number
+  id: string
   created_at: string
 }
 
@@ -115,7 +115,7 @@ export interface OrderDelivery {
 
 /** An order as the account screens list it (account summary and the admin customer page). */
 export interface OrderSummary {
-  id: number
+  id: string
   status: OrderStatus
   status_label: string
   total_cents: number
@@ -124,14 +124,14 @@ export interface OrderSummary {
 
 /** One payment attempt, as returned by `POST /orders/{id}/payment`. */
 export interface PaymentAttempt {
-  id: number
-  order_id: number
+  id: string
+  order_id: string
   status: 'approved' | 'declined'
   amount_cents: number
 }
 
 export interface Order {
-  id: number
+  id: string
   /** What is charged: the items plus the shipping. */
   total_cents: number
   items_total_cents: number
@@ -143,7 +143,7 @@ export interface Order {
   timeline: TimelineStep[]
   items_count?: number
   items?: OrderItem[]
-  customer?: { id: number; name: string; email: string }
+  customer?: { id: string; name: string; email: string }
   created_at: string
   updated_at: string
 }
@@ -163,12 +163,12 @@ export interface Paginated<T> {
 }
 
 export interface CartItemPayload {
-  product_id: number
+  product_id: string
   quantity: number
 }
 
 export interface CartValidationLine {
-  product_id: number
+  product_id: string
   name: string | null
   image_url: string | null
   unit_price_cents: number | null

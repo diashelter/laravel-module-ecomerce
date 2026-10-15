@@ -15,13 +15,16 @@ vi.mock('@/services/orderService', () => ({
   orderService: { pay: vi.fn(), find: vi.fn() },
 }))
 
+const ORDER_ID = '0199e3b0-4c2a-7d10-9a3b-000000000007'
+const PAYMENT_ID = '0199e3b0-4c2a-7d10-9a3b-000000000003'
+
 function attempt(): PaymentAttempt {
-  return { id: 3, order_id: 7, status: 'approved', amount_cents: 12345 }
+  return { id: PAYMENT_ID, order_id: ORDER_ID, status: 'approved', amount_cents: 12345 }
 }
 
 function order(status: OrderStatus): Order {
   return {
-    id: 7,
+    id: ORDER_ID,
     total_cents: 12345,
     items_total_cents: 12345,
     shipping_cents: 0,
@@ -50,7 +53,7 @@ function order(status: OrderStatus): Order {
 
 function setup(status: OrderStatus = 'awaiting_payment') {
   const current = ref<Order | null>(order(status))
-  return { current, payment: usePayment(7, current) }
+  return { current, payment: usePayment(ORDER_ID, current) }
 }
 
 describe('usePayment', () => {
@@ -81,7 +84,7 @@ describe('usePayment', () => {
 
     const paying = payment.pay()
 
-    expect(orderService.pay).toHaveBeenCalledWith(7, 'fake_card_declined')
+    expect(orderService.pay).toHaveBeenCalledWith(ORDER_ID, 'fake_card_declined')
     expect(payment.canSubmit.value).toBe(false)
     expect(payment.submitLabel.value).toBe('Pagando...')
 
@@ -102,7 +105,7 @@ describe('usePayment', () => {
     await payment.pay()
 
     expect(success).toHaveBeenCalledWith('Pagamento aprovado. O pedido será atualizado em instantes.')
-    expect(push).toHaveBeenCalledWith({ name: 'account.order', params: { id: 7 }, query: { paid: '1' } })
+    expect(push).toHaveBeenCalledWith({ name: 'account.order', params: { id: ORDER_ID }, query: { paid: '1' } })
   })
 
   it('keeps the page and shows the decline after a 402', async () => {
@@ -132,7 +135,7 @@ describe('usePayment', () => {
 
     expect(error).toHaveBeenCalledWith('Este pedido não está aguardando pagamento.')
     expect(orderService.find).toHaveBeenCalledTimes(1)
-    expect(orderService.find).toHaveBeenCalledWith(7)
+    expect(orderService.find).toHaveBeenCalledWith(ORDER_ID)
     expect(current.value?.status).toBe('payment_approved')
 
     const placed = setup('placed').payment

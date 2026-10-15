@@ -10,7 +10,7 @@ import { orderService } from '@/services/orderService'
 import type { Order } from '@/types'
 import { formatCents } from '@/utils/money'
 
-const props = defineProps<{ orderId: number }>()
+const props = defineProps<{ orderId: string }>()
 
 const order = ref<Order | null>(null)
 const error = ref<string | null>(null)

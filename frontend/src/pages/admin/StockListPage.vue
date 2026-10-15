@@ -9,7 +9,7 @@ import type { Paginated, Stock } from '@/types'
 
 const notifications = useNotificationStore()
 const result = ref<Paginated<Stock> | null>(null)
-const amounts = reactive<Record<number, number>>({})
+const amounts = reactive<Record<string, number>>({})
 const page = ref(1)
 
 async function load(newPage = page.value): Promise<void> {

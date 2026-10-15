@@ -15,7 +15,7 @@ export const productService = {
     return data
   },
 
-  async find(id: number): Promise<Product> {
+  async find(id: string): Promise<Product> {
     const { data } = await api.get<{ data: Product }>(`products/${id}`)
     return data.data
   },

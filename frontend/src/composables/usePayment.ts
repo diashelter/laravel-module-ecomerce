@@ -24,7 +24,7 @@ export const TEST_CARDS: readonly TestCard[] = [
  * Paying an order with a test card. A decline (402) keeps the customer on the page to try
  * another card; an order that can no longer be paid (409) is reloaded.
  */
-export function usePayment(orderId: number, order: Ref<Order | null>) {
+export function usePayment(orderId: string, order: Ref<Order | null>) {
   const router = useRouter()
   const notifications = useNotificationStore()
 

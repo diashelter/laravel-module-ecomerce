@@ -23,9 +23,12 @@ const QUOTES: Record<string, ShippingQuote> = {
   MG: { state: 'MG', price_cents: 2200, delivery_business_days: 4 },
 }
 
-function address(id: number, state: BrazilianState): CustomerAddress {
+/** The tests label their records 1, 2, 3...; each label stands for one UUID. */
+const uid = (label: number): string => `0199e3b0-4c2a-7d10-9a3b-${String(label).padStart(12, '0')}`
+
+function address(label: number, state: BrazilianState): CustomerAddress {
   return {
-    id,
+    id: uid(label),
     recipient_name: 'Ana Souza',
     postal_code: '01310100',
     street: 'Avenida Paulista',
@@ -40,10 +43,10 @@ function address(id: number, state: BrazilianState): CustomerAddress {
 
 const payload: AddressPayload = { ...address(0, 'MG'), complement: null }
 
-function product(id: number): Product {
+function product(label: number): Product {
   return {
-    id,
-    name: `Product ${id}`,
+    id: uid(label),
+    name: `Product ${label}`,
     price_cents: 10000,
     description: '',
     image_url: null,
@@ -93,7 +96,7 @@ describe('useCheckout', () => {
     await checkout.saveAddress(payload)
 
     expect(addressService.create).toHaveBeenCalledWith(payload)
-    expect(checkout.selectedAddressId.value).toBe(9)
+    expect(checkout.selectedAddressId.value).toBe(uid(9))
     expect(shippingService.quote).toHaveBeenCalledWith('MG')
     expect(checkout.formOpen.value).toBe(false)
   })
@@ -103,7 +106,7 @@ describe('useCheckout', () => {
 
     await checkout.init()
 
-    expect(checkout.selectedAddressId.value).toBe(2)
+    expect(checkout.selectedAddressId.value).toBe(uid(2))
     expect(shippingService.quote).toHaveBeenCalledWith('RJ')
     expect(checkout.formOpen.value).toBe(false)
 
@@ -127,7 +130,7 @@ describe('useCheckout', () => {
     const { checkout } = setup([address(2, 'RJ'), address(1, 'BA')])
     await checkout.init()
 
-    await checkout.selectAddress(1)
+    await checkout.selectAddress(uid(1))
 
     expect(shippingService.quote).toHaveBeenLastCalledWith('BA')
     expect(checkout.shippingCents.value).toBe(3800)
@@ -156,14 +159,14 @@ describe('useCheckout', () => {
 
   it('places the order with the selected address', async () => {
     const { cart, checkout } = setup([address(2, 'RJ'), address(1, 'BA')])
-    vi.mocked(orderService.place).mockResolvedValue({ id: 33 } as Order)
+    vi.mocked(orderService.place).mockResolvedValue({ id: uid(33) } as Order)
     await checkout.init()
     const items = [...cart.payload]
 
     await checkout.confirm()
 
-    expect(orderService.place).toHaveBeenCalledWith(items, 2)
-    expect(push).toHaveBeenCalledWith({ name: 'payment', params: { orderId: 33 } })
+    expect(orderService.place).toHaveBeenCalledWith(items, uid(2))
+    expect(push).toHaveBeenCalledWith({ name: 'payment', params: { orderId: uid(33) } })
   })
 
   it('reloads the addresses when the delivery address is refused', async () => {
@@ -179,7 +182,7 @@ describe('useCheckout', () => {
 
     expect(checkout.addressError.value).toBe('Endereço de entrega não encontrado.')
     expect(addressService.list).toHaveBeenCalledTimes(2)
-    expect(checkout.selectedAddressId.value).toBe(5)
+    expect(checkout.selectedAddressId.value).toBe(uid(5))
     expect(push).not.toHaveBeenCalled()
   })
 })

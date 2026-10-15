@@ -42,7 +42,7 @@ export function useAddressBook() {
   }
 
   /** Creates the address, or replaces the one with `id`. Returns the saved address, or null when it was refused. */
-  async function save(payload: AddressPayload, id?: number): Promise<CustomerAddress | null> {
+  async function save(payload: AddressPayload, id?: string): Promise<CustomerAddress | null> {
     saving.value = true
     clearFormErrors()
     try {

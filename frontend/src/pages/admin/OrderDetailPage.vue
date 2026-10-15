@@ -9,7 +9,7 @@ import { adminOrderService } from '@/services/admin/orderService'
 import type { Order } from '@/types'
 import { formatDateTime } from '@/utils/date'
 
-const props = defineProps<{ id: number }>()
+const props = defineProps<{ id: string }>()
 const order = ref<Order | null>(null)
 
 onMounted(async () => {

@@ -7,7 +7,7 @@ import type { Customer } from '@/types'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { formatCents } from '@/utils/money'
 
-const props = defineProps<{ id: number }>()
+const props = defineProps<{ id: string }>()
 const customer = ref<Customer | null>(null)
 
 onMounted(async () => {
