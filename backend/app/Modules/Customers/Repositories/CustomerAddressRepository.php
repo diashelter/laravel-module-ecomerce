@@ -9,6 +9,7 @@ use App\Modules\Ordering\Contracts\DeliveryAddressBook;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Also answers the ordering side's DeliveryAddressBook contract (bound in CustomersServiceProvider).
@@ -35,6 +36,30 @@ class CustomerAddressRepository extends BaseRepository implements DeliveryAddres
     public function countForCustomer(string $customerId): int
     {
         return $this->query()->where('customer_id', $customerId)->count();
+    }
+
+    /**
+     * Replaces the fields of an address of that customer's own book.
+     *
+     * @param  array<string, mixed>  $attributes
+     *
+     * @throws ModelNotFoundException when the address is another customer's or does not exist
+     */
+    public function updateForCustomer(string $customerId, string $addressId, array $attributes): CustomerAddress
+    {
+        return $this->update($this->query()->where('customer_id', $customerId)->findOrFail($addressId), $attributes);
+    }
+
+    /**
+     * Deletes an address of that customer's own book with a single DELETE, without reading it.
+     *
+     * @throws ModelNotFoundException when the address is another customer's or does not exist
+     */
+    public function deleteForCustomer(string $customerId, string $addressId): void
+    {
+        if ($this->query()->where('customer_id', $customerId)->whereKey($addressId)->delete() === 0) {
+            throw (new ModelNotFoundException)->setModel($this->model(), [$addressId]);
+        }
     }
 
     /**

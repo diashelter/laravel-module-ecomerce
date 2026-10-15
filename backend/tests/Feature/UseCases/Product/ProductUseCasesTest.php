@@ -14,6 +14,7 @@ use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 
 beforeEach(function () {
@@ -75,7 +76,7 @@ it('updates the product and its categories without touching the stock', function
     $product->categories()->attach(Category::factory()->create());
     $newCategory = Category::factory()->create();
 
-    $updated = app(UpdateProductUseCase::class)->execute($product, ($this->product)([$newCategory->id], ['name' => 'Monitor 32']));
+    $updated = app(UpdateProductUseCase::class)->execute($product->id, ($this->product)([$newCategory->id], ['name' => 'Monitor 32']));
 
     expect($updated->name)->toBe('Monitor 32')
         ->and($updated->categories->pluck('id')->all())->toBe([$newCategory->id])
@@ -85,7 +86,7 @@ it('updates the product and its categories without touching the stock', function
 it('changes the product status', function () {
     $product = productWithStock(4);
 
-    $updated = app(ChangeProductStatusUseCase::class)->execute($product, new UpdateProductStatusDTO(ProductStatus::Inactive));
+    $updated = app(ChangeProductStatusUseCase::class)->execute($product->id, new UpdateProductStatusDTO(ProductStatus::Inactive));
 
     expect($updated->status)->toBe(ProductStatus::Inactive)
         ->and($product->fresh()->status)->toBe(ProductStatus::Inactive)
@@ -96,7 +97,7 @@ it('does not delete a product that appears in orders', function () {
     $product = productWithStock(4);
     OrderItem::factory()->forProduct($product, 1)->create();
 
-    expect(fn () => app(DeleteProductUseCase::class)->execute($product))
+    expect(fn () => app(DeleteProductUseCase::class)->execute($product->id))
         ->toThrow(BusinessRuleException::class, 'Este produto possui pedidos e não pode ser excluído. Desative-o em vez disso.');
 
     expect(Product::query()->whereKey($product->id)->exists())->toBeTrue();
@@ -105,8 +106,28 @@ it('does not delete a product that appears in orders', function () {
 it('deletes a product without orders together with its stock', function () {
     $product = productWithStock(4);
 
-    app(DeleteProductUseCase::class)->execute($product);
+    app(DeleteProductUseCase::class)->execute($product->id);
 
     expect(Product::query()->whereKey($product->id)->exists())->toBeFalse()
         ->and(Stock::query()->where('product_id', $product->id)->exists())->toBeFalse();
+});
+
+it('deletes a product by id and refuses an unknown one', function () {
+    $product = productWithStock(4);
+    $other = productWithStock(2);
+
+    app(DeleteProductUseCase::class)->execute($product->id);
+
+    expect(Product::query()->whereKey($product->id)->exists())->toBeFalse();
+
+    expect(fn () => app(DeleteProductUseCase::class)->execute(unknownId()))->toThrow(ModelNotFoundException::class);
+
+    expect(Product::query()->whereKey($other->id)->exists())->toBeTrue();
+});
+
+it('refuses to update or change the status of an unknown product', function () {
+    expect(fn () => app(UpdateProductUseCase::class)->execute(unknownId(), ($this->product)([Category::factory()->create()->id])))
+        ->toThrow(ModelNotFoundException::class)
+        ->and(fn () => app(ChangeProductStatusUseCase::class)->execute(unknownId(), new UpdateProductStatusDTO(ProductStatus::Inactive)))
+        ->toThrow(ModelNotFoundException::class);
 });

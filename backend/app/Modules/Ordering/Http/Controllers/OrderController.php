@@ -6,7 +6,6 @@ namespace App\Modules\Ordering\Http\Controllers;
 
 use App\Modules\Ordering\Http\Requests\StoreOrderRequest;
 use App\Modules\Ordering\Http\Resources\OrderResource;
-use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\UseCases\PlaceOrderUseCase;
 use App\Modules\Shared\Http\Controllers\Controller;
@@ -14,7 +13,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Gate;
 
 class OrderController extends Controller
 {
@@ -23,11 +21,11 @@ class OrderController extends Controller
         return OrderResource::collection($orders->paginateForCustomer($request->user('customer')->id, 10));
     }
 
-    public function show(Order $order): OrderResource
+    public function show(Request $request, string $order, OrderRepository $orders): OrderResource
     {
-        Gate::authorize('view', $order);
+        $found = $orders->findForCustomer($request->user('customer')->id, $order) ?? abort(404);
 
-        return OrderResource::make($order->load('items'));
+        return OrderResource::make($found);
     }
 
     public function store(StoreOrderRequest $request, PlaceOrderUseCase $placeOrder): JsonResponse

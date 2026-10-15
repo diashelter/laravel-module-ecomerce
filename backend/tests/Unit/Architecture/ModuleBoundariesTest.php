@@ -229,7 +229,7 @@ it('generates the private directory rules from the folders that exist', function
     $httpExceptions = array_filter(BOUNDARY_EXCEPTIONS, fn (array $exception) => preg_match('/\\\\Http(\\\\|$)/', $exception[1]) === 1);
 
     expect(PUBLIC_DIRECTORIES)->toBe(['Contracts', 'Events'])
-        ->and($private)->toContain('Exceptions', 'Gateways', 'Http', 'Jobs', 'Listeners', 'Models', 'Policies', 'Repositories', 'Services', 'UseCases')
+        ->and($private)->toContain('Exceptions', 'Gateways', 'Http', 'Jobs', 'Listeners', 'Models', 'Repositories', 'Services', 'UseCases')
         ->and($private)->not->toContain('Contracts')
         ->and($private)->not->toContain('Events')
         ->and($private)->not->toContain('DTOs')

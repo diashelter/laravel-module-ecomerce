@@ -7,7 +7,7 @@ namespace App\Modules\Identity\Http\Controllers\Admin;
 use App\Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest;
 use App\Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest;
 use App\Modules\Identity\Http\Resources\StaffMemberResource;
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Repositories\UserRepository;
 use App\Modules\Identity\UseCases\CreateStaffMemberUseCase;
 use App\Modules\Identity\UseCases\DeleteStaffMemberUseCase;
 use App\Modules\Identity\UseCases\ListStaffMembersUseCase;
@@ -35,17 +35,17 @@ class StaffMemberController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(User $user): StaffMemberResource
+    public function show(string $user, UserRepository $users): StaffMemberResource
     {
-        return StaffMemberResource::make($user);
+        return StaffMemberResource::make($users->findOrFail($user));
     }
 
-    public function update(UpdateStaffMemberRequest $request, User $user, UpdateStaffMemberUseCase $updateStaffMember): StaffMemberResource
+    public function update(UpdateStaffMemberRequest $request, string $user, UpdateStaffMemberUseCase $updateStaffMember): StaffMemberResource
     {
         return StaffMemberResource::make($updateStaffMember->execute($request->user('staff'), $user, $request->toDto()));
     }
 
-    public function destroy(Request $request, User $user, DeleteStaffMemberUseCase $deleteStaffMember): Response
+    public function destroy(Request $request, string $user, DeleteStaffMemberUseCase $deleteStaffMember): Response
     {
         $deleteStaffMember->execute($request->user('staff'), $user);
 

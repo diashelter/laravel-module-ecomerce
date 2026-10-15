@@ -33,6 +33,6 @@ it('tells whether a category has products', function () {
     $empty = Category::factory()->create();
     productWithStock(1)->categories()->attach($used);
 
-    expect($this->repository->hasProducts($used))->toBeTrue()
-        ->and($this->repository->hasProducts($empty))->toBeFalse();
+    expect($this->repository->hasProducts($used->id))->toBeTrue()
+        ->and($this->repository->hasProducts($empty->id))->toBeFalse();
 });

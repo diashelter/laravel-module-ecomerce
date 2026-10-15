@@ -91,7 +91,8 @@ it('blocks deleting a product present in orders', function () {
     $product = productWithStock(4);
     OrderItem::factory()->forProduct($product, 1)->create();
 
-    $this->deleteJson("/api/admin/products/{$product->id}")->assertConflict();
+    $response = $this->deleteJson("/api/admin/products/{$product->id}")->assertConflict();
 
+    assertApiError($response, 'BUSINESS_RULE_VIOLATION', 'Este produto possui pedidos e não pode ser excluído. Desative-o em vez disso.');
     $this->assertModelExists($product);
 });

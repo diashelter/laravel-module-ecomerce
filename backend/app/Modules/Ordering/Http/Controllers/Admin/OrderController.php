@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Ordering\Http\Controllers\Admin;
 
 use App\Modules\Ordering\Http\Resources\OrderResource;
-use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,8 +19,8 @@ class OrderController extends Controller
         return OrderResource::collection($orders->paginateForAdmin(15));
     }
 
-    public function show(Order $order): OrderResource
+    public function show(string $order, OrderRepository $orders): OrderResource
     {
-        return OrderResource::make($order->load(['customer', 'items']));
+        return OrderResource::make($orders->findWithCustomerAndItems($order));
     }
 }

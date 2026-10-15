@@ -11,7 +11,6 @@ use App\Modules\Customers\UseCases\CreateCustomerUseCase;
 use App\Modules\Customers\UseCases\ListCustomersUseCase;
 use App\Modules\Customers\UseCases\ShowCustomerUseCase;
 use App\Modules\Customers\UseCases\UpdateCustomerUseCase;
-use App\Modules\Identity\ValueObjects\CustomerProfile;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -36,13 +35,13 @@ class CustomerController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(CustomerProfile $customer, ShowCustomerUseCase $showCustomer): CustomerSummaryResource
+    public function show(string $customer, ShowCustomerUseCase $showCustomer): CustomerSummaryResource
     {
         return CustomerSummaryResource::make($showCustomer->execute($customer, 10));
     }
 
-    public function update(UpdateCustomerRequest $request, CustomerProfile $customer, UpdateCustomerUseCase $updateCustomer): CustomerSummaryResource
+    public function update(UpdateCustomerRequest $request, string $customer, UpdateCustomerUseCase $updateCustomer): CustomerSummaryResource
     {
-        return CustomerSummaryResource::make($updateCustomer->execute($customer->id, $request->toDto()));
+        return CustomerSummaryResource::make($updateCustomer->execute($customer, $request->toDto()));
     }
 }

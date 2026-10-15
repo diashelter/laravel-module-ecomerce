@@ -13,6 +13,7 @@ use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection as BaseCollection;
 
 /**
@@ -53,6 +54,16 @@ class ProductRepository extends BaseRepository implements ProductCatalog
             ->with(['categories', 'stock'])
             ->latest('id')
             ->paginate($perPage);
+    }
+
+    /**
+     * The product with its categories and stock, for the pages that show it.
+     *
+     * @throws ModelNotFoundException
+     */
+    public function findWithCategoriesAndStock(string $id): Product
+    {
+        return $this->query()->with(['categories', 'stock'])->findOrFail($id);
     }
 
     public function syncCategories(Product $product, CategoryIds $categoryIds): void

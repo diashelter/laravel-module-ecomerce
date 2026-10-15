@@ -88,7 +88,7 @@ it('shows an account with its order count and only the most recent orders', func
     $user = customer();
     $orders = Order::factory()->count(12)->for($user, 'customer')->create(['created_at' => now()]);
 
-    $summary = app(ShowCustomerUseCase::class)->execute(app(CustomerAccounts::class)->findProfile($user->id), 10);
+    $summary = app(ShowCustomerUseCase::class)->execute($user->id, 10);
 
     expect($summary->ordersCount)->toBe(12)
         ->and($summary->recentOrders)->toBeInstanceOf(OrderSummaries::class)

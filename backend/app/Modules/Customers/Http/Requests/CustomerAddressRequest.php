@@ -8,7 +8,6 @@ use App\Modules\Customers\DTOs\CustomerAddressDTO;
 use App\Modules\Customers\Http\Requests\Concerns\NormalizesStateInput;
 use App\Modules\Ordering\Enums\BrazilianState;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 /**
@@ -18,17 +17,6 @@ use Illuminate\Validation\Rule;
 class CustomerAddressRequest extends ApiFormRequest
 {
     use NormalizesStateInput;
-
-    /**
-     * Creating needs no address. Updating is for the owner only, and is decided before the
-     * body is validated, so a stranger never learns what is wrong with it.
-     */
-    public function authorize(): bool
-    {
-        $address = $this->route('address');
-
-        return $address === null || Gate::allows('update', $address);
-    }
 
     public function rules(): array
     {

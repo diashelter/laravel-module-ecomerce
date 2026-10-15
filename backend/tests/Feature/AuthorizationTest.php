@@ -113,7 +113,10 @@ it('allows admins on admin endpoints', function () {
 it('forbids a customer from seeing another customer order', function () {
     $order = Order::factory()->create();
 
-    $this->actingAs(customer())->getJson("/api/orders/{$order->id}")->assertForbidden();
+    // Not forbidden: the order of another customer answers like an id that does not exist.
+    $response = $this->actingAs(customer())->getJson("/api/orders/{$order->id}")->assertNotFound();
+
+    assertApiError($response, 'NOT_FOUND', 'Recurso não encontrado.');
 });
 
 it('returns 404 with the standard error shape for unknown resources', function () {

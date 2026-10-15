@@ -7,6 +7,7 @@ namespace App\Modules\Identity\UseCases;
 use App\Modules\Identity\Models\User;
 use App\Modules\Identity\Repositories\UserRepository;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Admin: removes a staff member. Their session ends on the next request, because the guard
@@ -18,13 +19,14 @@ final class DeleteStaffMemberUseCase
 
     /**
      * @throws BusinessRuleException
+     * @throws ModelNotFoundException
      */
-    public function execute(User $actor, User $target): void
+    public function execute(User $actor, string $targetId): void
     {
-        if ($actor->is($target)) {
+        if ($actor->getKey() === $targetId) {
             throw new BusinessRuleException('Você não pode remover a própria conta.');
         }
 
-        $this->users->delete($target);
+        $this->users->deleteById($targetId);
     }
 }

@@ -300,7 +300,15 @@ it('keeps 404 for unknown ids on the money routes', function (string $method, st
     $this->actingAs(admin())->actingAs(customer());
     $uri = str_replace('/1', '/'.unknownId(), $uri);
 
-    $this->json($method, $uri)->assertNotFound();
+    // The body is validated before the record is looked up, so the write routes need a valid one.
+    $body = match (true) {
+        str_ends_with($uri, '/status') => ['status' => 'active'],
+        str_ends_with($uri, '/payment') => ['card_token' => 'fake_card_approved'],
+        $method === 'put' => productPayload(),
+        default => [],
+    };
+
+    $this->json($method, $uri, $body)->assertNotFound();
 })->with([
     ['get', '/api/products/1'],
     ['get', '/api/admin/products/1'],

@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Route parameters are canonical UUIDs: "/api/products/abc" returns 404 before any query,
         // instead of a database error (PostgreSQL refuses a non-UUID compared with a `uuid` column).
-        foreach (['product', 'category', 'stock', 'user', 'customer', 'order', 'payableOrder', 'address'] as $parameter) {
+        foreach (['product', 'category', 'stock', 'user', 'customer', 'order', 'address'] as $parameter) {
             Route::pattern($parameter, RecordId::PATTERN);
         }
     }

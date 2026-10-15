@@ -23,6 +23,7 @@ use App\Modules\Shared\Repositories\BaseRepository;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as BaseCollection;
 
@@ -132,16 +133,30 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
         return $order;
     }
 
-    public function findForPayment(string $orderId): ?OrderForPayment
+    /**
+     * The order, with its items, only when it belongs to that customer: the order of another
+     * customer answers the same as one that does not exist.
+     */
+    public function findForCustomer(string $customerId, string $orderId): ?Order
     {
-        $order = $this->query()->find($orderId);
-
-        return $order === null ? null : new OrderForPayment($order->id, $order->customer_id, $order->total_cents, $order->status);
+        return $this->forCustomer($customerId)->with('items')->find($orderId);
     }
 
-    public function findOrFail(string $id): Order
+    /**
+     * The order with its customer and items, for the admin.
+     *
+     * @throws ModelNotFoundException
+     */
+    public function findWithCustomerAndItems(string $id): Order
     {
-        return $this->query()->findOrFail($id);
+        return $this->query()->with(['customer', 'items'])->findOrFail($id);
+    }
+
+    public function findForPayment(string $customerId, string $orderId): ?OrderForPayment
+    {
+        $order = $this->forCustomer($customerId)->find($orderId);
+
+        return $order === null ? null : new OrderForPayment($order->id, $order->customer_id, $order->total_cents, $order->status);
     }
 
     /**

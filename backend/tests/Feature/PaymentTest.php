@@ -218,13 +218,13 @@ it('charges the order total and ignores amounts in the request', function () {
 
 it('forbids paying an order of another customer', function () {
     $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
-    // Not payable either: the owner is checked before the status, so it is still 403, never 409.
+    // Not payable either: the owner is checked before the status, so it is still 404, never 409.
     $placed = Order::factory()->status(OrderStatus::Placed)->create();
     $gateway = spyPaymentGateway();
 
     $this->actingAs(customer());
-    $this->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])->assertForbidden();
-    $this->postJson("/api/orders/{$placed->id}/payment", ['card_token' => 'fake_card_approved'])->assertForbidden();
+    assertApiError($this->postJson("/api/orders/{$order->id}/payment", ['card_token' => 'fake_card_approved'])->assertNotFound(), 'NOT_FOUND', 'Recurso não encontrado.');
+    assertApiError($this->postJson("/api/orders/{$placed->id}/payment", ['card_token' => 'fake_card_approved'])->assertNotFound(), 'NOT_FOUND', 'Recurso não encontrado.');
 
     expect(paymentRows($order))->toBeEmpty()
         ->and(paymentRows($placed))->toBeEmpty()
