@@ -10,6 +10,7 @@ use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\UseCases\PlaceOrderUseCase;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
@@ -83,3 +84,38 @@ it('refuses an unknown delivery address before touching the stock', function () 
         ->and($product->stock->fresh()->quantity)->toBe(5)
         ->and(Order::query()->count())->toBe(0);
 });
+
+it('draws the order code up to three times', function (int $collisions, bool $placed) {
+    $taken = array_slice(['AAAAAAAA', 'BBBBBBBB', 'CCCCCCCC'], 0, $collisions);
+    foreach ($taken as $code) {
+        Order::factory()->create(['code' => $code]);
+    }
+    $generator = forceOrderCodes([...$taken, 'EEEEEEEE', 'FFFFFFFF']);
+    $user = customer();
+    $product = productWithStock(5);
+    $ordersBefore = Order::query()->count();
+    $address = new DeliveryAddress('Beto', '30140071', 'Av. Afonso Pena', '5', null, 'Centro', 'Belo Horizonte', BrazilianState::MG);
+    $place = fn () => placeOrderWith(fixedAddressBook($address), countingQuoter())
+        ->execute($user->id, new CartDTO(new CartItemDTO($product->id, 2)), unknownId());
+
+    if ($placed) {
+        expect($place()->code)->toBe('EEEEEEEE')
+            ->and($generator->draws)->toBe($collisions + 1)
+            ->and(Order::query()->count())->toBe($ordersBefore + 1)
+            ->and($product->stock->fresh()->quantity)->toBe(3);
+
+        return;
+    }
+
+    expect($place)->toThrow(UniqueConstraintViolationException::class);
+    expect($generator->draws)->toBe(3)
+        ->and(Order::query()->count())->toBe($ordersBefore)
+        ->and(DB::table('order_items')->count())->toBe(0)
+        ->and($product->stock->fresh()->quantity)->toBe(5);
+    Event::assertNotDispatched(OrderPlaced::class);
+})->with([
+    'no collision' => [0, true],
+    'one collision' => [1, true],
+    'two collisions' => [2, true],
+    'three collisions' => [3, false],
+]);

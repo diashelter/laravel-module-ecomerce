@@ -61,7 +61,7 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
         return new OrderSummaries(...$this->newestFirst($this->forCustomer($customerId))
             ->limit($limit)
             ->get()
-            ->map(fn (Order $order) => new OrderSummary($order->id, $order->status, $order->total_cents, $order->created_at->toImmutable()))
+            ->map(fn (Order $order) => new OrderSummary($order->id, $order->code, $order->status, $order->total_cents, $order->created_at->toImmutable()))
             ->all());
     }
 
@@ -93,18 +93,20 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
     }
 
     /**
-     * Creates the order and its items (snapshot of name and price) together with the copy of the
-     * delivery address and the shipping quoted for it. The order total is the one the lines and
+     * Creates the order, with the code already drawn, and its items (snapshot of name and price)
+     * together with the copy of the delivery address and the shipping quoted for it. The order total is the one the lines and
      * the shipping calculate, so it cannot diverge from them.
      */
     public function createWithItems(
         string $customerId,
+        string $code,
         OrderStatus $status,
         OrderLines $lines,
         DeliveryAddress $address,
         ShippingQuote $shipping,
     ): Order {
         $order = $this->query()->create([
+            'code' => $code,
             'customer_id' => $customerId,
             'total_cents' => $lines->totalCents() + $shipping->priceCents,
             'shipping_cents' => $shipping->priceCents,

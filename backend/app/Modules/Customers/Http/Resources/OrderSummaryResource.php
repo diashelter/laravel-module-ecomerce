@@ -19,6 +19,7 @@ class OrderSummaryResource extends JsonResource
     {
         return [
             'id' => $this->resource->id,
+            'code' => $this->resource->code,
             'status' => $this->resource->status->value,
             'status_label' => $this->resource->status->label(),
             'total_cents' => $this->resource->totalCents,

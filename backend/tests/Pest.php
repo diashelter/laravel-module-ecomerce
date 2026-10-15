@@ -5,6 +5,7 @@ use App\Modules\Catalog\Models\Product;
 use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ordering\Services\OrderCodeGenerator;
 use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\DTOs\ChargeRequest;
 use App\Modules\Payment\DTOs\ChargeResult;
@@ -58,6 +59,7 @@ function orderRow(string $customerId, array $overrides = []): array
 {
     return array_merge([
         'id' => unknownId(),
+        'code' => (new OrderCodeGenerator)->generate(),
         'customer_id' => $customerId,
         'total_cents' => 0,
         'shipping_cents' => 0,
@@ -75,6 +77,32 @@ function orderRow(string $customerId, array $overrides = []): array
         'created_at' => now(),
         'updated_at' => now(),
     ], $overrides);
+}
+
+/**
+ * Replaces the order code draw with a fixed sequence, so a test decides which codes collide. The
+ * returned generator counts the draws; asking for more codes than the sequence holds is an error.
+ *
+ * @param  list<string>  $codes
+ */
+function forceOrderCodes(array $codes): OrderCodeGenerator
+{
+    $generator = new class($codes) extends OrderCodeGenerator
+    {
+        public int $draws = 0;
+
+        /** @param  list<string>  $codes */
+        public function __construct(private array $codes) {}
+
+        public function generate(): string
+        {
+            return $this->codes[$this->draws++] ?? throw new LogicException('The forced order codes ran out.');
+        }
+    };
+
+    app()->instance(OrderCodeGenerator::class, $generator);
+
+    return $generator;
 }
 
 function admin(array $attributes = []): User

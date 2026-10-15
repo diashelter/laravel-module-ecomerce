@@ -4,6 +4,7 @@ use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Ordering\Models\Order;
+use App\Modules\Ordering\Models\OrderItem;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -223,4 +224,84 @@ it('stores the customer id on the placed order', function () {
         ->assertCreated();
 
     expect(Order::query()->sole()->customer_id)->toBe($account->id);
+});
+
+it('returns the order code on checkout', function () {
+    $product = productWithStock(5);
+    $this->actingAs(customer());
+
+    $code = checkout([['product_id' => $product->id, 'quantity' => 1]])->assertCreated()->json('data.code');
+
+    expect($code)->toMatch('/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/')
+        ->and(Order::query()->sole()->code)->toBe($code);
+});
+
+/** Orders that already own the given codes, so a draw of one of them collides. */
+function ordersOwning(string ...$codes): void
+{
+    foreach ($codes as $code) {
+        Order::factory()->create(['code' => $code]);
+    }
+}
+
+it('draws the order code again after a collision', function (int $collisions) {
+    $taken = array_slice(['AAAAAAAA', 'BBBBBBBB'], 0, $collisions);
+    ordersOwning(...$taken);
+    $generator = forceOrderCodes([...$taken, 'CCCCCCCC', 'DDDDDDDD']);
+    $first = productWithStock(5);
+    $second = productWithStock(7);
+    $this->actingAs(customer());
+    $account = auth('customer')->user();
+    $body = [
+        'items' => [['product_id' => $first->id, 'quantity' => 2], ['product_id' => $second->id, 'quantity' => 3]],
+        'address_id' => addressOf($account)->id,
+    ];
+    DB::enableQueryLog();
+
+    $this->postJson('/api/orders', $body)->assertCreated()->assertJsonPath('data.code', 'CCCCCCCC');
+
+    $stockLocks = collect(DB::getQueryLog())->pluck('query')
+        ->filter(fn (string $sql) => str_contains($sql, 'from "stocks"') && str_contains($sql, 'for update'));
+
+    expect($stockLocks)->toHaveCount(1)
+        ->and($generator->draws)->toBe($collisions + 1)
+        ->and($first->stock->fresh()->quantity)->toBe(3)
+        ->and($second->stock->fresh()->quantity)->toBe(4)
+        ->and(Order::query()->where('customer_id', $account->id)->sole()->code)->toBe('CCCCCCCC');
+    Event::assertDispatchedTimes(OrderPlaced::class, 1);
+})->with([1, 2]);
+
+it('fails the whole order after three code collisions', function () {
+    ordersOwning('AAAAAAAA', 'BBBBBBBB', 'CCCCCCCC');
+    $generator = forceOrderCodes(['AAAAAAAA', 'BBBBBBBB', 'CCCCCCCC', 'DDDDDDDD']);
+    $first = productWithStock(5);
+    $second = productWithStock(7);
+    $this->actingAs(customer());
+    $ordersBefore = Order::query()->count();
+
+    checkout([['product_id' => $first->id, 'quantity' => 2], ['product_id' => $second->id, 'quantity' => 3]])
+        ->assertStatus(500);
+
+    expect($generator->draws)->toBe(3)
+        ->and(Order::query()->count())->toBe($ordersBefore)
+        ->and(OrderItem::query()->count())->toBe(0)
+        ->and($first->stock->fresh()->quantity)->toBe(5)
+        ->and($second->stock->fresh()->quantity)->toBe(7);
+    Event::assertNotDispatched(OrderPlaced::class);
+});
+
+it('keeps the query count of the checkout', function () {
+    $first = productWithStock(5);
+    $second = productWithStock(7);
+    $account = customer();
+    $body = [
+        'items' => [['product_id' => $first->id, 'quantity' => 1], ['product_id' => $second->id, 'quantity' => 2]],
+        'address_id' => addressOf($account)->id,
+    ];
+    $this->actingAs($account);
+    DB::enableQueryLog();
+
+    $this->postJson('/api/orders', $body)->assertCreated();
+
+    expect(DB::getQueryLog())->toHaveCount(9);
 });

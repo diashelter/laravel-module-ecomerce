@@ -15,6 +15,11 @@ use App\Modules\Ordering\Exceptions\InsufficientStockException;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\Services\CheckoutService;
+use App\Modules\Ordering\Services\OrderCodeGenerator;
+use App\Modules\Ordering\ValueObjects\DeliveryAddress;
+use App\Modules\Ordering\ValueObjects\OrderLines;
+use App\Modules\Ordering\ValueObjects\ShippingQuote;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -25,11 +30,15 @@ use Illuminate\Validation\ValidationException;
  */
 final class PlaceOrderUseCase
 {
+    /** Draws of the order code before a collision fails the order. */
+    private const CODE_ATTEMPTS = 3;
+
     public function __construct(
         private readonly ProductCatalog $catalog,
         private readonly StockReservation $stockReservation,
         private readonly OrderRepository $orders,
         private readonly CheckoutService $checkout,
+        private readonly OrderCodeGenerator $codes,
         private readonly DeliveryAddressBook $addressBook,
         private readonly ShippingQuoter $shippingQuoter,
     ) {}
@@ -73,12 +82,33 @@ final class PlaceOrderUseCase
 
             // 5. Create the order and its items (snapshot of name and price), with the address copy and
             //    the shipping, so the total is the items plus the shipping.
-            return $this->orders->createWithItems($customerId, OrderStatus::Placed, $lines, $address, $shipping);
+            return $this->createWithUniqueCode($customerId, $lines, $address, $shipping);
         });
 
         // 6. Only after COMMIT: the queued listener moves the order to "awaiting_payment".
         OrderPlaced::dispatch($order->id);
 
         return $order->load('items');
+    }
+
+    /**
+     * The drawn code may already belong to another order. PostgreSQL aborts the whole transaction
+     * on a unique violation, so each try runs in a savepoint (a nested transaction): only that try
+     * is undone, and the stock lock and deduction of the checkout stay. The third collision in a
+     * row is left to fail, which rolls the whole checkout back.
+     */
+    private function createWithUniqueCode(string $customerId, OrderLines $lines, DeliveryAddress $address, ShippingQuote $shipping): Order
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return DB::transaction(fn (): Order => $this->orders->createWithItems(
+                    $customerId, $this->codes->generate(), OrderStatus::Placed, $lines, $address, $shipping,
+                ));
+            } catch (UniqueConstraintViolationException $e) {
+                if ($attempt === self::CODE_ATTEMPTS) {
+                    throw $e;
+                }
+            }
+        }
     }
 }
