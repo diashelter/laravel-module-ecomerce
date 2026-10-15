@@ -41,8 +41,9 @@ it('blocks deleting a category with products', function () {
     $category = Category::factory()->create();
     productWithStock(1)->categories()->attach($category);
 
-    $this->deleteJson("/api/admin/categories/{$category->id}")->assertConflict();
+    $response = $this->deleteJson("/api/admin/categories/{$category->id}")->assertConflict();
 
+    assertApiError($response, 'BUSINESS_RULE_VIOLATION', 'Esta categoria possui produtos associados e não pode ser excluída.');
     $this->assertModelExists($category);
 });
 

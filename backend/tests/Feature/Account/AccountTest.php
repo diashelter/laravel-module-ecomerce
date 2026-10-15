@@ -34,6 +34,7 @@ it('renders the recent orders as summaries', function () {
     $order = Order::factory()->for($user, 'customer')->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 15990]);
     $summary = [
         'id' => $order->id,
+        'code' => $order->code,
         'status' => 'awaiting_payment',
         'status_label' => OrderStatus::AwaitingPayment->label(),
         'total_cents' => 15990,
@@ -114,4 +115,16 @@ it('returns the account summary under the customer key without a role', function
     expect(array_keys($response->json('data')))->toEqualCanonicalizing(['customer', 'last_order', 'orders_count', 'recent_orders'])
         ->and(array_keys($response->json('data.customer')))->toEqualCanonicalizing(['created_at', 'email', 'id', 'name'])
         ->and($response->json('data.customer.created_at'))->toBe($account->created_at->toIso8601String());
+});
+
+it('returns the order code in every order summary', function () {
+    $user = customer();
+    $orders = Order::factory()->count(2)->for($user, 'customer')->sequence(['created_at' => now()->subDay()], ['created_at' => now()])->create();
+
+    $account = $this->actingAs($user)->getJson('/api/account')->assertOk();
+    $admin = $this->actingAs(admin())->getJson("/api/admin/customers/{$user->id}")->assertOk();
+
+    expect($account->json('data.last_order.code'))->toBe($orders->last()->code)
+        ->and($account->json('data.recent_orders.*.code'))->toBe([$orders->last()->code, $orders->first()->code])
+        ->and($admin->json('data.orders.*.code'))->toBe([$orders->last()->code, $orders->first()->code]);
 });

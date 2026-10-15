@@ -53,16 +53,31 @@ it('returns the most recent orders of a customer, using the id as tie breaker', 
     // The summary carries what the account screens show, not the items.
     expect($recent)->toBeInstanceOf(OrderSummaries::class)
         ->and(array_map(fn (OrderSummary $summary) => $summary->id, iterator_to_array($recent)))->toBe($orders->pluck('id')->reverse()->take(3)->values()->all())
-        ->and($recent->first())->toEqual(new OrderSummary($newest->id, $newest->status, $newest->total_cents, $newest->created_at->toImmutable()));
+        ->and($recent->first())->toEqual(new OrderSummary($newest->id, $newest->code, $newest->status, $newest->total_cents, $newest->created_at->toImmutable()));
 });
 
-it('finds an order for payment by id', function () {
+it('finds an order for payment only among the customer own orders', function () {
     $user = customer();
     $order = Order::factory()->for($user, 'customer')->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 15990]);
 
-    expect(app(PayableOrders::class)->findForPayment($order->id))
+    expect(app(PayableOrders::class)->findForPayment($user->id, $order->id))
         ->toEqual(new OrderForPayment($order->id, $user->id, 15990, OrderStatus::AwaitingPayment))
-        ->and(app(PayableOrders::class)->findForPayment(999999))->toBeNull();
+        ->and(app(PayableOrders::class)->findForPayment(customer()->id, $order->id))->toBeNull()
+        ->and(app(PayableOrders::class)->findForPayment($user->id, unknownId()))->toBeNull();
+});
+
+it('finds an order only among the customer own orders', function () {
+    $user = customer();
+    $order = Order::factory()->for($user, 'customer')->create();
+    OrderItem::factory()->for($order)->create();
+
+    $found = $this->repository->findForCustomer($user->id, $order->id);
+
+    expect($found->id)->toBe($order->id)
+        ->and($found->relationLoaded('items'))->toBeTrue()
+        ->and($found->items)->toHaveCount(1)
+        ->and($this->repository->findForCustomer(customer()->id, $order->id))->toBeNull()
+        ->and($this->repository->findForCustomer($user->id, unknownId()))->toBeNull();
 });
 
 it('counts the orders of a customer', function () {
@@ -88,6 +103,7 @@ it('creates an order with its items', function () {
 
     $order = $this->repository->createWithItems(
         $user->id,
+        'K7Q2M9XA',
         OrderStatus::Placed,
         new OrderLines(new OrderLine($product->id, 'Fone', 5000, 2)),
         new DeliveryAddress('Ana Souza', '01310100', 'Avenida Paulista', '1000', null, 'Bela Vista', 'São Paulo', BrazilianState::SP),
@@ -95,6 +111,7 @@ it('creates an order with its items', function () {
     );
 
     expect($order->customer_id)->toBe($user->id)
+        ->and($order->code)->toBe('K7Q2M9XA')
         ->and($order->status)->toBe(OrderStatus::Placed)
         ->and($order->total_cents)->toBe(10000 + 1500)
         ->and($order->shipping_cents)->toBe(1500)

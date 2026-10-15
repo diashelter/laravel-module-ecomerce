@@ -10,7 +10,7 @@ namespace App\Modules\Ordering\ValueObjects;
 final readonly class OrderLine
 {
     public function __construct(
-        public int $productId,
+        public string $productId,
         public string $productName,
         public int $unitPriceCents,
         public int $quantity,

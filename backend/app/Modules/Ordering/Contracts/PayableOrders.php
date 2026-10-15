@@ -13,7 +13,8 @@ use App\Modules\Ordering\ValueObjects\OrderForPayment;
 interface PayableOrders
 {
     /**
-     * Null when there is no such order.
+     * Null when there is no such order among that customer's own: the order of another customer
+     * answers the same as one that does not exist.
      */
-    public function findForPayment(int $orderId): ?OrderForPayment;
+    public function findForPayment(string $customerId, string $orderId): ?OrderForPayment;
 }

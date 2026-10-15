@@ -7,6 +7,7 @@ namespace App\Modules\Ordering\Http\Requests;
 use App\Modules\Ordering\DTOs\CartDTO;
 use App\Modules\Ordering\DTOs\CartItemDTO;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
+use App\Modules\Shared\Http\Rules\CanonicalRecordId;
 
 /**
  * The client only sends product ids and quantities. Prices, names and totals sent by
@@ -18,7 +19,8 @@ class ValidateCartRequest extends ApiFormRequest
     {
         return [
             'items' => ['required', 'array', 'min:1', 'max:50'],
-            'items.*.product_id' => ['required', 'integer', 'min:1'],
+            // `bail`: a malformed id never reaches the catalog or the stock.
+            'items.*.product_id' => ['bail', 'required', new CanonicalRecordId],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
         ];
     }
@@ -26,7 +28,7 @@ class ValidateCartRequest extends ApiFormRequest
     public function toDto(): CartDTO
     {
         return new CartDTO(...array_map(
-            fn (array $item) => new CartItemDTO((int) $item['product_id'], (int) $item['quantity']),
+            fn (array $item) => new CartItemDTO($item['product_id'], (int) $item['quantity']),
             array_values($this->validated('items')),
         ));
     }

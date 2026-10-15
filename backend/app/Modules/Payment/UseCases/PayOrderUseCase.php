@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Payment\UseCases;
 
+use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\DTOs\ChargeRequest;
@@ -15,6 +16,7 @@ use App\Modules\Payment\Models\Payment;
 use App\Modules\Payment\Repositories\PaymentRepository;
 use App\Modules\Payment\Services\PaymentService;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -27,17 +29,22 @@ use Illuminate\Support\Facades\Log;
 final class PayOrderUseCase
 {
     public function __construct(
+        private readonly PayableOrders $orders,
         private readonly PaymentService $rules,
         private readonly PaymentRepository $payments,
         private readonly PaymentGateway $gateway,
     ) {}
 
     /**
+     * @throws ModelNotFoundException when the order is not among the customer's own (404, checked before the status)
      * @throws BusinessRuleException when the order cannot be paid (409)
      * @throws PaymentDeclinedException when the gateway declines the charge (402)
      */
-    public function execute(OrderForPayment $order, PayOrderDTO $data): Payment
+    public function execute(string $customerId, string $orderId, PayOrderDTO $data): Payment
     {
+        $order = $this->orders->findForPayment($customerId, $orderId)
+            ?? throw (new ModelNotFoundException)->setModel(OrderForPayment::class, [$orderId]);
+
         $this->rules->ensureCanBePaid($order, $this->payments->hasApprovedForOrder($order->id));
 
         // The amount always comes from the order, never from the request.

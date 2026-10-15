@@ -15,7 +15,7 @@ final class UpdateOwnProfileUseCase
 {
     public function __construct(private readonly CustomerAccounts $accounts) {}
 
-    public function execute(int $customerId, UpdateUserProfileDTO $data): CustomerProfile
+    public function execute(string $customerId, UpdateUserProfileDTO $data): CustomerProfile
     {
         return $this->accounts->updateProfile($customerId, $data);
     }

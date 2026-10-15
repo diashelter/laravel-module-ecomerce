@@ -21,7 +21,7 @@ class PaymentRepository extends BaseRepository
         return Payment::class;
     }
 
-    public function hasApprovedForOrder(int $orderId): bool
+    public function hasApprovedForOrder(string $orderId): bool
     {
         return $this->query()
             ->where('order_id', $orderId)

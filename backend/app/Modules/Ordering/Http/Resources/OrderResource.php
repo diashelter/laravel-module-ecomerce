@@ -16,6 +16,7 @@ class OrderResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'code' => $this->code,
             // The items are what is left of the total once the shipping is taken out.
             'items_total_cents' => $this->total_cents - $this->shipping_cents,
             'shipping_cents' => $this->shipping_cents,

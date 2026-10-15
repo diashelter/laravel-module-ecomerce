@@ -6,7 +6,6 @@ namespace App\Modules\Catalog\Http\Controllers\Admin;
 
 use App\Modules\Catalog\Http\Requests\Admin\CategoryRequest;
 use App\Modules\Catalog\Http\Resources\CategoryResource;
-use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Repositories\CategoryRepository;
 use App\Modules\Catalog\UseCases\CreateCategoryUseCase;
 use App\Modules\Catalog\UseCases\DeleteCategoryUseCase;
@@ -32,17 +31,17 @@ class CategoryController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Category $category): CategoryResource
+    public function show(string $category, CategoryRepository $categories): CategoryResource
     {
-        return CategoryResource::make($category->loadCount('products'));
+        return CategoryResource::make($categories->findOrFail($category)->loadCount('products'));
     }
 
-    public function update(CategoryRequest $request, Category $category, UpdateCategoryUseCase $updateCategory): CategoryResource
+    public function update(CategoryRequest $request, string $category, UpdateCategoryUseCase $updateCategory): CategoryResource
     {
         return CategoryResource::make($updateCategory->execute($category, $request->toDto()));
     }
 
-    public function destroy(Category $category, DeleteCategoryUseCase $deleteCategory): Response
+    public function destroy(string $category, DeleteCategoryUseCase $deleteCategory): Response
     {
         $deleteCategory->execute($category);
 

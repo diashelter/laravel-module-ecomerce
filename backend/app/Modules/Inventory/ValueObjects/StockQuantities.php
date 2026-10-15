@@ -15,20 +15,20 @@ use Traversable;
  * so this class answers zero for it. Iterates only the products that have a row:
  * `product_id => quantity`, in the order of the query.
  *
- * @implements IteratorAggregate<int, int>
+ * @implements IteratorAggregate<string, int>
  */
 final readonly class StockQuantities implements Countable, IteratorAggregate
 {
-    /** @var array<int, int> */
+    /** @var array<string, int> */
     private array $quantities;
 
-    /** @param  Collection<int, int>  $quantitiesByProductId  `product_id => quantity`, as plucked from the query */
+    /** @param  Collection<string, int>  $quantitiesByProductId  `product_id => quantity`, as plucked from the query */
     public function __construct(Collection $quantitiesByProductId)
     {
         $this->quantities = $quantitiesByProductId->map(fn ($quantity) => (int) $quantity)->all();
     }
 
-    public function of(int $productId): int
+    public function of(string $productId): int
     {
         return $this->quantities[$productId] ?? 0;
     }
@@ -38,7 +38,7 @@ final readonly class StockQuantities implements Countable, IteratorAggregate
         return count($this->quantities);
     }
 
-    /** @return Traversable<int, int> */
+    /** @return Traversable<string, int> */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->quantities);

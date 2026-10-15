@@ -3,7 +3,7 @@ import { api } from './api'
 
 export const orderService = {
   /** Only ids, quantities and the address id are sent: prices, shipping and totals are calculated by the backend. */
-  async place(items: CartItemPayload[], addressId: number): Promise<Order> {
+  async place(items: CartItemPayload[], addressId: string): Promise<Order> {
     const { data } = await api.post<{ data: Order }>('orders', { items, address_id: addressId })
     return data.data
   },
@@ -13,13 +13,13 @@ export const orderService = {
     return data
   },
 
-  async find(id: number): Promise<Order> {
+  async find(id: string): Promise<Order> {
     const { data } = await api.get<{ data: Order }>(`orders/${id}`)
     return data.data
   },
 
   /** Pays with a test card token; the amount is always the order total, set by the backend. */
-  async pay(id: number, cardToken: string): Promise<{ payment: PaymentAttempt; message: string }> {
+  async pay(id: string, cardToken: string): Promise<{ payment: PaymentAttempt; message: string }> {
     const { data } = await api.post<{ data: PaymentAttempt; message: string }>(`orders/${id}/payment`, { card_token: cardToken })
     return { payment: data.data, message: data.message }
   },

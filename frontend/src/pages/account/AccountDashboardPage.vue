@@ -33,7 +33,7 @@ onMounted(async () => {
         <p class="text-sm text-slate-500">Último pedido</p>
         <template v-if="summary.last_order">
           <RouterLink :to="{ name: 'account.order', params: { id: summary.last_order.id } }" class="mt-1 block font-semibold text-indigo-600 hover:underline">
-            #{{ summary.last_order.id }} · {{ formatCents(summary.last_order.total_cents) }}
+            #{{ summary.last_order.code }} · {{ formatCents(summary.last_order.total_cents) }}
           </RouterLink>
           <OrderStatusBadge :status="summary.last_order.status" :label="summary.last_order.status_label" />
         </template>
@@ -56,7 +56,7 @@ onMounted(async () => {
           </thead>
           <tbody>
             <tr v-for="order in summary.recent_orders" :key="order.id">
-              <td><RouterLink :to="{ name: 'account.order', params: { id: order.id } }" class="font-medium text-indigo-600 hover:underline">#{{ order.id }}</RouterLink></td>
+              <td><RouterLink :to="{ name: 'account.order', params: { id: order.id } }" class="font-medium text-indigo-600 hover:underline">#{{ order.code }}</RouterLink></td>
               <td>{{ formatDate(order.created_at) }}</td>
               <td class="text-right">{{ formatCents(order.total_cents) }}</td>
               <td><OrderStatusBadge :status="order.status" :label="order.status_label" /></td>

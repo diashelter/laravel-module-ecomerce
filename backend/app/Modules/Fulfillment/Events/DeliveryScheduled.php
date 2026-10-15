@@ -16,5 +16,5 @@ class DeliveryScheduled implements ShouldDispatchAfterCommit
 {
     use Dispatchable;
 
-    public function __construct(public int $orderId, public CarbonImmutable $estimatedDeliveryOn) {}
+    public function __construct(public string $orderId, public CarbonImmutable $estimatedDeliveryOn) {}
 }

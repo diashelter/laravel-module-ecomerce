@@ -20,10 +20,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('customer_addresses', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             // cascadeOnDelete: the book goes away with the account. There is nothing to preserve,
             // because every order already holds its own copy of the delivery address.
-            $table->foreignId('customer_id')->index()->constrained()->cascadeOnDelete();
+            $table->foreignUuid('customer_id')->index()->constrained()->cascadeOnDelete();
             $table->string('recipient_name', 120);
             $table->char('postal_code', 8);
             $table->string('street', 150);

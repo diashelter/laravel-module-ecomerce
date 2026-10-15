@@ -8,6 +8,7 @@ use App\Modules\Catalog\DTOs\ProductDTO;
 use App\Modules\Catalog\Enums\ProductStatus;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
 use App\Modules\Shared\Http\Requests\ApiFormRequest;
+use App\Modules\Shared\Http\Rules\CanonicalRecordId;
 use Illuminate\Validation\Rule;
 
 /**
@@ -24,7 +25,8 @@ abstract class ProductRequest extends ApiFormRequest
             'image_url' => ['nullable', 'url', 'max:2048'],
             'status' => ['required', Rule::enum(ProductStatus::class)],
             'category_ids' => ['required', 'array', 'min:1'],
-            'category_ids.*' => ['integer', 'distinct', 'exists:categories,id'],
+            // `bail`: a malformed id must never reach `exists` (PostgreSQL would fail instead of finding no row).
+            'category_ids.*' => ['bail', new CanonicalRecordId, 'distinct', 'exists:categories,id'],
         ];
     }
 
@@ -44,7 +46,7 @@ abstract class ProductRequest extends ApiFormRequest
             description: $this->validated('description'),
             imageUrl: $this->validated('image_url'),
             status: ProductStatus::from($this->validated('status')),
-            categoryIds: new CategoryIds(...array_map(intval(...), array_values($this->validated('category_ids')))),
+            categoryIds: new CategoryIds(...array_values($this->validated('category_ids'))),
         );
     }
 }

@@ -6,7 +6,6 @@ namespace App\Modules\Catalog\Http\Controllers;
 
 use App\Modules\Catalog\Http\Requests\ProductIndexRequest;
 use App\Modules\Catalog\Http\Resources\ProductResource;
-use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Ordering\Services\PurchaseAvailabilityService;
 use App\Modules\Shared\Http\Controllers\Controller;
@@ -30,9 +29,9 @@ class ProductController extends Controller
     /**
      * The product page is only reachable while the product can be bought.
      */
-    public function show(Product $product, PurchaseAvailabilityService $availability): ProductResource
+    public function show(string $product, ProductRepository $products, PurchaseAvailabilityService $availability): ProductResource
     {
-        $product->load(['categories', 'stock']);
+        $product = $products->findWithCategoriesAndStock($product);
 
         abort_unless($availability->isAvailable($product->isActive(), $product->stock?->quantity), 404, 'Produto indisponível.');
 

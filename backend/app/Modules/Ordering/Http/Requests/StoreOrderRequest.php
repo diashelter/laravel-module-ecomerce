@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\Http\Requests;
 
+use App\Modules\Shared\Http\Rules\CanonicalRecordId;
+
 /**
  * The cart payload plus the delivery address, chosen from the customer's own address book.
  * Who may place an order is decided by the `auth:customer` route group: every shopper account
@@ -16,7 +18,8 @@ class StoreOrderRequest extends ValidateCartRequest
     {
         return [
             ...parent::rules(),
-            'address_id' => ['required', 'integer', 'min:1'],
+            // `bail`: a malformed id never reaches the address book or the stock.
+            'address_id' => ['bail', 'required', new CanonicalRecordId],
         ];
     }
 
@@ -27,8 +30,8 @@ class StoreOrderRequest extends ValidateCartRequest
         ];
     }
 
-    public function addressId(): int
+    public function addressId(): string
     {
-        return (int) $this->validated('address_id');
+        return $this->validated('address_id');
     }
 }

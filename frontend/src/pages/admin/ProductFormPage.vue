@@ -11,7 +11,7 @@ import { useNotificationStore } from '@/stores/notifications'
 import type { Category, Product, ProductStatus } from '@/types'
 import { centsToReaisInput, INVALID_PRICE_MESSAGE, parseReaisInput } from '@/utils/money'
 
-const props = defineProps<{ id?: number }>()
+const props = defineProps<{ id?: string }>()
 
 const router = useRouter()
 const notifications = useNotificationStore()
@@ -31,7 +31,7 @@ const form = reactive({
   description: '',
   image_url: '',
   status: 'active' as ProductStatus,
-  category_ids: [] as number[],
+  category_ids: [] as string[],
   stock_quantity: 0,
 })
 

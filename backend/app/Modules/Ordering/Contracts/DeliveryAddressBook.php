@@ -16,5 +16,5 @@ use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 interface DeliveryAddressBook
 {
     /** Null when the address does not exist or belongs to another customer. */
-    public function find(int $customerId, int $addressId): ?DeliveryAddress;
+    public function find(string $customerId, string $addressId): ?DeliveryAddress;
 }

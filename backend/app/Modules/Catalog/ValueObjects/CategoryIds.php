@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\ValueObjects;
 
+use App\Modules\Shared\Support\RecordId;
 use ArrayIterator;
 use Countable;
 use InvalidArgumentException;
@@ -11,23 +12,23 @@ use IteratorAggregate;
 use Traversable;
 
 /**
- * A list of category ids. Ids are positive and never repeated: a repetition is a bug upstream, so it is
+ * A list of category ids. Ids are canonical UUIDs and never repeated: a repetition is a bug upstream, so it is
  * refused instead of silently removed.
  *
- * @implements IteratorAggregate<int, int>
+ * @implements IteratorAggregate<int, string>
  */
 final readonly class CategoryIds implements Countable, IteratorAggregate
 {
-    /** @var list<int> */
+    /** @var list<string> */
     private array $ids;
 
-    public function __construct(int ...$ids)
+    public function __construct(string ...$ids)
     {
         $ids = array_values($ids);
 
         foreach ($ids as $id) {
-            if ($id < 1) {
-                throw new InvalidArgumentException('Ids must be positive integers.');
+            if (! RecordId::isCanonical($id)) {
+                throw new InvalidArgumentException('Ids must be canonical UUIDs.');
             }
         }
 
@@ -38,7 +39,7 @@ final readonly class CategoryIds implements Countable, IteratorAggregate
         $this->ids = $ids;
     }
 
-    /** @return list<int> for the query builder (`whereIn`, `sync`) */
+    /** @return list<string> for the query builder (`whereIn`, `sync`) */
     public function all(): array
     {
         return $this->ids;
@@ -49,7 +50,7 @@ final readonly class CategoryIds implements Countable, IteratorAggregate
         return count($this->ids);
     }
 
-    /** @return Traversable<int, int> */
+    /** @return Traversable<int, string> */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->ids);

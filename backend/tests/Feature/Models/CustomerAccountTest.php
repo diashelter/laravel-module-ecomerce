@@ -25,11 +25,11 @@ it('ties orders to existing customers and keeps customers that have orders', fun
     expect(refused(fn () => DB::table('customers')->where('id', $buyer->id)->delete()))->toBeTrue()
         ->and(DB::table('customers')->where('id', $buyer->id)->exists())->toBeTrue()
         ->and(DB::table('customers')->where('id', $free->id)->delete())->toBe(1)
-        ->and(refused(fn () => DB::table('orders')->insert(orderRow(999999))))->toBeTrue();
+        ->and(refused(fn () => DB::table('orders')->insert(orderRow(unknownId()))))->toBeTrue();
 });
 
 it('rejects invalid customer e-mails in the database', function (string $email) {
-    $insert = fn (string $value) => DB::table('customers')->insert(['name' => 'Ana', 'email' => $value, 'password' => 'x']);
+    $insert = fn (string $value) => DB::table('customers')->insert(['id' => unknownId(), 'name' => 'Ana', 'email' => $value, 'password' => 'x']);
 
     // The same e-mail in users does not stand in the way of the first customer row.
     admin(['email' => 'ana@example.com']);

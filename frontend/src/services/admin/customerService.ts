@@ -14,7 +14,7 @@ export const adminCustomerService = {
     return data
   },
 
-  async find(id: number): Promise<Customer> {
+  async find(id: string): Promise<Customer> {
     const { data } = await api.get<{ data: Customer }>(`admin/customers/${id}`)
     return data.data
   },
@@ -24,7 +24,7 @@ export const adminCustomerService = {
     return data.data
   },
 
-  async update(id: number, payload: CustomerPayload): Promise<Customer> {
+  async update(id: string, payload: CustomerPayload): Promise<Customer> {
     const { data } = await api.put<{ data: Customer }>(`admin/customers/${id}`, payload)
     return data.data
   },

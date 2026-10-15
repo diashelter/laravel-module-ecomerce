@@ -36,7 +36,7 @@ it('registers a customer account', function () {
 it('finds no profile for an unknown customer', function () {
     $account = customer(['name' => 'Maria']);
 
-    expect(app(CustomerAccounts::class)->findProfile(999999))->toBeNull()
+    expect(app(CustomerAccounts::class)->findProfile(unknownId()))->toBeNull()
         ->and(app(CustomerAccounts::class)->findProfile($account->id))
         ->toEqual(new CustomerProfile($account->id, 'Maria', $account->email, $account->created_at->toImmutable()));
 });
@@ -88,7 +88,7 @@ it('shows an account with its order count and only the most recent orders', func
     $user = customer();
     $orders = Order::factory()->count(12)->for($user, 'customer')->create(['created_at' => now()]);
 
-    $summary = app(ShowCustomerUseCase::class)->execute(app(CustomerAccounts::class)->findProfile($user->id), 10);
+    $summary = app(ShowCustomerUseCase::class)->execute($user->id, 10);
 
     expect($summary->ordersCount)->toBe(12)
         ->and($summary->recentOrders)->toBeInstanceOf(OrderSummaries::class)

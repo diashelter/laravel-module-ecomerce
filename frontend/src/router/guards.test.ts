@@ -4,6 +4,8 @@ import { adminMenuLinks } from '@/utils/adminMenu'
 import { guardRedirect, type GuardState, type GuardTarget } from './guards'
 import { routes } from './routes'
 
+const ID = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'
+
 const visitor: GuardState = { customer: false, staffRole: null }
 const staffOnly = (role: 'admin' | 'support'): GuardState => ({ customer: false, staffRole: role })
 
@@ -19,7 +21,7 @@ describe('router guard', () => {
     expect(guardRedirect(target('/checkout'), staffOnly('admin'))).toEqual({ name: 'login', query: { redirect: '/checkout' } })
   })
 
-  it.each(['/admin', '/admin/products', '/admin/customers/3'])('sends a browser without a staff session to the admin login: %s', (path) => {
+  it.each(['/admin', '/admin/products', `/admin/customers/${ID}`])('sends a browser without a staff session to the admin login: %s', (path) => {
     const expected = { name: 'admin.login', query: { redirect: path } }
 
     expect(guardRedirect(target(path), visitor)).toEqual(expected)
@@ -46,7 +48,7 @@ describe('router guard', () => {
   it('registers the admin customer pages under admin customers', () => {
     const router = createRouter({ history: createMemoryHistory(), routes })
 
-    expect(['/admin/customers', '/admin/customers/new', '/admin/customers/3', '/admin/customers/3/edit'].map((path) => router.resolve(path).name)).toEqual([
+    expect(['/admin/customers', '/admin/customers/new', `/admin/customers/${ID}`, `/admin/customers/${ID}/edit`].map((path) => router.resolve(path).name)).toEqual([
       'admin.customers',
       'admin.customers.create',
       'admin.customers.show',

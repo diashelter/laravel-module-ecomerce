@@ -13,8 +13,8 @@ use App\Modules\Ordering\Enums\OrderStatus;
 final readonly class OrderForPayment
 {
     public function __construct(
-        public int $id,
-        public int $customerId,
+        public string $id,
+        public string $customerId,
         public int $totalCents,
         public OrderStatus $status,
     ) {}

@@ -97,11 +97,11 @@ it('answers 404 for unknown admin records', function (string $method, string $ur
 
     expect($response->json('code'))->toBe('NOT_FOUND');
 })->with([
-    ['GET', '/api/admin/customers/999999'],
-    ['PUT', '/api/admin/customers/999999'],
-    ['GET', '/api/admin/users/999999'],
-    ['PUT', '/api/admin/users/999999'],
-    ['DELETE', '/api/admin/users/999999'],
-    ['DELETE', '/api/admin/products/999999'],
-    ['DELETE', '/api/admin/categories/999999'],
+    ['GET', '/api/admin/customers/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
+    ['PUT', '/api/admin/customers/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
+    ['GET', '/api/admin/users/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
+    ['PUT', '/api/admin/users/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
+    ['DELETE', '/api/admin/users/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
+    ['DELETE', '/api/admin/products/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
+    ['DELETE', '/api/admin/categories/0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a'],
 ]);

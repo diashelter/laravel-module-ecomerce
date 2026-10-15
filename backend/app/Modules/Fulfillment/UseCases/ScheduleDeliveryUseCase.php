@@ -18,7 +18,7 @@ final class ScheduleDeliveryUseCase
 {
     public function __construct(private readonly DeliveryCalendar $calendar) {}
 
-    public function execute(int $orderId, int $deliveryBusinessDays): void
+    public function execute(string $orderId, int $deliveryBusinessDays): void
     {
         $estimatedOn = $this->calendar->estimate(now(), $deliveryBusinessDays);
 

@@ -15,11 +15,11 @@ use Traversable;
  * Total quantity per product: one entry per product_id, sorted by product_id (the checkout
  * relies on this order to lock stock rows without deadlocks). Iterates `product_id => quantity`.
  *
- * @implements IteratorAggregate<int, int>
+ * @implements IteratorAggregate<string, int>
  */
 final readonly class ProductQuantities implements Countable, IteratorAggregate
 {
-    /** @var array<int, int> */
+    /** @var array<string, int> */
     private array $quantities;
 
     public function __construct(CartItemDTO ...$items)
@@ -45,7 +45,7 @@ final readonly class ProductQuantities implements Countable, IteratorAggregate
         return count($this->quantities);
     }
 
-    /** @return Traversable<int, int> */
+    /** @return Traversable<string, int> */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->quantities);

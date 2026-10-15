@@ -16,9 +16,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            // What people read and dictate (K7Q2M9XA); the id never leaves the URLs and the payloads.
+            // Drawn by the application from a 31-symbol alphabet (no 0, O, 1, I or L).
+            $table->char('code', 8)->unique();
             // restrictOnDelete: a customer with orders cannot be removed (order history must be kept).
-            $table->foreignId('customer_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('customer_id')->constrained()->restrictOnDelete();
             // Money is stored as an integer amount of cents.
             // total_cents = the sum of the items + shipping_cents.
             $table->bigInteger('total_cents');
@@ -45,6 +48,7 @@ return new class extends Migration
 
         $states = "'".implode("','", self::STATES)."'";
 
+        DB::statement("ALTER TABLE orders ADD CONSTRAINT orders_code_format CHECK (code ~ '^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$')");
         DB::statement('ALTER TABLE orders ADD CONSTRAINT orders_total_cents_non_negative CHECK (total_cents >= 0)');
         DB::statement('ALTER TABLE orders ADD CONSTRAINT orders_shipping_cents_non_negative CHECK (shipping_cents >= 0)');
         // Named to sort after orders_total_cents_non_negative, so a negative total still reports that one.

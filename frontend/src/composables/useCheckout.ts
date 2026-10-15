@@ -28,7 +28,7 @@ export function useCheckout() {
 
   const validation = ref<CartValidation | null>(null)
   const loadingCart = ref(false)
-  const selectedAddressId = ref<number | null>(null)
+  const selectedAddressId = ref<string | null>(null)
   const formOpen = ref(false)
   const quote = ref<ShippingQuote | null>(null)
   const quoteStatus = ref<QuoteStatus>('idle')
@@ -91,14 +91,14 @@ export function useCheckout() {
     }
   }
 
-  async function pickAddress(id: number): Promise<void> {
+  async function pickAddress(id: string): Promise<void> {
     selectedAddressId.value = id
     formOpen.value = false
     await requestQuote()
   }
 
   /** The customer chose an address: whatever was said about the previous one no longer applies. */
-  async function selectAddress(id: number): Promise<void> {
+  async function selectAddress(id: string): Promise<void> {
     addressError.value = null
     await pickAddress(id)
   }
@@ -150,7 +150,7 @@ export function useCheckout() {
     try {
       const order = await orderService.place(cart.payload, selectedAddressId.value)
       cart.clear()
-      notifications.success(`Pedido #${order.id} criado com sucesso!`)
+      notifications.success(`Pedido #${order.code} criado com sucesso!`)
       await router.push({ name: 'payment', params: { orderId: order.id } })
     } catch (error) {
       if (!(error instanceof ApiError)) throw error

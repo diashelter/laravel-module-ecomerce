@@ -15,5 +15,5 @@ class OrderPlaced implements ShouldDispatchAfterCommit
 {
     use Dispatchable;
 
-    public function __construct(public int $orderId) {}
+    public function __construct(public string $orderId) {}
 }

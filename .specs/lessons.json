@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 6,
+  "next_id": 9,
   "lessons": [
     {
       "id": "L-001",
@@ -94,6 +94,60 @@
       ],
       "created": "2026-10-09T16:44:55Z",
       "last_seen": "2026-10-09T16:44:55Z"
+    },
+    {
+      "id": "L-006",
+      "key": "spec_precision_gap::before writing a check about a database refusal citing a constraint confirm the column type rejects the value first a char 8 refuses a 9 character value before any check runs",
+      "text": "Before writing a check about a database refusal citing a constraint, confirm the column type rejects the value first; a char(8) refuses a 9-character value before any CHECK runs.",
+      "signal": "spec_precision_gap",
+      "scope": "backend/migrations",
+      "status": "candidate",
+      "features": [
+        "uuid-record-ids"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C23 (backend/migrations)"
+      ],
+      "created": "2026-10-15T21:42:15Z",
+      "last_seen": "2026-10-15T21:42:15Z"
+    },
+    {
+      "id": "L-007",
+      "key": "spec_precision_gap::a negative grep proof must be shown failing on a planted line a pattern keyed to a renamed token the old id silently matches nothing",
+      "text": "A negative-grep proof must be shown failing on a planted line; a pattern keyed to a renamed token (the old {id}) silently matches nothing.",
+      "signal": "spec_precision_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "uuid-record-ids"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C63 (docs)"
+      ],
+      "created": "2026-10-15T21:42:15Z",
+      "last_seen": "2026-10-15T21:42:15Z"
+    },
+    {
+      "id": "L-008",
+      "key": "ac_gap::every type the plan s impact names as changing here the id keyed maps owes a coverage row and a proof not only the ones that appear in surface",
+      "text": "Every type the plan's Impact names as changing (here the id-keyed maps) owes a Coverage row and a proof, not only the ones that appear in Surface.",
+      "signal": "ac_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "uuid-record-ids"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "plan.md Impact (checks)"
+      ],
+      "created": "2026-10-15T21:42:15Z",
+      "last_seen": "2026-10-15T21:42:15Z"
     }
   ]
 }

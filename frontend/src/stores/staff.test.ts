@@ -4,7 +4,7 @@ import type { StaffMember, StaffRole } from '@/types'
 import { useStaffStore } from './staff'
 
 function member(role: StaffRole): StaffMember {
-  return { id: 1, name: 'Equipe', email: 'equipe@example.com', role, role_label: role, created_at: '' }
+  return { id: '0199e3b0-4c2a-7d10-9a3b-000000000001', name: 'Equipe', email: 'equipe@example.com', role, role_label: role, created_at: '' }
 }
 
 function storeWith(role: StaffRole) {

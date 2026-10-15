@@ -19,7 +19,7 @@ final class UpdateCustomerUseCase
         private readonly CustomerOrderHistory $orders,
     ) {}
 
-    public function execute(int $customerId, UpdateUserProfileDTO $data): CustomerSummaryDTO
+    public function execute(string $customerId, UpdateUserProfileDTO $data): CustomerSummaryDTO
     {
         $account = $this->accounts->updateProfile($customerId, $data);
 

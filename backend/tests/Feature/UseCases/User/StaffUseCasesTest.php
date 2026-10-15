@@ -8,6 +8,7 @@ use App\Modules\Identity\UseCases\DeleteStaffMemberUseCase;
 use App\Modules\Identity\UseCases\UpdateStaffMemberUseCase;
 use App\Modules\Identity\ValueObjects\Email;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 function staffUpdate(User $member, string $name, UserRole $role): UpdateStaffMemberDTO
 {
@@ -19,7 +20,7 @@ it('decides when a staff update may change the role', function (bool $ownAccount
     $target = $ownAccount ? $actor : support();
     $before = $target->role;
 
-    $run = fn () => app(UpdateStaffMemberUseCase::class)->execute($actor, $target, staffUpdate($target, 'Outro Nome', $newRole));
+    $run = fn () => app(UpdateStaffMemberUseCase::class)->execute($actor, $target->id, staffUpdate($target, 'Outro Nome', $newRole));
 
     if ($allowed) {
         expect($run()->fresh()->role)->toBe($newRole)
@@ -41,11 +42,30 @@ it('decides when a staff member may be removed', function () {
     $actor = admin();
     $other = support();
 
-    expect(fn () => app(DeleteStaffMemberUseCase::class)->execute($actor, $actor))
+    expect(fn () => app(DeleteStaffMemberUseCase::class)->execute($actor, $actor->id))
         ->toThrow(BusinessRuleException::class, 'Você não pode remover a própria conta.')
         ->and(User::query()->whereKey($actor->id)->exists())->toBeTrue();
 
-    app(DeleteStaffMemberUseCase::class)->execute($actor, $other);
+    app(DeleteStaffMemberUseCase::class)->execute($actor, $other->id);
 
     expect(User::query()->whereKey($other->id)->exists())->toBeFalse();
+});
+
+it('deletes a staff member by id and refuses an unknown one', function () {
+    $actor = admin();
+    $other = support();
+
+    app(DeleteStaffMemberUseCase::class)->execute($actor, $other->id);
+
+    expect(User::query()->whereKey($other->id)->exists())->toBeFalse();
+
+    expect(fn () => app(DeleteStaffMemberUseCase::class)->execute($actor, unknownId()))->toThrow(ModelNotFoundException::class)
+        ->and(User::query()->whereKey($actor->id)->exists())->toBeTrue();
+});
+
+it('refuses to update an unknown staff member', function () {
+    $actor = admin();
+
+    expect(fn () => app(UpdateStaffMemberUseCase::class)->execute($actor, unknownId(), new UpdateStaffMemberDTO(new UpdateUserProfileDTO('Nome', new Email('nome@example.com')), UserRole::Support)))
+        ->toThrow(ModelNotFoundException::class);
 });

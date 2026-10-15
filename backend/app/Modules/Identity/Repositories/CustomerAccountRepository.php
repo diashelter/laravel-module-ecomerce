@@ -29,14 +29,14 @@ class CustomerAccountRepository extends BaseRepository implements CustomerAccoun
         return $this->create($data->toArray())->toProfile();
     }
 
-    public function updateProfile(int $customerId, UpdateUserProfileDTO $data): CustomerProfile
+    public function updateProfile(string $customerId, UpdateUserProfileDTO $data): CustomerProfile
     {
         $account = $this->query()->findOrFail($customerId);
 
         return $this->update($account, $data->toArray())->toProfile();
     }
 
-    public function findProfile(int $customerId): ?CustomerProfile
+    public function findProfile(string $customerId): ?CustomerProfile
     {
         return $this->query()->find($customerId)?->toProfile();
     }

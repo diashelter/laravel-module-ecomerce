@@ -23,6 +23,7 @@ use App\Modules\Shared\Repositories\BaseRepository;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as BaseCollection;
 
@@ -49,23 +50,23 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
     }
 
     /** @return LengthAwarePaginator<int, Order> */
-    public function paginateForCustomer(int $customerId, int $perPage): LengthAwarePaginator
+    public function paginateForCustomer(string $customerId, int $perPage): LengthAwarePaginator
     {
         return $this->newestFirst($this->forCustomer($customerId))
             ->withCount('items')
             ->paginate($perPage);
     }
 
-    public function recentForCustomer(int $customerId, int $limit): OrderSummaries
+    public function recentForCustomer(string $customerId, int $limit): OrderSummaries
     {
         return new OrderSummaries(...$this->newestFirst($this->forCustomer($customerId))
             ->limit($limit)
             ->get()
-            ->map(fn (Order $order) => new OrderSummary($order->id, $order->status, $order->total_cents, $order->created_at->toImmutable()))
+            ->map(fn (Order $order) => new OrderSummary($order->id, $order->code, $order->status, $order->total_cents, $order->created_at->toImmutable()))
             ->all());
     }
 
-    public function countForCustomer(int $customerId): int
+    public function countForCustomer(string $customerId): int
     {
         return $this->forCustomer($customerId)->count();
     }
@@ -87,24 +88,26 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
      * Whether the product appears in any order. Items keep a snapshot of the product, but the
      * catalog must not delete a product that order history still points to.
      */
-    public function hasBeenOrdered(int $productId): bool
+    public function hasBeenOrdered(string $productId): bool
     {
         return OrderItem::query()->where('product_id', $productId)->exists();
     }
 
     /**
-     * Creates the order and its items (snapshot of name and price) together with the copy of the
-     * delivery address and the shipping quoted for it. The order total is the one the lines and
+     * Creates the order, with the code already drawn, and its items (snapshot of name and price)
+     * together with the copy of the delivery address and the shipping quoted for it. The order total is the one the lines and
      * the shipping calculate, so it cannot diverge from them.
      */
     public function createWithItems(
-        int $customerId,
+        string $customerId,
+        string $code,
         OrderStatus $status,
         OrderLines $lines,
         DeliveryAddress $address,
         ShippingQuote $shipping,
     ): Order {
         $order = $this->query()->create([
+            'code' => $code,
             'customer_id' => $customerId,
             'total_cents' => $lines->totalCents() + $shipping->priceCents,
             'shipping_cents' => $shipping->priceCents,
@@ -130,16 +133,30 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
         return $order;
     }
 
-    public function findForPayment(int $orderId): ?OrderForPayment
+    /**
+     * The order, with its items, only when it belongs to that customer: the order of another
+     * customer answers the same as one that does not exist.
+     */
+    public function findForCustomer(string $customerId, string $orderId): ?Order
     {
-        $order = $this->query()->find($orderId);
-
-        return $order === null ? null : new OrderForPayment($order->id, $order->customer_id, $order->total_cents, $order->status);
+        return $this->forCustomer($customerId)->with('items')->find($orderId);
     }
 
-    public function findOrFail(int $id): Order
+    /**
+     * The order with its customer and items, for the admin.
+     *
+     * @throws ModelNotFoundException
+     */
+    public function findWithCustomerAndItems(string $id): Order
     {
-        return $this->query()->findOrFail($id);
+        return $this->query()->with(['customer', 'items'])->findOrFail($id);
+    }
+
+    public function findForPayment(string $customerId, string $orderId): ?OrderForPayment
+    {
+        $order = $this->forCustomer($customerId)->find($orderId);
+
+        return $order === null ? null : new OrderForPayment($order->id, $order->customer_id, $order->total_cents, $order->status);
     }
 
     /**
@@ -207,7 +224,7 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
     }
 
     /** @return Builder<Order> */
-    protected function forCustomer(int $customerId): Builder
+    protected function forCustomer(string $customerId): Builder
     {
         return $this->query()->where('customer_id', $customerId);
     }

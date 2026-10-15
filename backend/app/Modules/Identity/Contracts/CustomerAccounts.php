@@ -18,12 +18,12 @@ interface CustomerAccounts
 {
     public function register(CreateUserDTO $data): CustomerProfile;
 
-    public function updateProfile(int $customerId, UpdateUserProfileDTO $data): CustomerProfile;
+    public function updateProfile(string $customerId, UpdateUserProfileDTO $data): CustomerProfile;
 
     /**
      * Null when there is no such account.
      */
-    public function findProfile(int $customerId): ?CustomerProfile;
+    public function findProfile(string $customerId): ?CustomerProfile;
 
     /** @return LengthAwarePaginator<int, CustomerProfile> */
     public function paginateNewestFirst(int $perPage): LengthAwarePaginator;

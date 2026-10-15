@@ -8,7 +8,6 @@ use App\Modules\Catalog\Http\Requests\Admin\StoreProductRequest;
 use App\Modules\Catalog\Http\Requests\Admin\UpdateProductRequest;
 use App\Modules\Catalog\Http\Requests\Admin\UpdateProductStatusRequest;
 use App\Modules\Catalog\Http\Resources\ProductResource;
-use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Catalog\UseCases\ChangeProductStatusUseCase;
 use App\Modules\Catalog\UseCases\CreateProductUseCase;
@@ -35,25 +34,25 @@ class ProductController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Product $product): ProductResource
+    public function show(string $product, ProductRepository $products): ProductResource
     {
-        return ProductResource::make($product->load(['categories', 'stock']));
+        return ProductResource::make($products->findWithCategoriesAndStock($product));
     }
 
     /**
      * Stock is intentionally not touched here (see StockController).
      */
-    public function update(UpdateProductRequest $request, Product $product, UpdateProductUseCase $updateProduct): ProductResource
+    public function update(UpdateProductRequest $request, string $product, UpdateProductUseCase $updateProduct): ProductResource
     {
         return ProductResource::make($updateProduct->execute($product, $request->toDto()));
     }
 
-    public function updateStatus(UpdateProductStatusRequest $request, Product $product, ChangeProductStatusUseCase $changeStatus): ProductResource
+    public function updateStatus(UpdateProductStatusRequest $request, string $product, ChangeProductStatusUseCase $changeStatus): ProductResource
     {
         return ProductResource::make($changeStatus->execute($product, $request->toDto()));
     }
 
-    public function destroy(Product $product, DeleteProductUseCase $deleteProduct): Response
+    public function destroy(string $product, DeleteProductUseCase $deleteProduct): Response
     {
         $deleteProduct->execute($product);
 

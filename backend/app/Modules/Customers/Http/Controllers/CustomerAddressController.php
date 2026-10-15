@@ -6,7 +6,6 @@ namespace App\Modules\Customers\Http\Controllers;
 
 use App\Modules\Customers\Http\Requests\CustomerAddressRequest;
 use App\Modules\Customers\Http\Resources\CustomerAddressResource;
-use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Customers\Repositories\CustomerAddressRepository;
 use App\Modules\Customers\UseCases\CreateCustomerAddressUseCase;
 use App\Modules\Customers\UseCases\DeleteCustomerAddressUseCase;
@@ -16,7 +15,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * The logged-in customer's own address book (guard `customer`).
@@ -38,17 +36,15 @@ class CustomerAddressController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function update(CustomerAddressRequest $request, CustomerAddress $address, UpdateCustomerAddressUseCase $updateAddress): CustomerAddressResource
+    public function update(CustomerAddressRequest $request, string $address, UpdateCustomerAddressUseCase $updateAddress): CustomerAddressResource
     {
-        return CustomerAddressResource::make($updateAddress->execute($address, $request->toDto()))
+        return CustomerAddressResource::make($updateAddress->execute($request->user('customer')->getAuthIdentifier(), $address, $request->toDto()))
             ->additional(['message' => 'Endereço atualizado com sucesso.']);
     }
 
-    public function destroy(CustomerAddress $address, DeleteCustomerAddressUseCase $deleteAddress): Response
+    public function destroy(Request $request, string $address, DeleteCustomerAddressUseCase $deleteAddress): Response
     {
-        Gate::authorize('delete', $address);
-
-        $deleteAddress->execute($address);
+        $deleteAddress->execute($request->user('customer')->getAuthIdentifier(), $address);
 
         return response()->noContent();
     }

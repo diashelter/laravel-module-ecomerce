@@ -52,7 +52,7 @@ it('locks a single stock row by id', function () {
 });
 
 it('fails when locking a missing stock row', function () {
-    DB::transaction(fn () => $this->repository->lockById(999999));
+    DB::transaction(fn () => $this->repository->lockById(unknownId()));
 })->throws(ModelNotFoundException::class);
 
 it('decrements the stock quantity', function () {

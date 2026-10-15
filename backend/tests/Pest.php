@@ -5,11 +5,14 @@ use App\Modules\Catalog\Models\Product;
 use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ordering\Services\OrderCodeGenerator;
 use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\DTOs\ChargeRequest;
 use App\Modules\Payment\DTOs\ChargeResult;
 use App\Modules\Payment\Gateways\FakePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -46,10 +49,18 @@ function addressPayload(array $overrides = []): array
     ], $overrides);
 }
 
+/** A canonical UUID v7 that is in no table: what the tests send as an unknown id. */
+function unknownId(): string
+{
+    return Str::uuid7()->toString();
+}
+
 /** A complete row for `orders`, written straight to the table with no model in between. */
-function orderRow(int $customerId, array $overrides = []): array
+function orderRow(string $customerId, array $overrides = []): array
 {
     return array_merge([
+        'id' => unknownId(),
+        'code' => (new OrderCodeGenerator)->generate(),
         'customer_id' => $customerId,
         'total_cents' => 0,
         'shipping_cents' => 0,
@@ -67,6 +78,47 @@ function orderRow(int $customerId, array $overrides = []): array
         'created_at' => now(),
         'updated_at' => now(),
     ], $overrides);
+}
+
+/**
+ * Replaces the order code draw with a fixed sequence, so a test decides which codes collide. The
+ * returned generator counts the draws; asking for more codes than the sequence holds is an error.
+ *
+ * @param  list<string>  $codes
+ */
+function forceOrderCodes(array $codes): OrderCodeGenerator
+{
+    $generator = new class($codes) extends OrderCodeGenerator
+    {
+        public int $draws = 0;
+
+        /** @param  list<string>  $codes */
+        public function __construct(private array $codes) {}
+
+        public function generate(): string
+        {
+            return $this->codes[$this->draws++] ?? throw new LogicException('The forced order codes ran out.');
+        }
+    };
+
+    app()->instance(OrderCodeGenerator::class, $generator);
+
+    return $generator;
+}
+
+/**
+ * The SQL of every query the closure runs, in order. Sign in and create the data before calling it,
+ * so only the request itself is counted.
+ *
+ * @return list<string>
+ */
+function queriesDuring(Closure $request): array
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $request();
+
+    return array_column(DB::getQueryLog(), 'query');
 }
 
 function admin(array $attributes = []): User

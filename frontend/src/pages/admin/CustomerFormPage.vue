@@ -7,7 +7,7 @@ import { useFormErrors } from '@/composables/useFormErrors'
 import { adminCustomerService } from '@/services/admin/customerService'
 import { useNotificationStore } from '@/stores/notifications'
 
-const props = defineProps<{ id?: number }>()
+const props = defineProps<{ id?: string }>()
 
 const router = useRouter()
 const notifications = useNotificationStore()

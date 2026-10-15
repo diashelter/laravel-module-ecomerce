@@ -15,7 +15,7 @@ final class MarkOrderAsAwaitingPaymentUseCase
 {
     public function __construct(private readonly OrderRepository $orders) {}
 
-    public function execute(int $orderId): void
+    public function execute(string $orderId): void
     {
         $order = $this->orders->findOrFail($orderId);
 

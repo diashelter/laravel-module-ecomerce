@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 // Identity (the store session) and customers (account and admin screens) each render the account
 // with their own resource, and the API keeps one shape of it.
 it('renders the customer account in the same shape in identity and customers', function () {
-    $profile = new CustomerProfile(id: 7, name: 'Ana Souza', email: 'ana@example.com', createdAt: CarbonImmutable::parse('2026-10-09 14:30:00'));
+    $profile = new CustomerProfile(id: '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a', name: 'Ana Souza', email: 'ana@example.com', createdAt: CarbonImmutable::parse('2026-10-09 14:30:00'));
     $request = Request::create('/');
 
     $identity = IdentityCustomerProfileResource::make($profile)->resolve($request);
@@ -17,7 +17,7 @@ it('renders the customer account in the same shape in identity and customers', f
 
     expect($customers)->toBe($identity)
         ->and($customers)->toBe([
-            'id' => 7,
+            'id' => '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a',
             'name' => 'Ana Souza',
             'email' => 'ana@example.com',
             'created_at' => $profile->createdAt->toIso8601String(),

@@ -30,8 +30,9 @@ class CategoryRepository extends BaseRepository
         return $this->query()->withCount('products')->orderBy('name')->get();
     }
 
-    public function hasProducts(Category $category): bool
+    public function hasProducts(string $categoryId): bool
     {
-        return $category->products()->exists();
+        // Only the id is needed: the relation query runs on the pivot, without reading the category.
+        return (new Category)->forceFill(['id' => $categoryId])->products()->exists();
     }
 }

@@ -8,6 +8,7 @@ use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Enums\BrazilianState;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
+use App\Modules\Ordering\Services\OrderCodeGenerator;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,6 +21,8 @@ class OrderFactory extends Factory
     public function definition(): array
     {
         return [
+            // Drawn directly, not through the container: a test may replace the generator there.
+            'code' => (new OrderCodeGenerator)->generate(),
             'customer_id' => CustomerAccount::factory(),
             'total_cents' => 0,
             // Free shipping keeps the default total (0) valid; tests that care set both.

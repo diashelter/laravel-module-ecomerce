@@ -8,7 +8,7 @@ import { useNotificationStore } from '@/stores/notifications'
 import type { Product } from '@/types'
 import { formatCents } from '@/utils/money'
 
-const props = defineProps<{ id: number }>()
+const props = defineProps<{ id: string }>()
 
 const cart = useCartStore()
 const notifications = useNotificationStore()

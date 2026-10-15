@@ -44,6 +44,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md round 2 gap 1; C10 (backend/tests/Unit/Architecture/ModuleBoundariesTest.php:168) (backend/tests/Unit/Architecture)
 - last seen: 2026-10-09T16:44:55Z
 
+### L-006 - Before writing a check about a database refusal citing a constraint, confirm the column type rejects the value first; a char(8) refuses a 9-character value before any CHECK runs.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `backend/migrations` · harmful: 0
+- features: uuid-record-ids
+- evidence: checks.md C23 (backend/migrations)
+- last seen: 2026-10-15T21:42:15Z
+
+### L-007 - A negative-grep proof must be shown failing on a planted line; a pattern keyed to a renamed token (the old {id}) silently matches nothing.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: uuid-record-ids
+- evidence: checks.md C63 (docs)
+- last seen: 2026-10-15T21:42:15Z
+
+### L-008 - Every type the plan's Impact names as changing (here the id-keyed maps) owes a Coverage row and a proof, not only the ones that appear in Surface.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: uuid-record-ids
+- evidence: plan.md Impact (checks)
+- last seen: 2026-10-15T21:42:15Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

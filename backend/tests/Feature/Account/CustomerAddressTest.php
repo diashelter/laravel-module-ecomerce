@@ -237,15 +237,17 @@ it('forbids changing an address of another customer', function (string $method) 
     $owner = customer();
     $address = addressOf($owner, ['city' => 'Campinas']);
 
-    $this->actingAs(customer())->json($method, "/api/account/addresses/{$address->id}", addressPayload(['city' => 'Hacked']))
-        ->assertForbidden();
+    // Not forbidden: the address of another customer answers like an id that does not exist.
+    $response = $this->actingAs(customer())->json($method, "/api/account/addresses/{$address->id}", addressPayload(['city' => 'Hacked']))
+        ->assertNotFound();
+    assertApiError($response, 'NOT_FOUND', 'Recurso não encontrado.');
 
     expect(CustomerAddress::query()->count())->toBe(1)
         ->and($address->fresh()->city)->toBe('Campinas');
 })->with(['put', 'delete']);
 
 it('answers 404 to an unknown address', function (string $method) {
-    $this->actingAs(customer())->json($method, '/api/account/addresses/999999', addressPayload())->assertNotFound();
+    $this->actingAs(customer())->json($method, '/api/account/addresses/'.unknownId(), addressPayload())->assertNotFound();
 })->with(['put', 'delete']);
 
 it('answers 401 to a guest on every address route', function (string $method, string $uri) {

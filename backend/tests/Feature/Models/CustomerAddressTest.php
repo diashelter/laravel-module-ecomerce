@@ -5,9 +5,10 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /** A complete row for the table, written straight to it with no model in between. */
-function addressRow(int $customerId, array $overrides = []): array
+function addressRow(string $customerId, array $overrides = []): array
 {
     return array_merge([
+        'id' => unknownId(),
         'customer_id' => $customerId,
         'recipient_name' => 'Ana Souza',
         'postal_code' => '01310100',
@@ -33,7 +34,7 @@ it('removes the address book together with the customer account', function () {
         ->and(CustomerAddress::query()->whereKey($other->id)->exists())->toBeTrue();
 
     // The nested transaction is a savepoint: Postgres aborts the test transaction after a failed statement.
-    expect(fn () => DB::transaction(fn () => DB::table('customer_addresses')->insert(addressRow(999999))))
+    expect(fn () => DB::transaction(fn () => DB::table('customer_addresses')->insert(addressRow(unknownId()))))
         ->toThrow(QueryException::class);
 });
 

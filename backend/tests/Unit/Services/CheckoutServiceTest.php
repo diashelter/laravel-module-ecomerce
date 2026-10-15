@@ -11,11 +11,13 @@ use App\Modules\Ordering\ValueObjects\ProductQuantities;
 
 beforeEach(function () {
     $this->service = new CheckoutService(new PurchaseAvailabilityService);
+    // The products are labelled 1, 2 and 3 in the cases below; each label stands for one UUID.
+    $this->id = fn (int $label) => sprintf('0199e3b0-4c2a-7d10-9a3b-%012d', $label);
     $this->quantities = fn (array $byProduct) => new ProductQuantities(
-        ...array_map(fn (int $id) => new CartItemDTO($id, $byProduct[$id]), array_keys($byProduct)),
+        ...array_map(fn (int $label) => new CartItemDTO(($this->id)($label), $byProduct[$label]), array_keys($byProduct)),
     );
-    $this->product = fn (int $id, int $priceCents, bool $isActive = true) => new CatalogProduct($id, "Produto {$id}", null, $priceCents, $isActive);
-    $this->stock = fn (array $byProduct) => new StockQuantities(collect($byProduct));
+    $this->product = fn (int $label, int $priceCents, bool $isActive = true) => new CatalogProduct(($this->id)($label), "Produto {$label}", null, $priceCents, $isActive);
+    $this->stock = fn (array $byProduct) => new StockQuantities(collect($byProduct)->mapWithKeys(fn (int $quantity, int $label) => [($this->id)($label) => $quantity]));
 });
 
 it('accepts quantities that the stock can fulfil', function () {
@@ -32,9 +34,9 @@ it('reports every product that cannot be bought, keyed by item', function () {
         $this->fail('InsufficientStockException was not thrown.');
     } catch (InsufficientStockException $e) {
         expect($e->errors())->toBe([
-            'items.1' => ['Estoque insuficiente. Disponível: 2.'],
-            'items.2' => ['Produto indisponível.'],
-            'items.3' => ['Produto não encontrado.'],
+            'items.'.($this->id)(1) => ['Estoque insuficiente. Disponível: 2.'],
+            'items.'.($this->id)(2) => ['Produto indisponível.'],
+            'items.'.($this->id)(3) => ['Produto não encontrado.'],
         ]);
     }
 });

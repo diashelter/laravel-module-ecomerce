@@ -12,11 +12,11 @@ use Traversable;
 /**
  * The products found by the catalog, keyed by id. Iterates `product_id => CatalogProduct`.
  *
- * @implements IteratorAggregate<int, CatalogProduct>
+ * @implements IteratorAggregate<string, CatalogProduct>
  */
 final readonly class CatalogProducts implements Countable, IteratorAggregate
 {
-    /** @var array<int, CatalogProduct> */
+    /** @var array<string, CatalogProduct> */
     private array $products;
 
     public function __construct(CatalogProduct ...$products)
@@ -30,7 +30,7 @@ final readonly class CatalogProducts implements Countable, IteratorAggregate
         $this->products = $byId;
     }
 
-    public function find(int $productId): ?CatalogProduct
+    public function find(string $productId): ?CatalogProduct
     {
         return $this->products[$productId] ?? null;
     }
@@ -40,7 +40,7 @@ final readonly class CatalogProducts implements Countable, IteratorAggregate
         return count($this->products);
     }
 
-    /** @return Traversable<int, CatalogProduct> */
+    /** @return Traversable<string, CatalogProduct> */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->products);

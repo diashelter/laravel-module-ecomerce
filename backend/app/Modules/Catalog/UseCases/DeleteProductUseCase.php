@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Catalog\UseCases;
 
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
-use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Catalog\Services\ProductService;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Admin: deletes a product that was never ordered.
@@ -23,12 +23,13 @@ final class DeleteProductUseCase
 
     /**
      * @throws BusinessRuleException
+     * @throws ModelNotFoundException
      */
-    public function execute(Product $product): void
+    public function execute(string $productId): void
     {
-        $this->productService->ensureCanBeDeleted($this->orderHistory->hasBeenOrdered($product->id));
+        $this->productService->ensureCanBeDeleted($this->orderHistory->hasBeenOrdered($productId));
 
         // Stock and category links are removed by the foreign key cascades.
-        $this->products->delete($product);
+        $this->products->deleteById($productId);
     }
 }

@@ -14,5 +14,5 @@ interface StockInitializer
     /**
      * Product 1:1 Stock: called once, right after the product is created.
      */
-    public function createForProduct(int $productId, int $quantity): void;
+    public function createForProduct(string $productId, int $quantity): void;
 }

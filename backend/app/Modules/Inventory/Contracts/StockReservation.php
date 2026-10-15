@@ -26,5 +26,5 @@ interface StockReservation
     /**
      * Deducts sold units from the stock of a product previously locked with lockForProducts().
      */
-    public function decrement(int $productId, int $quantity): void;
+    public function decrement(string $productId, int $quantity): void;
 }

@@ -13,5 +13,5 @@ namespace App\Modules\Catalog\Contracts;
  */
 interface ProductOrderHistory
 {
-    public function hasBeenOrdered(int $productId): bool;
+    public function hasBeenOrdered(string $productId): bool;
 }

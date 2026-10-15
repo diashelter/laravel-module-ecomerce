@@ -65,7 +65,7 @@ it('logs a staff member out of the admin', function () {
 
 it('accepts only admin and support roles in the database', function (?string $role) {
     $row = fn (string $email, ?string $role) => array_filter(
-        ['name' => 'Ana', 'email' => $email, 'password' => 'x', 'role' => $role],
+        ['id' => unknownId(), 'name' => 'Ana', 'email' => $email, 'password' => 'x', 'role' => $role],
         fn ($value, $key) => $key !== 'role' || $role !== null,
         ARRAY_FILTER_USE_BOTH,
     );

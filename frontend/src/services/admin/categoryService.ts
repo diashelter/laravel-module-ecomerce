@@ -12,12 +12,12 @@ export const adminCategoryService = {
     return data.data
   },
 
-  async update(id: number, name: string): Promise<Category> {
+  async update(id: string, name: string): Promise<Category> {
     const { data } = await api.put<{ data: Category }>(`admin/categories/${id}`, { name })
     return data.data
   },
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await api.delete(`admin/categories/${id}`)
   },
 }

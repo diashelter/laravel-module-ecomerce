@@ -9,6 +9,7 @@ use App\Modules\Inventory\Models\Stock;
 use App\Modules\Inventory\Repositories\StockRepository;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,11 +25,12 @@ final class AdjustStockUseCase
 
     /**
      * @throws BusinessRuleException
+     * @throws ModelNotFoundException
      */
-    public function execute(Stock $stock, AdjustStockDTO $data): Stock
+    public function execute(string $stockId, AdjustStockDTO $data): Stock
     {
-        $stock = DB::transaction(function () use ($stock, $data): Stock {
-            $locked = $this->stocks->lockById($stock->getKey());
+        $stock = DB::transaction(function () use ($stockId, $data): Stock {
+            $locked = $this->stocks->lockById($stockId);
 
             $newQuantity = $this->stockService->calculateNewQuantity($locked->quantity, $data);
 

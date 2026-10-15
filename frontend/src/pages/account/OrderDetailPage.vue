@@ -12,7 +12,7 @@ import { orderService } from '@/services/orderService'
 import type { Order, OrderStatus } from '@/types'
 import { formatDateTime } from '@/utils/date'
 
-const props = defineProps<{ id: number }>()
+const props = defineProps<{ id: string }>()
 
 const route = useRoute()
 const order = ref<Order | null>(null)
@@ -48,7 +48,7 @@ onMounted(async () => {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <RouterLink :to="{ name: 'account.orders' }" class="text-sm text-indigo-600 hover:underline">← Meus pedidos</RouterLink>
-        <h1 class="page-title mt-1">Pedido #{{ order.id }}</h1>
+        <h1 class="page-title mt-1">Pedido #{{ order.code }}</h1>
         <p class="text-sm text-slate-500">Realizado em {{ formatDateTime(order.created_at) }}</p>
       </div>
       <OrderStatusBadge :status="order.status" :label="order.status_label" />
