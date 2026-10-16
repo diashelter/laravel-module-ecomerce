@@ -2,6 +2,7 @@
 
 use App\Modules\Shared\Models\OutboxMessage;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -167,5 +168,41 @@ it('exits after the cycle when the queue restart signal changes', function () {
 
     expect(Artisan::call('outbox:relay'))->toBe(0);
 
+    Sleep::assertSleptTimes(1);
+});
+
+it('prints one warning line when the transport refuses a message', function () {
+    $message = pendingMessage();
+    spyTransport(failing: [$message->id]);
+
+    relayOnce();
+
+    expect(Artisan::output())->toContain('The transport refused an outbox message');
+});
+
+it('keeps relaying while the cache with the restart signal is unreachable', function () {
+    // Redis down: the cache throws, and the relay keeps publishing instead of crashing.
+    $reads = 0;
+    $cache = Mockery::mock(CacheRepository::class);
+    $cache->shouldReceive('get')->with(RESTART_SIGNAL)->andReturnUsing(function () use (&$reads) {
+        $reads++;
+
+        if ($reads <= 2) {
+            throw new RuntimeException('cache down');
+        }
+
+        return $reads === 3 ? 'signal-once-back' : 'signal-after-restart';
+    });
+    app()->instance(CacheRepository::class, $cache);
+    $message = pendingMessage();
+    $transport = spyTransport();
+    Sleep::fake();
+
+    expect(Artisan::call('outbox:relay'))->toBe(0);
+
+    // Published while the cache was down; the first signal read back is adopted, the next one stops it.
+    expect($transport->accepted)->toHaveCount(1)
+        ->and($message->fresh()->published_at)->not->toBeNull()
+        ->and($reads)->toBe(4);
     Sleep::assertSleptTimes(1);
 });

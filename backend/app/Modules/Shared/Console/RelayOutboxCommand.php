@@ -9,6 +9,7 @@ use App\Modules\Shared\Messaging\RelayCycle;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Sleep;
+use Throwable;
 
 /**
  * The outbox relay process (the outbox-relay container): publishes the pending messages within
@@ -35,10 +36,10 @@ final class RelayOutboxCommand extends Command
         $nextPruneAt = now()->addHour();
 
         if ($this->option('once')) {
-            return $relay->publishPending() === RelayCycle::Failed ? self::FAILURE : self::SUCCESS;
+            return $this->publish($relay) === RelayCycle::Failed ? self::FAILURE : self::SUCCESS;
         }
 
-        $restartSignal = $cache->get(self::RESTART_SIGNAL);
+        $restartSignal = $this->restartSignal($cache);
 
         while (true) {
             if (now()->greaterThanOrEqualTo($nextPruneAt)) {
@@ -46,9 +47,12 @@ final class RelayOutboxCommand extends Command
                 $nextPruneAt = now()->addHour();
             }
 
-            $cycle = $relay->publishPending();
+            $cycle = $this->publish($relay);
+            $currentSignal = $this->restartSignal($cache);
 
-            if ($cache->get(self::RESTART_SIGNAL) !== $restartSignal) {
+            if ($restartSignal === null) {
+                $restartSignal = $currentSignal;
+            } elseif ($currentSignal !== null && $currentSignal !== $restartSignal) {
                 return self::SUCCESS;
             }
 
@@ -58,6 +62,33 @@ final class RelayOutboxCommand extends Command
             } elseif ($cycle === RelayCycle::Failed) {
                 Sleep::for(self::FAILURE_WAIT_SECONDS)->seconds();
             }
+        }
+    }
+
+    private function publish(OutboxRelay $relay): RelayCycle
+    {
+        $cycle = $relay->publishPending();
+
+        // One line on the process output (make logs-relay); the message id and the error are in the log.
+        if ($cycle === RelayCycle::Failed) {
+            $this->components->warn('The transport refused an outbox message: it and the later ones stay pending.');
+        }
+
+        return $cycle;
+    }
+
+    /**
+     * The signal in a one-item list, or null while the cache cannot be read (Redis down): the relay
+     * then keeps publishing, and adopts the signal it reads once the cache is back.
+     *
+     * @return array{0: mixed}|null
+     */
+    private function restartSignal(Cache $cache): ?array
+    {
+        try {
+            return [$cache->get(self::RESTART_SIGNAL)];
+        } catch (Throwable) {
+            return null;
         }
     }
 }
