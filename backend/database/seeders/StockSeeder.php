@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Inventory\Models\Stock;
 use Illuminate\Database\Seeder;
 
 class StockSeeder extends Seeder
@@ -21,7 +22,7 @@ class StockSeeder extends Seeder
 
     public function run(): void
     {
-        $products = Product::query()->doesntHave('stock')->orderBy('id')->get()->shuffle(DatabaseSeeder::FAKER_SEED);
+        $products = Product::query()->whereNotIn('id', Stock::query()->select('product_id'))->orderBy('id')->get()->shuffle(DatabaseSeeder::FAKER_SEED);
 
         $ranges = [];
         foreach (self::DISTRIBUTION as [$count, $min, $max]) {
@@ -31,7 +32,7 @@ class StockSeeder extends Seeder
         foreach ($products->values() as $index => $product) {
             [$min, $max] = $ranges[$index] ?? [21, 150];
 
-            $product->stock()->create(['quantity' => fake()->numberBetween($min, $max)]);
+            Stock::query()->create(['product_id' => $product->id, 'quantity' => fake()->numberBetween($min, $max)]);
         }
     }
 }

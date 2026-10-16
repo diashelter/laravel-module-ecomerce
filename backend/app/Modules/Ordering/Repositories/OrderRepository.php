@@ -24,8 +24,6 @@ use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection as BaseCollection;
 
 /**
  * Also answers the catalog's ProductOrderHistory contract and the ordering contracts other modules
@@ -201,26 +199,6 @@ class OrderRepository extends BaseRepository implements CustomerOrderHistory, Pa
         }
 
         return false;
-    }
-
-    /** @return BaseCollection<string, int> ['YYYY-MM-DD' => total] */
-    public function countPerDaySince(Carbon $start): BaseCollection
-    {
-        return $this->query()
-            ->where('created_at', '>=', $start)
-            ->selectRaw("to_char(created_at, 'YYYY-MM-DD') as day, count(*) as total")
-            ->groupBy('day')
-            ->pluck('total', 'day');
-    }
-
-    /** @return BaseCollection<string, int> ['YYYY-MM' => total] */
-    public function countPerMonthSince(Carbon $start): BaseCollection
-    {
-        return $this->query()
-            ->where('created_at', '>=', $start)
-            ->selectRaw("to_char(created_at, 'YYYY-MM') as month, count(*) as total")
-            ->groupBy('month')
-            ->pluck('total', 'month');
     }
 
     /** @return Builder<Order> */

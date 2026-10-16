@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Models;
 
-use App\Modules\Catalog\Models\Product;
+use App\Modules\Inventory\ValueObjects\StockRecord;
 use Database\Factories\StockFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['product_id', 'quantity'])]
 #[UseFactory(StockFactory::class)]
@@ -27,10 +26,10 @@ class Stock extends Model
         ];
     }
 
-    /** @return BelongsTo<Product, $this> */
-    public function product(): BelongsTo
+    /** The data of this row, for the callers that must not hold the model. */
+    public function toRecord(): StockRecord
     {
-        return $this->belongsTo(Product::class);
+        return new StockRecord($this->id, $this->product_id, $this->quantity, $this->updated_at?->toImmutable());
     }
 
     public function hasUnits(): bool

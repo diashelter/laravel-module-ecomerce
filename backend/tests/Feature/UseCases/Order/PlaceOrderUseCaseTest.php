@@ -77,7 +77,7 @@ it('refuses an unknown delivery address before touching the stock', function () 
 
     expect($quoter->calls)->toBe(0)
         ->and($stockLocks)->toBeEmpty()
-        ->and($product->stock->fresh()->quantity)->toBe(5)
+        ->and(stockOf($product)->quantity)->toBe(5)
         ->and(Order::query()->count())->toBe(0);
 });
 
@@ -98,7 +98,7 @@ it('draws the order code up to three times', function (int $collisions, bool $pl
         expect($place()->code)->toBe('EEEEEEEE')
             ->and($generator->draws)->toBe($collisions + 1)
             ->and(Order::query()->count())->toBe($ordersBefore + 1)
-            ->and($product->stock->fresh()->quantity)->toBe(3)
+            ->and(stockOf($product)->quantity)->toBe(3)
             ->and(outboxMessages('ordering.order_placed'))->toHaveCount(1);
 
         return;
@@ -108,7 +108,7 @@ it('draws the order code up to three times', function (int $collisions, bool $pl
     expect($generator->draws)->toBe(3)
         ->and(Order::query()->count())->toBe($ordersBefore)
         ->and(DB::table('order_items')->count())->toBe(0)
-        ->and($product->stock->fresh()->quantity)->toBe(5)
+        ->and(stockOf($product)->quantity)->toBe(5)
         ->and(outboxMessages('ordering.order_placed'))->toBeEmpty();
 })->with([
     'no collision' => [0, true],

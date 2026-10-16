@@ -4,36 +4,42 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Http\Resources;
 
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Ordering\Services\PurchaseAvailabilityService;
+use App\Modules\Catalog\ValueObjects\ProductCategory;
+use App\Modules\Catalog\ValueObjects\ProductView;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin Product */
+/** @property ProductView $resource */
 class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $availability = app(PurchaseAvailabilityService::class);
+        $product = $this->resource->product;
+        $stock = $this->resource->stock;
+        // Availability is always decided by the backend (active AND stock > 0).
+        $availability = $this->resource->availability();
 
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'price_cents' => $this->price_cents,
-            'description' => $this->description,
-            'image_url' => $this->image_url,
-            'status' => $this->status->value,
-            'status_label' => $this->status->label(),
-            // Availability is always decided by the backend (active AND stock > 0).
-            'is_available' => $this->whenLoaded('stock', fn () => $availability->isAvailable($this->isActive(), $this->stock?->quantity)),
-            'available_quantity' => $this->whenLoaded('stock', fn () => $availability->availableQuantity($this->stock?->quantity)),
-            'stock' => $this->whenLoaded('stock', fn () => $this->stock ? [
-                'id' => $this->stock->id,
-                'quantity' => $this->stock->quantity,
-            ] : null),
-            'categories' => CategoryResource::collection($this->whenLoaded('categories')),
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'id' => $product->id,
+            'name' => $product->name,
+            'price_cents' => $product->priceCents,
+            'description' => $product->description,
+            'image_url' => $product->imageUrl,
+            'status' => $product->status->value,
+            'status_label' => $product->status->label(),
+            'is_available' => $availability->isAvailable(),
+            'available_quantity' => $availability->availableQuantity(),
+            'stock' => $stock === null ? null : [
+                'id' => $stock->id,
+                'quantity' => $stock->quantity,
+            ],
+            'categories' => array_map(fn (ProductCategory $category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ], iterator_to_array($this->resource->categories)),
+            'created_at' => $product->createdAt?->toIso8601String(),
+            'updated_at' => $product->updatedAt?->toIso8601String(),
         ];
     }
 }

@@ -48,7 +48,7 @@ function existingIdOf(string $kind): string
     return match ($kind) {
         'product' => productWithStock(3)->id,
         'category' => Category::factory()->create()->id,
-        'stock' => productWithStock(3)->stock->id,
+        'stock' => stockOf(productWithStock(3))->id,
         'customer' => customer()->id,
         'user' => support()->id,
         'order' => Order::factory()->create()->id,
@@ -128,7 +128,7 @@ it('validates the body before the record in the staff routes', function (string 
 ]);
 
 it('adjusts the stock reading it once with a lock', function () {
-    $stock = productWithStock(10)->stock;
+    $stock = stockOf(productWithStock(10));
     $this->actingAs(admin());
 
     $response = null;

@@ -6,21 +6,19 @@ namespace App\Modules\Inventory\Repositories;
 
 use App\Modules\Catalog\ValueObjects\ProductIds;
 use App\Modules\Inventory\Contracts\StockInitializer;
-use App\Modules\Inventory\Contracts\StockLevels;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Inventory\ValueObjects\StockQuantities;
 use App\Modules\Shared\Repositories\BaseRepository;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * The inventory's data access. Other parts of the system never use this class directly:
- * the catalog, the cart and the checkout depend on the StockInitializer, StockLevels and
- * StockReservation contracts.
+ * The inventory's writes. Other parts of the system never use this class directly: the catalog and
+ * the checkout depend on the StockInitializer and StockReservation contracts. The reads live in
+ * the Queries folder (StockLevels, StockMetrics and the admin list).
  *
  * @extends BaseRepository<Stock>
  */
-class StockRepository extends BaseRepository implements StockInitializer, StockLevels, StockReservation
+class StockRepository extends BaseRepository implements StockInitializer, StockReservation
 {
     protected function model(): string
     {
@@ -33,24 +31,6 @@ class StockRepository extends BaseRepository implements StockInitializer, StockL
     public function createForProduct(string $productId, int $quantity): void
     {
         $this->create(['product_id' => $productId, 'quantity' => $quantity]);
-    }
-
-    /** @return LengthAwarePaginator<int, Stock> */
-    public function paginateByQuantity(int $perPage): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with('product')
-            ->orderBy('quantity')
-            ->orderBy('id')
-            ->paginate($perPage);
-    }
-
-    public function quantitiesFor(ProductIds $productIds): StockQuantities
-    {
-        return new StockQuantities($this->query()
-            ->whereIn('product_id', $productIds->all())
-            ->orderBy('product_id')
-            ->pluck('quantity', 'product_id'));
     }
 
     /**
@@ -80,15 +60,5 @@ class StockRepository extends BaseRepository implements StockInitializer, StockL
     public function decrement(string $productId, int $quantity): void
     {
         $this->query()->where('product_id', $productId)->decrement('quantity', $quantity);
-    }
-
-    public function countInStock(): int
-    {
-        return $this->query()->where('quantity', '>', 0)->count();
-    }
-
-    public function totalUnits(): int
-    {
-        return (int) $this->query()->sum('quantity');
     }
 }

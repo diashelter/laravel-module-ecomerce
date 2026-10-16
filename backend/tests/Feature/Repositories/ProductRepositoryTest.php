@@ -1,73 +1,10 @@
 <?php
 
-use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
-use App\Modules\Catalog\ValueObjects\CatalogProduct;
-use App\Modules\Catalog\ValueObjects\CatalogProducts;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
-use App\Modules\Catalog\ValueObjects\ProductIds;
 
 beforeEach(fn () => $this->repository = app(ProductRepository::class));
-
-it('filters the catalog by category slug', function () {
-    $phones = Category::factory()->create(['name' => 'Celulares']);
-    $books = Category::factory()->create(['name' => 'Livros']);
-    $phone = productWithStock(1);
-    $phone->categories()->attach($phones);
-    productWithStock(1)->categories()->attach($books);
-
-    $page = $this->repository->paginateCatalog('celulares', 'name', 12);
-
-    expect($page->pluck('id')->all())->toBe([$phone->id]);
-});
-
-it('sorts the catalog with id as tie breaker', function (string $sort, array $expectedNames) {
-    productWithStock(1, ['name' => 'B', 'price_cents' => 2000]);
-    productWithStock(1, ['name' => 'A', 'price_cents' => 3000]);
-    productWithStock(1, ['name' => 'C', 'price_cents' => 1000]);
-    productWithStock(1, ['name' => 'D', 'price_cents' => 1000]);
-
-    $page = $this->repository->paginateCatalog(null, $sort, 12);
-
-    expect($page->pluck('name')->all())->toBe($expectedNames);
-})->with([
-    'name' => ['name', ['A', 'B', 'C', 'D']],
-    'price ascending' => ['price_asc', ['C', 'D', 'B', 'A']],
-    'price descending' => ['price_desc', ['A', 'B', 'C', 'D']],
-]);
-
-it('includes inactive products in the catalog and eager loads relations', function () {
-    productWithStock(3);
-    Product::factory()->inactive()->withStock(3)->create();
-
-    $page = $this->repository->paginateCatalog(null, 'name', 12);
-
-    expect($page->total())->toBe(2)
-        ->and($page->first()->relationLoaded('categories'))->toBeTrue()
-        ->and($page->first()->relationLoaded('stock'))->toBeTrue();
-});
-
-it('paginates the catalog with the given page size', function () {
-    Product::factory()->count(5)->withStock(1)->create();
-
-    $page = $this->repository->paginateCatalog(null, 'name', 2);
-
-    expect($page->count())->toBe(2)
-        ->and($page->total())->toBe(5)
-        ->and($page->perPage())->toBe(2);
-});
-
-it('lists products for the admin newest first', function () {
-    $first = productWithStock(1);
-    $second = productWithStock(1);
-
-    $page = $this->repository->paginateForAdmin(15);
-
-    expect($page->pluck('id')->all())->toBe([$second->id, $first->id])
-        ->and($page->first()->relationLoaded('stock'))->toBeTrue();
-});
 
 it('syncs the product categories', function () {
     $product = productWithStock(1);
@@ -78,29 +15,4 @@ it('syncs the product categories', function () {
 
     expect($product->categories()->pluck('categories.id')->sort()->values()->all())
         ->toBe(collect([$kept->id, $new->id])->sort()->values()->all());
-});
-
-it('finds catalog products by id for other modules', function () {
-    $active = productWithStock(3, ['name' => 'Teclado', 'price_cents' => 15990, 'image_url' => 'https://example.com/teclado.png']);
-    $inactive = Product::factory()->inactive()->create(['name' => 'Mouse', 'price_cents' => 4990, 'image_url' => null]);
-
-    $unknown = unknownId();
-
-    $products = app(ProductCatalog::class)->findMany(new ProductIds($active->id, $inactive->id, $unknown));
-
-    expect($products)->toBeInstanceOf(CatalogProducts::class)
-        ->and($products)->toHaveCount(2)
-        ->and($products->find($active->id))->toEqual(new CatalogProduct($active->id, 'Teclado', 'https://example.com/teclado.png', 15990, true))
-        ->and($products->find($inactive->id))->toEqual(new CatalogProduct($inactive->id, 'Mouse', null, 4990, false))
-        ->and($products->find($unknown))->toBeNull();
-});
-
-it('counts products by status', function () {
-    Product::factory()->count(2)->create();
-    Product::factory()->inactive()->create();
-
-    $counts = $this->repository->countByStatus();
-
-    expect((int) $counts['active'])->toBe(2)
-        ->and((int) $counts['inactive'])->toBe(1);
 });

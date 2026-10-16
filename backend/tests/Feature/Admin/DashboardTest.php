@@ -29,3 +29,22 @@ it('returns aggregated metrics', function () {
         ->and($response->json('data.orders_per_month'))->toHaveCount(12)
         ->and(collect($response->json('data.orders_per_month'))->sum('total'))->toBe(2);
 });
+
+it('returns zeros for an empty store', function () {
+    $response = $this->actingAs(admin())->getJson('/api/admin/dashboard')->assertOk();
+
+    $response->assertJsonPath('data.cards', [
+        'total_products' => 0,
+        'active_products' => 0,
+        'inactive_products' => 0,
+        'total_stock_units' => 0,
+        'total_customers' => 0,
+        'total_orders' => 0,
+    ]);
+    $response->assertJsonPath('data.stock', ['products_in_stock' => 0, 'products_out_of_stock' => 0]);
+
+    expect($response->json('data.orders_per_day'))->toHaveCount(30)
+        ->and(collect($response->json('data.orders_per_day'))->sum('total'))->toBe(0)
+        ->and($response->json('data.orders_per_month'))->toHaveCount(12)
+        ->and(collect($response->json('data.orders_per_month'))->sum('total'))->toBe(0);
+});

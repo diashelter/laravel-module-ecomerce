@@ -15,7 +15,6 @@ use App\Modules\Ordering\ValueObjects\OrderLines;
 use App\Modules\Ordering\ValueObjects\OrderSummaries;
 use App\Modules\Ordering\ValueObjects\OrderSummary;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
-use Illuminate\Support\Carbon;
 
 beforeEach(fn () => $this->repository = app(OrderRepository::class));
 
@@ -131,34 +130,6 @@ it('counts the orders of several customers in a single query', function () {
 
     expect(iterator_to_array($counts))->toEqualCanonicalizing([$buyer->id => 3, $other->id => 1])
         ->and($counts->countFor($withoutOrders->id))->toBe(0);
-});
-
-it('counts orders per day since a date', function () {
-    $today = Carbon::today();
-    Order::factory()->count(2)->create(['created_at' => $today->copy()->addHour()]);
-    Order::factory()->create(['created_at' => $today->copy()->subDay()->addHour()]);
-    Order::factory()->create(['created_at' => $today->copy()->subDays(10)]);
-
-    $counts = $this->repository->countPerDaySince($today->copy()->subDay());
-
-    expect($counts->map(fn ($total) => (int) $total)->sortKeys()->all())->toBe([
-        $today->copy()->subDay()->toDateString() => 1,
-        $today->toDateString() => 2,
-    ]);
-});
-
-it('counts orders per month since a date', function () {
-    $thisMonth = Carbon::today()->startOfMonth();
-    Order::factory()->count(2)->create(['created_at' => $thisMonth->copy()->addDay()]);
-    Order::factory()->create(['created_at' => $thisMonth->copy()->subMonth()->addDay()]);
-    Order::factory()->create(['created_at' => $thisMonth->copy()->subMonths(5)]);
-
-    $counts = $this->repository->countPerMonthSince($thisMonth->copy()->subMonth());
-
-    expect($counts->map(fn ($total) => (int) $total)->sortKeys()->all())->toBe([
-        $thisMonth->copy()->subMonth()->format('Y-m') => 1,
-        $thisMonth->format('Y-m') => 2,
-    ]);
 });
 
 it('moves an order to the new status when it is in the expected one', function () {

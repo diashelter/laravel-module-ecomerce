@@ -11,6 +11,7 @@ use App\Modules\Catalog\UseCases\CreateProductUseCase;
 use App\Modules\Catalog\UseCases\DeleteProductUseCase;
 use App\Modules\Catalog\UseCases\UpdateProductUseCase;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
+use App\Modules\Catalog\ValueObjects\ProductRecord;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Ordering\Models\OrderItem;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
@@ -34,11 +35,39 @@ it('creates a product with its categories, stock and a default image', function 
 
     $product = app(CreateProductUseCase::class)->execute(new CreateProductDTO(($this->product)($categoryIds), 7));
 
-    expect($product->image_url)->toBe("https://picsum.photos/seed/product-{$product->id}/600/600")
-        ->and($product->relationLoaded('categories'))->toBeTrue()
-        ->and($product->categories)->toHaveCount(2)
-        ->and($product->stock->quantity)->toBe(7)
-        ->and($product->fresh()->image_url)->toBe($product->image_url);
+    expect($product->imageUrl)->toBe("https://picsum.photos/seed/product-{$product->id}/600/600")
+        ->and(Product::query()->findOrFail($product->id)->image_url)->toBe($product->imageUrl)
+        ->and(Product::query()->findOrFail($product->id)->categories()->pluck('categories.id')->sort()->values()->all())->toBe(collect($categoryIds)->sort()->values()->all())
+        ->and(Stock::query()->where('product_id', $product->id)->value('quantity'))->toBe(7);
+});
+
+it('returns the written product data from every product write', function () {
+    $category = Category::factory()->create();
+    $product = productWithStock(4);
+    $dto = ($this->product)([$category->id], ['name' => 'Monitor 32', 'priceCents' => 99900]);
+
+    $created = app(CreateProductUseCase::class)->execute(new CreateProductDTO($dto, 3));
+    $createdRow = Product::query()->findOrFail($created->id);
+    $updated = app(UpdateProductUseCase::class)->execute($product->id, $dto);
+    $updatedRow = Product::query()->findOrFail($product->id);
+    $changed = app(ChangeProductStatusUseCase::class)->execute($product->id, new UpdateProductStatusDTO(ProductStatus::Inactive));
+    $changedRow = Product::query()->findOrFail($product->id);
+
+    foreach ([[$created, $createdRow], [$updated, $updatedRow], [$changed, $changedRow]] as [$record, $row]) {
+        expect($record)->toBeInstanceOf(ProductRecord::class)
+            ->and($record->id)->toBe($row->id)
+            ->and($record->name)->toBe($row->name)
+            ->and($record->priceCents)->toBe($row->price_cents)
+            ->and($record->description)->toBe($row->description)
+            ->and($record->status)->toBe($row->status)
+            ->and($record->createdAt?->toIso8601String())->toBe($row->created_at->toIso8601String())
+            ->and($record->updatedAt?->toIso8601String())->toBe($row->updated_at->toIso8601String());
+    }
+
+    expect($created->name)->toBe('Monitor 32')
+        ->and($created->priceCents)->toBe(99900)
+        ->and($updated->priceCents)->toBe(99900)
+        ->and($changed->status)->toBe(ProductStatus::Inactive);
 });
 
 it('keeps the image url when one is given', function () {
@@ -49,7 +78,7 @@ it('keeps the image url when one is given', function () {
         1,
     ));
 
-    expect($product->fresh()->image_url)->toBe('https://example.com/monitor.png');
+    expect(Product::query()->findOrFail($product->id)->image_url)->toBe('https://example.com/monitor.png');
 });
 
 it('rolls back the product when the categories cannot be synced', function () {
@@ -79,8 +108,8 @@ it('updates the product and its categories without touching the stock', function
     $updated = app(UpdateProductUseCase::class)->execute($product->id, ($this->product)([$newCategory->id], ['name' => 'Monitor 32']));
 
     expect($updated->name)->toBe('Monitor 32')
-        ->and($updated->categories->pluck('id')->all())->toBe([$newCategory->id])
-        ->and($updated->stock->quantity)->toBe(4);
+        ->and($product->categories()->pluck('categories.id')->all())->toBe([$newCategory->id])
+        ->and(stockOf($product)->quantity)->toBe(4);
 });
 
 it('changes the product status', function () {
@@ -89,8 +118,7 @@ it('changes the product status', function () {
     $updated = app(ChangeProductStatusUseCase::class)->execute($product->id, new UpdateProductStatusDTO(ProductStatus::Inactive));
 
     expect($updated->status)->toBe(ProductStatus::Inactive)
-        ->and($product->fresh()->status)->toBe(ProductStatus::Inactive)
-        ->and($updated->relationLoaded('stock'))->toBeTrue();
+        ->and($product->fresh()->status)->toBe(ProductStatus::Inactive);
 });
 
 it('does not delete a product that appears in orders', function () {

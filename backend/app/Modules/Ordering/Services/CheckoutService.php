@@ -37,7 +37,7 @@ class CheckoutService
                 continue;
             }
 
-            if (($problem = $this->availability->purchaseProblem($product->isActive, $stock->of($productId), $quantity)) !== null) {
+            if (($problem = $this->availability->purchaseProblem($product->availability($stock->of($productId)), $quantity)) !== null) {
                 $errors["items.{$productId}"] = [$problem];
             }
         }

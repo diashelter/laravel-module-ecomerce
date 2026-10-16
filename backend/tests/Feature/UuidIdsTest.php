@@ -155,7 +155,7 @@ it('refuses a malformed address id before touching the stock', function (mixed $
 
     expect(array_key_exists('address_id', $response->json('errors')))->toBeTrue()
         ->and(array_filter($queries, fn (string $sql) => str_contains($sql, 'for update')))->toBeEmpty()
-        ->and($product->stock->fresh()->quantity)->toBe(3);
+        ->and(stockOf($product)->quantity)->toBe(3);
 })->with('malformed body ids');
 
 it('refuses a malformed category id without querying the categories', function (string $method, mixed $badId) {

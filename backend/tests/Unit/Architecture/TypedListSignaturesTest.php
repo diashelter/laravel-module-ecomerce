@@ -1,13 +1,18 @@
 <?php
 
+use App\Modules\Catalog\Contracts\CatalogMetrics;
 use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\DTOs\ProductDTO;
+use App\Modules\Catalog\Queries\ProductCatalogQuery;
 use App\Modules\Catalog\Repositories\ProductRepository;
 use App\Modules\Customers\UseCases\ListCustomersUseCase;
 use App\Modules\Identity\Contracts\CustomerAccounts;
+use App\Modules\Identity\Contracts\CustomerMetrics;
 use App\Modules\Inventory\Contracts\StockLevels;
+use App\Modules\Inventory\Contracts\StockMetrics;
 use App\Modules\Inventory\Contracts\StockReservation;
 use App\Modules\Ordering\Contracts\CustomerOrderHistory;
+use App\Modules\Ordering\Contracts\OrderMetrics;
 use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\DTOs\CartDTO;
 use App\Modules\Ordering\Repositories\OrderRepository;
@@ -42,11 +47,15 @@ it('declares no array in the domain list signatures', function (string $class, ?
     [StockReservation::class, null],
     [StockLevels::class, null],
     [ProductCatalog::class, null],
+    [CatalogMetrics::class, null],
+    [StockMetrics::class, null],
+    [CustomerMetrics::class, null],
+    [OrderMetrics::class, null],
     [PayableOrders::class, null],
     [CustomerOrderHistory::class, null],
     [CustomerAccounts::class, null],
     [ProductDTO::class, '__construct'],
-    [ProductRepository::class, 'findMany'],
+    [ProductCatalogQuery::class, 'findMany'],
     [ProductRepository::class, 'syncCategories'],
     [OrderRepository::class, 'countPerCustomer'],
     [OrderRepository::class, 'createWithItems'],

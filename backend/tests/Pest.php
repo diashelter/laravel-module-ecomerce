@@ -5,6 +5,7 @@ use App\Modules\Catalog\Models\Product;
 use App\Modules\Customers\Models\CustomerAddress;
 use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Identity\Models\User;
+use App\Modules\Inventory\Models\Stock;
 use App\Modules\Ordering\Services\OrderCodeGenerator;
 use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\DTOs\ChargeRequest;
@@ -139,6 +140,12 @@ function support(array $attributes = []): User
 function productWithStock(int $quantity, array $attributes = []): Product
 {
     return Product::factory()->withStock($quantity)->create($attributes);
+}
+
+/** The stock row of a product, read from `stocks` by its `product_id` (the product has no relation to it). */
+function stockOf(Product $product): Stock
+{
+    return Stock::query()->where('product_id', $product->id)->firstOrFail();
 }
 
 /** Valid admin product payload (price in cents); pass overrides to change fields. */

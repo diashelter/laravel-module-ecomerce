@@ -6,8 +6,7 @@ namespace App\Modules\Catalog\Http\Controllers;
 
 use App\Modules\Catalog\Http\Requests\ProductIndexRequest;
 use App\Modules\Catalog\Http\Resources\ProductResource;
-use App\Modules\Catalog\Repositories\ProductRepository;
-use App\Modules\Ordering\Services\PurchaseAvailabilityService;
+use App\Modules\Catalog\Queries\ProductQuery;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -17,7 +16,7 @@ class ProductController extends Controller
      * Public catalog: lists active AND inactive products (the frontend greys out the
      * unavailable ones). Filtering, sorting and pagination happen in the database.
      */
-    public function index(ProductIndexRequest $request, ProductRepository $products): AnonymousResourceCollection
+    public function index(ProductIndexRequest $request, ProductQuery $products): AnonymousResourceCollection
     {
         $filters = $request->toDto();
 
@@ -29,11 +28,11 @@ class ProductController extends Controller
     /**
      * The product page is only reachable while the product can be bought.
      */
-    public function show(string $product, ProductRepository $products, PurchaseAvailabilityService $availability): ProductResource
+    public function show(string $product, ProductQuery $products): ProductResource
     {
-        $product = $products->findWithCategoriesAndStock($product);
+        $product = $products->find($product);
 
-        abort_unless($availability->isAvailable($product->isActive(), $product->stock?->quantity), 404, 'Produto indisponível.');
+        abort_unless($product->availability()->isAvailable(), 404, 'Produto indisponível.');
 
         return ProductResource::make($product);
     }

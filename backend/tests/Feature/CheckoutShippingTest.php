@@ -90,7 +90,7 @@ it('requires a delivery address to place an order', function () {
 
     expect($response->json('errors.address_id'))->toBe(['Escolha um endereço de entrega.'])
         ->and(Order::query()->count())->toBe(0)
-        ->and($product->stock->fresh()->quantity)->toBe(10);
+        ->and(stockOf($product)->quantity)->toBe(10);
 });
 
 it('refuses a delivery address that is not in the customer address book', function (string $kind) {
@@ -103,7 +103,7 @@ it('refuses a delivery address that is not in the customer address book', functi
 
     expect($response->json('errors.address_id'))->toBe(['Endereço de entrega não encontrado.'])
         ->and(Order::query()->count())->toBe(0)
-        ->and($product->stock->fresh()->quantity)->toBe(10);
+        ->and(stockOf($product)->quantity)->toBe(10);
 })->with(['another customer', 'unknown id']);
 
 it('ignores shipping and totals sent by the client', function () {

@@ -19,7 +19,7 @@ it('seeds a complete demo environment', function () {
     expect(CustomerAccount::query()->count())->toBeGreaterThanOrEqual(10)
         ->and(Category::query()->count())->toBeGreaterThanOrEqual(8)
         ->and(Product::query()->count())->toBeGreaterThanOrEqual(30)
-        ->and(Product::query()->doesntHave('stock')->count())->toBe(0)
+        ->and(Product::query()->whereNotIn('id', Stock::query()->select('product_id'))->count())->toBe(0)
         ->and(Product::query()->doesntHave('categories')->count())->toBe(0)
         ->and(Stock::query()->where('quantity', 0)->count())->toBeGreaterThanOrEqual(5)
         ->and(Stock::query()->whereBetween('quantity', [1, 5])->count())->toBeGreaterThanOrEqual(5)

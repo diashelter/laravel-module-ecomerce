@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Catalog\UseCases;
 
 use App\Modules\Catalog\DTOs\ProductDTO;
-use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Repositories\ProductRepository;
+use App\Modules\Catalog\ValueObjects\ProductRecord;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +21,7 @@ final class UpdateProductUseCase
     /**
      * @throws ModelNotFoundException
      */
-    public function execute(string $productId, ProductDTO $data): Product
+    public function execute(string $productId, ProductDTO $data): ProductRecord
     {
         $product = $this->products->findOrFail($productId);
 
@@ -30,6 +30,6 @@ final class UpdateProductUseCase
             $this->products->syncCategories($product, $data->categoryIds);
         });
 
-        return $product->load(['categories', 'stock']);
+        return $product->toRecord();
     }
 }
