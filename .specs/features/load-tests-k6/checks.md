@@ -71,7 +71,7 @@ Proof: `sh load-tests/tests/stack.sh --only reports`
 **C13** - Exercício temporário: com o status esperado de uma resposta do smoke trocado, `make load-test TYPE=smoke` sai com código diferente de zero e grava mesmo assim o HTML e o JSON com o carimbo da rodada (AC 12)
 Proof: `sh load-tests/tests/make.sh --only fails-on-threshold`
 
-**C14** - Exercício temporário: com o `LoadTestSeeder` lançando `load seed failed on purpose`, `make load-test TYPE=smoke` sai com código diferente de zero, imprime os logs da `api` de carga com essa mensagem e não grava nenhum relatório novo em `results/` (AC 13)
+**C14** - Exercício temporário: com o `LoadTestSeeder` lançando `load seed failed on purpose`, `make load-test TYPE=smoke` sai com código diferente de zero, imprime essa mensagem (na saída do `db:seed`) e, depois do aviso "Logs da api de carga", as linhas do `docker compose logs` da `api` de carga, e não grava nenhum relatório novo em `results/` (AC 13)
 Proof: `sh load-tests/tests/make.sh --only fails-on-seed`
 
 **C15** - `make load-down` deixa o projeto `ecommerce-load` sem containers e sem volumes, e o projeto `ecommerce` com os mesmos containers no ar e os mesmos volumes de antes (AC 14, door 1)
@@ -173,11 +173,11 @@ Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: address of a
 **C41** - A espera lê o pedido a cada 2 segundos, com o primeiro intervalo também de 2 segundos, até o status `awaiting_payment`, e grava em `order_payable_wait` o tempo desde o `201`. No `smoke`, `checkout: order became awaiting_payment` passa e a métrica tem ao menos 1 amostra (AC 36, door 6)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only polls-every-2s`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: order became awaiting_payment"`
-Proof: `sh load-tests/tests/assert-metric.sh smoke --name order_payable_wait --at-least 1 --value-at-least 2000`
+Proof: `sh load-tests/tests/assert-metric.sh smoke --name order_payable_wait --at-least 1 --value-at-least 2000 --value-at-most 60000`
 
 **C42** - Com um pedido que nunca sai de `placed`, a espera desiste ao chegar a 60 segundos, não devolve pedido para pagar e conta 1 erro inesperado, pela função que o fluxo da compra chama (AC 37)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only gives-up-after-60s`
-Proof: `grep -n "countGiveUp(wait" load-tests/flows/checkout.js`
+Proof: `grep -n "countGiveUp(wait, unexpectedErrors)" load-tests/flows/checkout.js`
 
 **C43** - O passo de pagamento só chama `POST /api/orders/{order}/payment` quando a espera devolveu o pedido como `awaiting_payment`. Sem isso, não faz nenhuma chamada. No `smoke`, o primeiro pagamento de cada pedido nunca recebe `409` (AC 38)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only pays-only-when-awaiting`
@@ -269,7 +269,9 @@ Proof: `sh load-tests/tests/assert-check.sh limits --name "limits: 21st payment 
 Proof: `sh load-tests/tests/assert-check.sh limits --name "limits: 61st cart validation is 429"`
 Proof: `sh load-tests/tests/assert-check.sh limits --name "limits: 61st shipping quote is 429"`
 
-**C63** - A rajada de 30 logins simultâneos conta em `rate_limit_burst_passed` os que passaram (ao menos os 10 do limite), grava a linha derivada `rate_limit_overshoot` e não tem limite de aprovação: o perfil não declara limite sobre essas métricas (AC 58, door 6). O cálculo do valor é o C91
+**C63** - A rajada de 30 logins simultâneos conta em `rate_limit_burst_passed` os que passaram pelo limitador (todo status que não é `429`, pela decisão `passedTheLimiter`, que o cenário chama), ao menos os 10 do limite, grava a linha derivada `rate_limit_overshoot` e não tem limite de aprovação: o perfil não declara limite sobre essas métricas (AC 58, door 6). O cálculo do valor é o C91
+Proof: `sh load-tests/tests/k6.sh summary.test.js --only burst-passed`
+Proof: `grep -n "burstPassed.add(passedTheLimiter(response.status) ? 1 : 0)" load-tests/scenarios/limits.js`
 Proof: `sh load-tests/tests/assert-metric.sh limits --name rate_limit_burst_passed --at-least 10`
 Proof: `sh load-tests/tests/assert-metric.sh limits --name rate_limit_overshoot --at-least 1`
 Proof: `sh load-tests/tests/k6.sh profiles.test.js --only limits-overshoot-unbounded`
@@ -308,7 +310,7 @@ Proof: `sh load-tests/tests/k6.sh profiles.test.js --only volume-thresholds`
 **C73** - O `spike` declara só o limite `unexpected_errors: rate<0.05` (AC 68)
 Proof: `sh load-tests/tests/k6.sh profiles.test.js --only spike-thresholds`
 
-**C74** - O ajudante de requisição troca `{order}`, `{product}`, `{address}` e `{stock}` pelo id na URL e põe o template na tag `name`, e nenhum arquivo de `load-tests/flows` ou `load-tests/scenarios` chama `http.get`, `http.post`, `http.put`, `http.patch`, `http.del` ou `http.request` direto (AC 69, door 6)
+**C74** - O ajudante de requisição troca `{order}`, `{product}`, `{address}` e `{stock}` pelo id na URL e põe o template na tag `name`; o `send()`, montado sobre um cliente HTTP falso no teste, entrega ao k6 a URL com o id, a tag com o template, o corpo, o XSRF do jar e os status esperados; e nenhum arquivo de `load-tests/flows` ou `load-tests/scenarios` chama `http.get`, `http.post`, `http.put`, `http.patch`, `http.del` ou `http.request` direto (AC 69, door 6)
 Proof: `sh load-tests/tests/k6.sh http.test.js --only name-tag`
 Proof: `! grep -rnE "http\.(get|post|put|patch|del|request)\(" load-tests/flows load-tests/scenarios`
 Proof: `grep -n "tags: request.tags" load-tests/lib/http.js`
@@ -467,7 +469,7 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
   - O `dataset.sh` para o worker e o relay durante o `migrate:fresh`, porque o relay cai quando a tabela some.
   - Os casos de erro sem fração no plano rodam em 1 de 10 iterações dos perfis de volume.
   - O `breakpoint` mantém as pausas de 1 a 3 s, com no máximo 1.000 VUs.
-  - As duas rodadas do `breakpoint` aceitas para a linha ficaram em commits diferentes com o mesmo código medido; o `load-tests/README.md` registra isso.
+  - As duas primeiras rodadas do `breakpoint` ficaram em commits diferentes; as linhas foram medidas de novo em `09760e2`, com as duas rodadas de cada perfil no mesmo commit (ver a rodada 1 da verificação abaixo).
   - A rajada de 30 logins simultâneos deixou passar 11, um além do limite: o limitador confere e depois conta. O plano manda registrar sem reprovar (AC 58), e o achado vira uma issue própria.
   - O door 6 chama `rate_limit_overshoot` de contador, mas ele é uma linha derivada no fim da rodada (`rate_limit_burst_passed − 10`, nunca negativa): uma rodada do k6 não consegue gravar uma métrica depois de terminar. O contador de verdade é o `rate_limit_burst_passed` (C63, C91).
 - **Rodada 1 da verificação (FAIL, 4 mutantes vivos):** o Verifier achou as lacunas abaixo, corrigidas em `52bebb6` e `301a7f8`.

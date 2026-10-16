@@ -12,6 +12,12 @@ export const BURST_SIZE = 30;
 export const LOGIN_LIMIT = 10;
 
 const burstPassed = new Counter('rate_limit_burst_passed');
+
+/** A login of the burst passed the limiter unless it was refused with 429 (a wrong password still passes: 422). */
+export function passedTheLimiter(status) {
+    return status !== 429;
+}
+
 const WRONG_PASSWORD = 'wrong-password';
 
 /** Sends `limit` requests that must pass the limiter and one more that must not. */
@@ -74,5 +80,5 @@ export function limitsBurst() {
     const body = { email: 'load-customer-3@example.com', password: WRONG_PASSWORD };
     const response = send('POST', '/api/auth/login', { body, jar, expect: [422, 429] });
 
-    burstPassed.add(response.status === 429 ? 0 : 1);
+    burstPassed.add(passedTheLimiter(response.status) ? 1 : 0);
 }

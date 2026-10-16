@@ -21,10 +21,13 @@ export function waitUntilPayable(readStatus, sleep) {
     return { payable: false, waitedSeconds: GIVE_UP_SECONDS };
 }
 
-/** A wait that gave up counts one unexpected error (the relay or the worker did not keep up); a payable one none. */
-export function countGiveUp(wait, addUnexpectedError) {
+/**
+ * A wait that gave up counts one unexpected error in the given metric (the relay or the worker did not keep up);
+ * a payable one counts nothing. The checkout passes the unexpected_errors metric itself.
+ */
+export function countGiveUp(wait, unexpectedErrors) {
     if (!wait.payable) {
-        addUnexpectedError(true);
+        unexpectedErrors.add(true);
     }
 
     return wait.payable;

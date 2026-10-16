@@ -53,7 +53,7 @@ case "$CASE" in
             has "$LOAD_README" "make load-test TYPE=$profile"
         done
         has "$LOAD_README" 'Limites de aprovação'
-        has "$LOAD_README" 'a menos de 20%'
+        has "$LOAD_README" 'Uma linha só entra na tabela quando duas rodadas seguidas do mesmo perfil, no mesmo commit, têm o p95 a menos de 20% uma da outra.'
         has "$LOAD_README" 'make load-down'
         ok "load-tests/README.md explica os perfis, os limites e o aceite"
         ;;

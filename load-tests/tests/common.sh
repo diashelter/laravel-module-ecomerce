@@ -22,11 +22,15 @@ expect_eq() {
     ok "$1"
 }
 
-# `--only <case>` -> CASE
+# `--only <case>` -> CASE. An option without its value is an error, never an endless loop.
 CASE=""
 while [ $# -gt 0 ]; do
     case "$1" in
-        --only) CASE="$2"; shift 2 ;;
+        --only)
+            [ $# -ge 2 ] || { echo "FALHOU: --only sem valor" >&2; exit 1; }
+            CASE="$2"
+            shift 2
+            ;;
         *) shift ;;
     esac
 done

@@ -31,9 +31,10 @@ const cases = {
         expectEqual('not payable', wait, { payable: false, waitedSeconds: 60 });
 
         const errors = [];
-        expectEqual('the give up is not payable', countGiveUp(wait, (failed) => errors.push(failed)), false);
+        const metric = { add: (failed) => errors.push(failed) };
+        expectEqual('the give up is not payable', countGiveUp(wait, metric), false);
         expectEqual('counts one unexpected error', errors, [true]);
-        expectEqual('a payable wait counts none', [countGiveUp({ payable: true }, (failed) => errors.push(failed)), errors.length], [true, 1]);
+        expectEqual('a payable wait counts none', [countGiveUp({ payable: true }, metric), errors.length], [true, 1]);
     },
     'pays-only-when-awaiting': () => {
         let payments = 0;

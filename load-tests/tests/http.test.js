@@ -1,6 +1,6 @@
 // Proves the request helper (checks C74 and C75): the URL, the `name` tag and the X-Request-ID.
 import { expectEqual, expectTrue, runCase } from './harness.js';
-import { BASE_URL, buildRequest, requestId, requestName, routeUrl } from '../lib/http.js';
+import { BASE_URL, buildRequest, createSender, requestId, requestName, routeUrl } from '../lib/http.js';
 
 export { options } from './harness.js';
 
@@ -24,6 +24,27 @@ const cases = {
         expectEqual('the request id header', request.headers['X-Request-ID'], 'smoke-vu1-it0-1');
         expectEqual('the XSRF header on a mutating method', request.headers['X-XSRF-TOKEN'], 't');
         expectEqual('no XSRF header on a GET', buildRequest('GET', '/api/orders', { xsrf: 't', id: 'x' }).headers['X-XSRF-TOKEN'], undefined);
+
+        // send() itself, over a fake client: the template it gets is the tag k6 receives.
+        const calls = [];
+        const jar = { cookiesForURL: () => ({ 'XSRF-TOKEN': ['token%3D'] }) };
+        const client = {
+            request: (method, url, body, params) => {
+                calls.push({ method, url, body, params });
+                return { status: 202 };
+            },
+            cookieJar: () => jar,
+            expectedStatuses: (...statuses) => ({ statuses }),
+        };
+        const sent = createSender(client)('POST', '/api/orders/{order}/payment', { params: { order: ID }, body: { card_token: 'x' }, expect: [202] });
+
+        expectEqual('send returns the response', sent.status, 202);
+        expectEqual('send hands k6 the URL with the id', calls[0].url, `${BASE_URL}/api/orders/${ID}/payment`);
+        expectEqual('send hands k6 the template as the tag', calls[0].params.tags, { name: 'POST /api/orders/{order}/payment' });
+        expectEqual('send hands k6 the JSON body', calls[0].body, '{"card_token":"x"}');
+        expectEqual('send hands k6 the XSRF token of the jar', calls[0].params.headers['X-XSRF-TOKEN'], 'token=');
+        expectEqual('send hands k6 the expected statuses', calls[0].params.responseCallback, { statuses: [202] });
+        expectTrue('send hands k6 the jar', calls[0].params.jar === jar);
 
         let missing = false;
         try {

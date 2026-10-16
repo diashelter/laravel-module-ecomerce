@@ -6,7 +6,11 @@ NAME=""
 shift
 while [ $# -gt 0 ]; do
     case "$1" in
-        --name) NAME="$2"; shift 2 ;;
+        --name)
+            [ $# -ge 2 ] || { echo "FALHOU: --name sem valor" >&2; exit 1; }
+            NAME="$2"
+            shift 2
+            ;;
         *) shift ;;
     esac
 done

@@ -13,7 +13,6 @@ export const PROFILE = __ENV.PROFILE || 'smoke';
 export const unexpectedErrors = new Rate('unexpected_errors');
 
 const MUTATING = ['POST', 'PUT', 'PATCH', 'DELETE'];
-const callbacks = {};
 let sequence = 0;
 let lastId = null;
 
@@ -40,13 +39,6 @@ export function requestId(profile, vu, iteration, seq) {
 
 export function isExpected(status, expected) {
     return expected.includes(status);
-}
-
-function responseCallback(expected) {
-    const key = expected.join(',');
-    callbacks[key] = callbacks[key] || http.expectedStatuses(...expected);
-
-    return callbacks[key];
 }
 
 function xsrfToken(jar) {
@@ -95,27 +87,43 @@ export function buildRequest(method, template, options = {}) {
 }
 
 /**
- * Sends one request and counts an unexpected status as an error.
- * options: those of buildRequest, plus expect (list of statuses) and jar (a CookieJar; the VU jar when omitted).
+ * Builds send() over a k6 http client: the real `k6/http`, or a fake in tests/http.test.js, which proves what
+ * send() hands to k6 (the URL, the `name` tag, the headers, the jar) at its own layer.
  */
-export function send(method, template, options = {}) {
-    const { expect = [200], jar = http.cookieJar() } = options;
-    const { vu, iteration } = vuState();
-    lastId = requestId(PROFILE, vu, iteration, ++sequence);
+export function createSender(client) {
+    const callbacks = {};
+    const responseCallback = (expected) => {
+        const key = expected.join(',');
+        callbacks[key] = callbacks[key] || client.expectedStatuses(...expected);
 
-    const xsrf = MUTATING.includes(method) ? xsrfToken(jar) : null;
-    const request = buildRequest(method, template, { ...options, xsrf, id: lastId });
-    const response = http.request(method, request.url, request.body, {
-        headers: request.headers,
-        jar,
-        tags: request.tags,
-        responseCallback: responseCallback(expect),
-    });
+        return callbacks[key];
+    };
 
-    unexpectedErrors.add(!isExpected(response.status, expect));
+    /**
+     * Sends one request and counts an unexpected status as an error.
+     * options: those of buildRequest, plus expect (list of statuses) and jar (a CookieJar; the VU jar when omitted).
+     */
+    return function send(method, template, options = {}) {
+        const { expect = [200], jar = client.cookieJar() } = options;
+        const { vu, iteration } = vuState();
+        lastId = requestId(PROFILE, vu, iteration, ++sequence);
 
-    return response;
+        const xsrf = MUTATING.includes(method) ? xsrfToken(jar) : null;
+        const request = buildRequest(method, template, { ...options, xsrf, id: lastId });
+        const response = client.request(method, request.url, request.body, {
+            headers: request.headers,
+            jar,
+            tags: request.tags,
+            responseCallback: responseCallback(expect),
+        });
+
+        unexpectedErrors.add(!isExpected(response.status, expect));
+
+        return response;
+    };
 }
+
+export const send = createSender(http);
 
 /** The X-Request-ID of the last request this VU sent. */
 export function lastRequestId() {

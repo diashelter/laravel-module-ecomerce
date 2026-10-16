@@ -54,7 +54,7 @@ function waitAndPay(orderId, createdAt, declinedFirst) {
 
     check(wait, { 'checkout: order became awaiting_payment': (w) => w.payable });
 
-    if (!countGiveUp(wait, (failed) => unexpectedErrors.add(failed))) {
+    if (!countGiveUp(wait, unexpectedErrors)) {
         return false;
     }
 

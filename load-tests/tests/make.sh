@@ -6,6 +6,7 @@
 
 PROFILES="smoke load stress spike breakpoint soak contention limits"
 OUTPUT="$RESULTS/make-output.log"
+mkdir -p "$RESULTS"
 
 load_containers() {
     docker ps -aq --filter label=com.docker.compose.project=ecommerce-load | wc -l | tr -d ' '
