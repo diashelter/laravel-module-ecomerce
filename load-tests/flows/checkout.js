@@ -6,7 +6,7 @@ import { Trend } from 'k6/metrics';
 import { errorCode, json, send, unexpectedErrors, verify } from '../lib/http.js';
 import { loginCustomer } from '../lib/session.js';
 import { customerForVu, shouldOrderUnavailable, shouldRunErrorPaths, startsWithDeclinedCard } from '../lib/mix.js';
-import { payWhenPayable, waitUntilPayable } from '../lib/payable.js';
+import { countGiveUp, payWhenPayable, waitUntilPayable } from '../lib/payable.js';
 import { MODE, pickMany, position, think } from '../lib/steps.js';
 
 export const orderPayableWait = new Trend('order_payable_wait', true);
@@ -54,9 +54,7 @@ function waitAndPay(orderId, createdAt, declinedFirst) {
 
     check(wait, { 'checkout: order became awaiting_payment': (w) => w.payable });
 
-    if (!wait.payable) {
-        // Gave up after 60 seconds: the relay or the worker did not keep up.
-        unexpectedErrors.add(true);
+    if (!countGiveUp(wait, (failed) => unexpectedErrors.add(failed))) {
         return false;
     }
 

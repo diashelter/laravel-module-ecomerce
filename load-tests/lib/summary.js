@@ -36,7 +36,8 @@ function metricLine(name, metric) {
     return `metric\t${name}\t${count}\t${value}`;
 }
 
-function derivedLines(data) {
+/** Pure: the lines computed after the run (the burst overshoot, the breakpoint rate at stop). */
+export function derivedLines(data, profile, now) {
     const lines = [];
     const burst = data.metrics.rate_limit_burst_passed;
 
@@ -45,8 +46,8 @@ function derivedLines(data) {
     }
 
     // The breakpoint result: the arrival rate when the run stopped (aborted by a threshold, or at the end).
-    if (PROFILE === 'breakpoint' && data.setup_data && data.setup_data.startedAt) {
-        const rate = breakpointRateAt((Date.now() - data.setup_data.startedAt) / 1000);
+    if (profile === 'breakpoint' && data.setup_data && data.setup_data.startedAt) {
+        const rate = breakpointRateAt((now - data.setup_data.startedAt) / 1000);
         lines.push(`metric\tbreakpoint_rate_at_stop\t1\t${rate.toFixed(1)}`);
     }
 
@@ -82,7 +83,7 @@ function textReport(data, checks) {
         }
     }
 
-    for (const line of derivedLines(data)) {
+    for (const line of derivedLines(data, PROFILE, Date.now())) {
         out.push(`  ${line.split('\t')[1]}: ${line.split('\t')[3]}`);
     }
 
@@ -100,7 +101,7 @@ export function summarize(data) {
         }
     }
 
-    lines.push(...derivedLines(data));
+    lines.push(...derivedLines(data, PROFILE, Date.now()));
 
     return {
         stdout: textReport(data, checks),

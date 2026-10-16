@@ -66,6 +66,11 @@ case "$CASE" in
         esac
         expect_eq "CACHE_LIMITER depois do $PROFILE" "$(env_of api CACHE_LIMITER)" "$EXPECTED"
         ;;
+    bcrypt-and-delivery)
+        expect_eq "BCRYPT_ROUNDS" "$(env_of api BCRYPT_ROUNDS)" 12
+        expect_eq "ORDER_DELIVERY_DELAY_SECONDS" "$(env_of api ORDER_DELIVERY_DELAY_SECONDS)" 10
+        expect_eq "a config em cache usa o mesmo atraso" "$($LOAD exec -T api php artisan tinker --execute="echo config('shop.delivery_delay_seconds');" | tr -d '[:space:]')" 10
+        ;;
     cache-env)
         for service in api queue-worker outbox-relay; do
             expect_eq "$service APP_CONFIG_CACHE" "$(env_of $service APP_CONFIG_CACHE)" /tmp/laravel/config.php
@@ -87,6 +92,6 @@ case "$CASE" in
         ok "nenhuma porta publicada no host"
         ;;
     *)
-        unknown_case "connection reports app-settings opcache-and-caches fpm-pool limiter-env cache-env k6-image no-host-ports"
+        unknown_case "connection reports app-settings opcache-and-caches fpm-pool limiter-env bcrypt-and-delivery cache-env k6-image no-host-ports"
         ;;
 esac

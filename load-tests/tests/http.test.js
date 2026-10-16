@@ -1,6 +1,6 @@
 // Proves the request helper (checks C74 and C75): the URL, the `name` tag and the X-Request-ID.
 import { expectEqual, expectTrue, runCase } from './harness.js';
-import { requestId, requestName, routeUrl } from '../lib/http.js';
+import { BASE_URL, buildRequest, requestId, requestName, routeUrl } from '../lib/http.js';
 
 export { options } from './harness.js';
 
@@ -16,6 +16,14 @@ const cases = {
         expectEqual('the payment route', routeUrl('/api/orders/{order}/payment', { order: ID }), `/api/orders/${ID}/payment`);
         expectEqual('the tag keeps the template', requestName('GET', '/api/orders/{order}'), 'GET /api/orders/{order}');
         expectTrue('the tag never holds the id', !requestName('POST', '/api/orders/{order}/payment').includes(ID));
+
+        // What send() actually hands to k6: the id in the URL, the template in the tag.
+        const request = buildRequest('POST', '/api/orders/{order}/payment', { params: { order: ID }, body: { card_token: 'x' }, xsrf: 't', id: 'smoke-vu1-it0-1' });
+        expectEqual('the request URL holds the id', request.url, `${BASE_URL}/api/orders/${ID}/payment`);
+        expectEqual('the request tag holds the template', request.tags, { name: 'POST /api/orders/{order}/payment' });
+        expectEqual('the request id header', request.headers['X-Request-ID'], 'smoke-vu1-it0-1');
+        expectEqual('the XSRF header on a mutating method', request.headers['X-XSRF-TOKEN'], 't');
+        expectEqual('no XSRF header on a GET', buildRequest('GET', '/api/orders', { xsrf: 't', id: 'x' }).headers['X-XSRF-TOKEN'], undefined);
 
         let missing = false;
         try {

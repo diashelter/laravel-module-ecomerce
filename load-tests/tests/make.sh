@@ -76,7 +76,7 @@ case "$CASE" in
         fi
         ok "a rodada saiu com código diferente de zero"
         grep -q 'load seed failed on purpose' "$OUTPUT" || fail "a saída não mostra a falha do seed"
-        grep -q 'Logs da api de carga' "$OUTPUT" || fail "a saída não imprimiu os logs da api de carga"
+        sed -n '/Logs da api de carga/,$p' "$OUTPUT" | grep -Eq '^api-1 +\|' || fail "a saída não imprimiu os logs da api de carga"
         ok "os logs da api de carga foram impressos"
         [ -z "$(find "$RESULTS" -name 'smoke-*' -newer "$MARK")" ] || fail "o k6 rodou e gravou relatório"
         ok "o k6 não rodou"

@@ -1,6 +1,9 @@
 // Pure: the k6 options of each profile (plan S7). Shapes, thresholds and the VU split are decisions, proven
 // one row at a time by tests/profiles.test.js.
 import { splitVus } from './mix.js';
+import { BASELINE } from './baseline.js';
+
+export { BASELINE };
 
 export const PROFILES = ['smoke', 'load', 'stress', 'spike', 'breakpoint', 'soak', 'contention', 'limits'];
 export const FLOWS = ['storefront', 'checkout', 'backoffice'];
@@ -8,9 +11,6 @@ export const FLOWS = ['storefront', 'checkout', 'backoffice'];
 // Until the first `load` row of the baseline (load-tests/README.md) these are the latency thresholds.
 export const DEFAULT_LATENCY = { storefrontP95: 500, ordersP95: 1000, payableWaitP95: 10000 };
 
-// The p95 of the accepted `load` row of load-tests/README.md, in ms (tests/profiles.test.js compares the two).
-// Update it together with the row; null would bring back DEFAULT_LATENCY.
-export const BASELINE = { storefrontP95: 30, ordersP95: 45.9, payableWaitP95: 2034 };
 
 const SHAPES = {
     load: { startVUs: 0, stages: [['1m', 50], ['5m', 50], ['1m', 0]] },

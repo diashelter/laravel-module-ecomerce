@@ -3,6 +3,8 @@
 . "$(dirname "$0")/common.sh"
 
 LOAD_README=load-tests/README.md
+# What a run measures. Recording a row (load-tests/lib/baseline.js and the READMEs) is not part of it.
+MEASURED="backend docker Makefile load-tests/docker-compose.yml load-tests/docker load-tests/main.js load-tests/lib load-tests/flows load-tests/scenarios"
 PROFILES="smoke load stress spike breakpoint soak contention limits"
 
 has() {
@@ -20,8 +22,10 @@ case "$CASE" in
             [ "$(echo "$ROW" | awk -F '|' '{ print NF }')" -eq 14 ] || fail "a linha do $profile não tem 12 colunas"
             SHA=$(echo "$ROW" | awk -F '|' '{ gsub(/ /, "", $3); print $3 }')
             git merge-base --is-ancestor "$SHA" HEAD || fail "$SHA não é ancestral de HEAD"
-            git merge-base --is-ancestor "$SHA" main && fail "$SHA já está na main"
-            ok "linha do $profile no commit $SHA"
+            git merge-base --is-ancestor "$SHA" origin/main && fail "$SHA já está na main"
+            # shellcheck disable=SC2086
+            git diff --quiet "$SHA" HEAD -- $MEASURED ':(exclude)load-tests/lib/baseline.js' || fail "o código medido mudou depois de $SHA"
+            ok "linha do $profile no commit $SHA, e o código medido não mudou até HEAD"
         done
         ;;
     readme)
@@ -34,6 +38,7 @@ case "$CASE" in
         has README.md 'make load-test'
         has README.md 'make load-down'
         has README.md 'CACHE_LIMITER'
+        has README.md 'limites de aprovação'
         has README.md 'ecommerce-load'
         ok "o README descreve os testes de carga"
         ;;
@@ -48,7 +53,7 @@ case "$CASE" in
             has "$LOAD_README" "make load-test TYPE=$profile"
         done
         has "$LOAD_README" 'Limites de aprovação'
-        has "$LOAD_README" '20%'
+        has "$LOAD_README" 'a menos de 20%'
         has "$LOAD_README" 'make load-down'
         ok "load-tests/README.md explica os perfis, os limites e o aceite"
         ;;

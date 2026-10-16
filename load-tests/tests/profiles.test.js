@@ -1,6 +1,6 @@
 // Proves the shape and the thresholds of every profile (checks C63, C65 to C73 and C77).
 import { expectEqual, expectTrue, runCase } from './harness.js';
-import { BASELINE, DEFAULT_LATENCY, buildOptions, latencyThresholds } from '../lib/profiles.js';
+import { BASELINE, DEFAULT_LATENCY, breakpointRateAt, buildOptions, latencyThresholds } from '../lib/profiles.js';
 import { splitVus } from '../lib/mix.js';
 
 export { options } from './harness.js';
@@ -114,12 +114,38 @@ const cases = {
         expectEqual('BASELINE is the load row of the README', BASELINE, recorded);
 
         const up = (ms) => Math.ceil((ms * 1.2) / 10) * 10;
-        expectEqual('load thresholds are the recorded p95 times 1.2', buildOptions('load').thresholds, {
+        const expected = {
             unexpected_errors: ['rate<0.01'],
             'http_req_duration{flow:storefront}': [`p(95)<${up(recorded.storefrontP95)}`],
             'http_req_duration{name:POST /api/orders}': [`p(95)<${up(recorded.ordersP95)}`],
             order_payable_wait: [`p(95)<${up(recorded.payableWaitP95)}`],
+        };
+
+        for (const profile of ['load', 'stress', 'soak']) {
+            expectEqual(`${profile} thresholds are the recorded p95 times 1.2`, buildOptions(profile).thresholds, expected);
+        }
+    },
+    'contention-thresholds': () => {
+        const options = buildOptions('contention', null);
+
+        expectEqual('50 buyers, 1 order each', [options.scenarios.contention.vus, options.scenarios.contention.iterations, options.scenarios.contention.exec], [50, 1, 'contention']);
+        expectEqual('100 cross orders, 1 each', [options.scenarios.cross_orders.vus, options.scenarios.cross_orders.iterations, options.scenarios.cross_orders.exec], [100, 1, 'crossOrders']);
+        expectEqual('contention thresholds', options.thresholds, {
+            checks: ['rate==1'],
+            unexpected_errors: ['rate==0'],
+            contention_created: ['count==10'],
+            contention_refused: ['count==40'],
+            contention_server_errors: ['count==0'],
+            cross_orders_created: ['count==100'],
+            cross_orders_server_errors: ['count==0'],
         });
+    },
+    'breakpoint-rate': () => {
+        expectEqual('starts at 5 iterations/s', breakpointRateAt(0), 5);
+        expectEqual('half of the ramp', breakpointRateAt(450), 252.5);
+        expectEqual('the end of the ramp', breakpointRateAt(900), 500);
+        expectEqual('never above 500', breakpointRateAt(2000), 500);
+        expectEqual('never below 5', breakpointRateAt(-1), 5);
     },
     'limits-overshoot-unbounded': () => {
         const thresholds = buildOptions('limits', null).thresholds;

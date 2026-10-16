@@ -5,6 +5,7 @@ import {
     shouldAdjustStock,
     shouldOrderUnavailable,
     shouldRegister,
+    shouldRunErrorPaths,
     staffForVu,
     startsWithDeclinedCard,
 } from '../lib/mix.js';
@@ -49,6 +50,10 @@ const cases = {
     'staff-for-vu': () => {
         expectEqual('odd VUs are the admin', [1, 3, 5].map(staffForVu), ['admin@example.com', 'admin@example.com', 'admin@example.com']);
         expectEqual('even VUs are the support', [2, 4, 6].map(staffForVu), ['suporte@example.com', 'suporte@example.com', 'suporte@example.com']);
+    },
+    'error-paths-rate': () => {
+        expectEqual('volume runs the error states in 100 of 1000', turns(shouldRunErrorPaths), 100);
+        expectEqual('smoke always does', shouldRunErrorPaths('smoke', 1, 0), true);
     },
     'stock-adjust-rate': () => {
         expectEqual('volume adjusts the stock in 20 of 1000', turns(shouldAdjustStock), 20);

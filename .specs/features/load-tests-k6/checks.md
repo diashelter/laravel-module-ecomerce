@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/load-tests-k6/plan.md`
 
-87 checks em 8 slices e o fechamento · 7 one-way doors · 1 open, que bloqueia C60 a C62
+92 checks em 8 slices e o fechamento (C88 a C92 entraram na rodada 1 da verificação) · 7 one-way doors · 0 open
 
 ## Como rodar as provas
 
@@ -112,7 +112,7 @@ Proof: `sh load-tests/tests/stack.sh --only k6-image`
 
 **C26** - Nenhum serviço do Compose de carga publica porta no host, e o Compose de dev (`docker-compose.yml`) não muda nesta feature (door 1)
 Proof: `sh load-tests/tests/stack.sh --only no-host-ports`
-Proof: `git diff --quiet main -- docker-compose.yml docker/`
+Proof: `git diff --quiet origin/main...HEAD -- docker-compose.yml docker/`
 
 ### S3 - Storefront · 4 arquivos · 14 KB · ~4k
 
@@ -173,10 +173,11 @@ Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: address of a
 **C41** - A espera lê o pedido a cada 2 segundos, com o primeiro intervalo também de 2 segundos, até o status `awaiting_payment`, e grava em `order_payable_wait` o tempo desde o `201`. No `smoke`, `checkout: order became awaiting_payment` passa e a métrica tem ao menos 1 amostra (AC 36, door 6)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only polls-every-2s`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: order became awaiting_payment"`
-Proof: `sh load-tests/tests/assert-metric.sh smoke --name order_payable_wait --at-least 1`
+Proof: `sh load-tests/tests/assert-metric.sh smoke --name order_payable_wait --at-least 1 --value-at-least 2000`
 
-**C42** - Com um pedido que nunca sai de `placed`, a espera desiste ao chegar a 60 segundos, não devolve pedido para pagar e conta 1 erro inesperado (AC 37)
+**C42** - Com um pedido que nunca sai de `placed`, a espera desiste ao chegar a 60 segundos, não devolve pedido para pagar e conta 1 erro inesperado, pela função que o fluxo da compra chama (AC 37)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only gives-up-after-60s`
+Proof: `grep -n "countGiveUp(wait" load-tests/flows/checkout.js`
 
 **C43** - O passo de pagamento só chama `POST /api/orders/{order}/payment` quando a espera devolveu o pedido como `awaiting_payment`. Sem isso, não faz nenhuma chamada. No `smoke`, o primeiro pagamento de cada pedido nunca recebe `409` (AC 38)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only pays-only-when-awaiting`
@@ -268,7 +269,8 @@ Proof: `sh load-tests/tests/assert-check.sh limits --name "limits: 21st payment 
 Proof: `sh load-tests/tests/assert-check.sh limits --name "limits: 61st cart validation is 429"`
 Proof: `sh load-tests/tests/assert-check.sh limits --name "limits: 61st shipping quote is 429"`
 
-**C63** - A rajada de 30 logins simultâneos grava `rate_limit_overshoot` (contagem ≥ 1, qualquer valor) e não tem limite de aprovação: o perfil não declara limite sobre essa métrica (AC 58, door 6)
+**C63** - A rajada de 30 logins simultâneos conta em `rate_limit_burst_passed` os que passaram (ao menos os 10 do limite), grava a linha derivada `rate_limit_overshoot` e não tem limite de aprovação: o perfil não declara limite sobre essas métricas (AC 58, door 6). O cálculo do valor é o C91
+Proof: `sh load-tests/tests/assert-metric.sh limits --name rate_limit_burst_passed --at-least 10`
 Proof: `sh load-tests/tests/assert-metric.sh limits --name rate_limit_overshoot --at-least 1`
 Proof: `sh load-tests/tests/k6.sh profiles.test.js --only limits-overshoot-unbounded`
 
@@ -309,16 +311,35 @@ Proof: `sh load-tests/tests/k6.sh profiles.test.js --only spike-thresholds`
 **C74** - O ajudante de requisição troca `{order}`, `{product}`, `{address}` e `{stock}` pelo id na URL e põe o template na tag `name`, e nenhum arquivo de `load-tests/flows` ou `load-tests/scenarios` chama `http.get`, `http.post`, `http.put`, `http.patch`, `http.del` ou `http.request` direto (AC 69, door 6)
 Proof: `sh load-tests/tests/k6.sh http.test.js --only name-tag`
 Proof: `! grep -rnE "http\.(get|post|put|patch|del|request)\(" load-tests/flows load-tests/scenarios`
+Proof: `grep -n "tags: request.tags" load-tests/lib/http.js`
 
 **C75** - Toda requisição leva um `X-Request-ID` no formato `<perfil>-vu<n>-it<n>-<sequência>`, que casa com `^[A-Za-z0-9._-]{8,128}$`, e a API o devolve igual: `smoke: api echoes the request id` passa (AC 70)
 Proof: `sh load-tests/tests/k6.sh http.test.js --only request-id`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "smoke: api echoes the request id"`
 
-**C76** - `load-tests/README.md` tem a tabela da linha de base com as 12 colunas do door 6 e uma linha do `load` e uma do `breakpoint`, cada uma com um commit que é ancestral de `HEAD` e está em `main..HEAD` (AC 71, door 6)
+**C76** - `load-tests/README.md` tem a tabela da linha de base com as 12 colunas do door 6 e uma linha do `load` e uma do `breakpoint`, cada uma com um commit de `origin/main..HEAD` a partir do qual nada do que a rodada mede mudou até `HEAD`: `backend/`, `docker/`, o `Makefile` e o Compose e o JavaScript de `load-tests/`, exceto `lib/baseline.js`, que só guarda os números registrados (AC 71, door 6)
 Proof: `sh load-tests/tests/docs.sh --only baseline-rows`
 
-**C77** - Depois da linha do `load`, os limites de latência do C72 são o p95 registrado vezes 1,2, arredondado para cima até a dezena de ms seguinte. O teste lê o `README.md` da pasta e compara (AC 72)
+**C77** - Depois da linha do `load`, os limites de latência do C72 são, no `load`, no `stress` e no `soak`, o p95 registrado vezes 1,2, arredondado para cima até a dezena de ms seguinte. O teste lê o `README.md` da pasta e compara com `lib/baseline.js` (AC 72)
 Proof: `sh load-tests/tests/k6.sh profiles.test.js --only thresholds-from-baseline`
+
+### Rodada 1 da verificação · 6 arquivos · 20 KB · ~5k
+
+**C88** - A `api` de carga roda com `BCRYPT_ROUNDS=12` e `ORDER_DELIVERY_DELAY_SECONDS=10`, e a configuração em cache lê o mesmo atraso (door 3)
+Proof: `sh load-tests/tests/stack.sh --only bcrypt-and-delivery`
+
+**C89** - O `contention` declara 50 VUs de uma iteração na disputa e 100 nos pedidos cruzados, e os limites `checks: rate==1`, `unexpected_errors: rate==0`, `contention_created: count==10`, `contention_refused: count==40`, `contention_server_errors: count==0`, `cross_orders_created: count==100` e `cross_orders_server_errors: count==0` (AC 52 e AC 54, na própria camada)
+Proof: `sh load-tests/tests/k6.sh profiles.test.js --only contention-thresholds`
+
+**C90** - A taxa na parada do `breakpoint` é 5 + 495 × (segundos desde o fim do `setup()` ÷ 900), entre 5 e 500: 5 em 0 s, 252,5 em 450 s e 500 a partir de 900 s. O `handleSummary` grava a linha `breakpoint_rate_at_stop` só no `breakpoint` (AC 64)
+Proof: `sh load-tests/tests/k6.sh profiles.test.js --only breakpoint-rate`
+Proof: `sh load-tests/tests/k6.sh summary.test.js --only breakpoint-rate`
+
+**C91** - `rate_limit_overshoot` vale `max(0, rate_limit_burst_passed − 10)`: 1 com 11 que passaram, 0 com 10 e 0 com 8, e não existe sem a rajada (AC 58)
+Proof: `sh load-tests/tests/k6.sh summary.test.js --only overshoot`
+
+**C92** - Nos perfis de volume, os casos de erro sem fração no plano rodam em exatamente 100 de 1.000 iterações seguidas de um VU (1 em 10). No `smoke`, rodam em toda iteração
+Proof: `sh load-tests/tests/k6.sh mix.test.js --only error-paths-rate`
 
 ### S8 - CI smoke · 2 arquivos · 3 KB · ~1k
 
@@ -368,18 +389,19 @@ Proof: `make test`
 | volumes do `LoadTestSeeder` (10) | clientes 1.000 C1 · endereços 1.000 C1 · equipe 2 C2 · categorias 8 C3 · ativos com unidades 170 C3 · ativos sem unidades 10 C3 · inativos 20 C3 · `Produto Disputado` 1 C3 · pedidos 10.000 C4 · pagamentos aprovados C4 | - |
 | startup config: caminhos de cache e log (3 containers) | `api` C23 · `queue-worker` C23 · `outbox-relay` C23 | - |
 | startup config: armazenamento do limitador (2 montagens) | pilha de carga C20, C21, C22 · Pest, dev e o job `backend` do CI, que montam a aplicação do mesmo jeito sem a variável C24 | - |
-| doors do plano (7) | 1 C9, C15, C26 · 2 C16, C18, C23 · 3 C17, C18, C19 · 4 C20, C21, C22, C24 · 5 C25 · 6 C41, C63, C74, C76 · 7 C1, C3, C6 | - |
+| doors do plano (7) | 1 C9, C15, C26 · 2 C16, C18, C23 · 3 C17, C18, C19, C88 · 4 C20, C21, C22, C24 · 5 C25 · 6 C41, C63, C74, C76, C91 · 7 C1, C3, C6 | - |
 | estados da vitrine (15) | lista C27 · ordem inválida C28 · página além da última C29 · produto disponível C30 · inativo C31 · sem unidades C31 · id malformado C31 · id desconhecido C31 · frete conhecido C32 · frete `ZZ` C32 · carrinho disponível C33 · carrinho com inativo C34 · carrinho sem unidades C34 · cadastro novo C35 · e-mail usado C35 | - |
 | estados da compra (19) | cookie CSRF C37 · login C37 · pedido C38 · produto sem unidades C39 · `address_id` malformado C40 · endereço alheio C40 · pagável C41 · cartão aprovado C44 · recusado C45 · aprovado depois da recusa C45 · pagar de novo C46 · sem `card_token` C46 · pedido alheio C47 · sem sessão C47 · conta C48 · lista de pedidos C48 · endereço novo C49 · exclusão do endereço C49 · `PUT` em endereço alheio C50 | - |
 | estados da equipe (11) | login C51 · dashboard C52 · lista de pedidos C52 · detalhe do pedido C52 · lista de estoque C52 · lista de produtos C52 · ajuste de estoque C53 · exclusão pelo suporte C54 · produto sobrevive C54 · produto desconhecido C55 · sessões trocadas C56 | - |
-| frações da mistura (5) | cadastro 1% C36 · pedido sem unidades 5% C39 · cartão aprovado 90% C44 · cartão recusado 10% C45 · ajuste de estoque 2% C53 | - |
+| frações da mistura (6) | cadastro 1% C36 · pedido sem unidades 5% C39 · cartão aprovado 90% C44 · cartão recusado 10% C45 · ajuste de estoque 2% C53 · casos de erro 10% C92 | - |
 | mapeamento de VU para conta (2) | cliente C37 · equipe C51 | - |
 | espera até pagar (3) | `placed` consulta de novo C41 · `awaiting_payment` paga C41, C43 · 60 s desiste C42 | - |
 | divisão dos VUs (4) | 50 VUs C71 · 150 VUs C71 · 300 VUs C71 · taxa de 500/s C71 | - |
-| limites de aprovação (5 grupos) | `smoke` C65 · `load`, `stress` e `soak` C72 · `spike` C73 · `breakpoint` C69 · `limits` sem limite de rajada C63 | - |
-| resultados do `contention` (5) | `201` × 10 C57 · `409` × 40 C57 · `5xx` 0 C57 · estoque final 0 C58 · pedidos cruzados 100 C59 | - |
+| limites de aprovação (6 grupos) | `smoke` C65 · `load`, `stress` e `soak` C72, C77 · `spike` C73 · `breakpoint` C69 · `contention` C89 · `limits` sem limite de rajada C63 | - |
+| resultados do `contention` (5) | `201` × 10 C57, C89 · `409` × 40 C57, C89 · `5xx` 0 C57, C89 · estoque final 0 C58 · pedidos cruzados 100 C59, C89 | - |
 | rotas limitadas no `limits` (6) | login de cliente C60 · cadastro C60 · pedido C61 · pagamento C61 · validação de carrinho C62 · cotação de frete C62 | - |
 | saídas do job de CI (4) | passa C78 · status inesperado C79 · pilha não sobe C80 · `make load-down` sempre C81 | - |
+| linhas derivadas no fim da rodada (2) | `rate_limit_overshoot` C63, C91 · `breakpoint_rate_at_stop` C90 | - |
 | documentos (5) | README C82 · `AGENTS.md` C83 · `backend/.env.example` C84 · `load-tests/README.md` C76, C85 · `.gitignore` C12 | - |
 
 - O plano não tem rota em `Surface`: nenhuma rota muda. Os status que o k6 confere estão nas linhas de estados acima.
@@ -403,12 +425,13 @@ Evidence:
 
 - `Makefile` (alvo `load-test`): decide sobre 8 perfis válidos e 2 entradas recusadas, e mapeia 8 perfis para o limitador, com 10 pontos de decisão
 - os perfis do k6: 6 formas de carga, 4 grupos de limites e 1 regra de divisão, com 11 pontos
-- a mistura do k6: 2 mapeamentos de VU e 5 frações, com 7 pontos
+- a mistura do k6: 2 mapeamentos de VU e 6 frações, com 8 pontos
+- o `handleSummary`: 2 linhas derivadas (o excesso da rajada e a taxa na parada), com 3 pontos
 - a espera até pagar: 3 saídas (consulta de novo, paga, desiste), com 3 pontos
 - o ajudante de requisição: 4 parâmetros de rota trocados e o formato do `X-Request-ID`, com 5 pontos
 - análogo mais próximo no repositório: nenhum para JavaScript de carga, `Makefile` ou Compose. O precedente aqui é o "exercício temporário" do `ModuleBoundariesTest` (features `module-facades` C7 e `uuid-record-ids` C62), que prova uma propriedade da infraestrutura de teste com uma falha de propósito, revertida
 
-Cost: 7 arquivos de teste novos em `load-tests/tests` (4 em JavaScript e 7 scripts de shell, contando os ajudantes) e 1 teste Pest. Sem estas linhas, as 5 frações, os 2 mapeamentos e a espera seriam provados só pelo `smoke`, que percorre um caso de cada e não falha se a fração estiver errada.
+Cost: os arquivos de teste novos em `load-tests/tests` (6 em JavaScript, contando o `harness.js`, e 10 scripts de shell, contando os ajudantes) e 1 teste Pest. Sem estas linhas, as 5 frações, os 2 mapeamentos e a espera seriam provados só pelo `smoke`, que percorre um caso de cada e não falha se a fração estiver errada.
 
 Estas linhas não entram nas diretrizes do repositório, a não ser que diashelter peça.
 

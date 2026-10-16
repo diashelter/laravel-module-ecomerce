@@ -65,34 +65,50 @@ function vuState() {
 }
 
 /**
- * Sends one request and counts an unexpected status as an error.
+ * Pure: everything send() hands to k6 for one request. The URL carries the id; the `name` tag keeps the template.
  * options: params (route parameters), query (string with the leading ?), body (object, sent as JSON),
- * expect (list of statuses), jar (a CookieJar; the VU jar when omitted).
+ * xsrf (the XSRF token, for a mutating method), id (the X-Request-ID).
  */
-export function send(method, template, options = {}) {
-    const { params = {}, query = '', body = null, expect = [200], jar = http.cookieJar() } = options;
-    const { vu, iteration } = vuState();
+export function buildRequest(method, template, options = {}) {
+    const { params = {}, query = '', body = null, xsrf = null, id } = options;
     const headers = {
         Accept: 'application/json',
         Origin: BASE_URL,
         Referer: `${BASE_URL}/`,
-        'X-Request-ID': requestId(PROFILE, vu, iteration, ++sequence),
+        'X-Request-ID': id,
     };
-    lastId = headers['X-Request-ID'];
 
     if (body !== null) {
         headers['Content-Type'] = 'application/json';
     }
 
-    const token = MUTATING.includes(method) ? xsrfToken(jar) : null;
-    if (token) {
-        headers['X-XSRF-TOKEN'] = token;
+    if (xsrf && MUTATING.includes(method)) {
+        headers['X-XSRF-TOKEN'] = xsrf;
     }
 
-    const response = http.request(method, `${BASE_URL}${routeUrl(template, params)}${query}`, body === null ? null : JSON.stringify(body), {
+    return {
+        url: `${BASE_URL}${routeUrl(template, params)}${query}`,
+        body: body === null ? null : JSON.stringify(body),
         headers,
-        jar,
         tags: { name: requestName(method, template) },
+    };
+}
+
+/**
+ * Sends one request and counts an unexpected status as an error.
+ * options: those of buildRequest, plus expect (list of statuses) and jar (a CookieJar; the VU jar when omitted).
+ */
+export function send(method, template, options = {}) {
+    const { expect = [200], jar = http.cookieJar() } = options;
+    const { vu, iteration } = vuState();
+    lastId = requestId(PROFILE, vu, iteration, ++sequence);
+
+    const xsrf = MUTATING.includes(method) ? xsrfToken(jar) : null;
+    const request = buildRequest(method, template, { ...options, xsrf, id: lastId });
+    const response = http.request(method, request.url, request.body, {
+        headers: request.headers,
+        jar,
+        tags: request.tags,
         responseCallback: responseCallback(expect),
     });
 

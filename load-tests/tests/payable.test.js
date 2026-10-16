@@ -1,6 +1,6 @@
 // Proves the wait until an order can be paid (checks C41, C42 and C43), with a fake clock.
 import { expectEqual, runCase } from './harness.js';
-import { payWhenPayable, waitUntilPayable } from '../lib/payable.js';
+import { countGiveUp, payWhenPayable, waitUntilPayable } from '../lib/payable.js';
 
 export { options } from './harness.js';
 
@@ -29,6 +29,11 @@ const cases = {
         expectEqual('30 reads in 60 s', order.reads(), 30);
         expectEqual('waited exactly 60 s', order.sleeps.reduce((sum, s) => sum + s, 0), 60);
         expectEqual('not payable', wait, { payable: false, waitedSeconds: 60 });
+
+        const errors = [];
+        expectEqual('the give up is not payable', countGiveUp(wait, (failed) => errors.push(failed)), false);
+        expectEqual('counts one unexpected error', errors, [true]);
+        expectEqual('a payable wait counts none', [countGiveUp({ payable: true }, (failed) => errors.push(failed)), errors.length], [true, 1]);
     },
     'pays-only-when-awaiting': () => {
         let payments = 0;

@@ -21,6 +21,15 @@ export function waitUntilPayable(readStatus, sleep) {
     return { payable: false, waitedSeconds: GIVE_UP_SECONDS };
 }
 
+/** A wait that gave up counts one unexpected error (the relay or the worker did not keep up); a payable one none. */
+export function countGiveUp(wait, addUnexpectedError) {
+    if (!wait.payable) {
+        addUnexpectedError(true);
+    }
+
+    return wait.payable;
+}
+
 /** The payment step: never calls pay() for an order the wait did not read as awaiting_payment. */
 export function payWhenPayable(wait, pay) {
     return wait.payable ? pay() : null;
