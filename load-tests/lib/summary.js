@@ -2,6 +2,7 @@
 // one line per check and per custom metric, which the proofs read (tests/assert-check.sh, tests/assert-metric.sh).
 import { PROFILE } from './http.js';
 import { LOGIN_LIMIT } from '../scenarios/limits.js';
+import { breakpointRateAt } from './profiles.js';
 
 const CUSTOM_METRICS = [
     'unexpected_errors',
@@ -41,6 +42,12 @@ function derivedLines(data) {
 
     if (burst) {
         lines.push(`metric\trate_limit_overshoot\t1\t${Math.max(0, burst.values.count - LOGIN_LIMIT)}`);
+    }
+
+    // The breakpoint result: the arrival rate when the run stopped (aborted by a threshold, or at the end).
+    if (PROFILE === 'breakpoint' && data.setup_data && data.setup_data.startedAt) {
+        const rate = breakpointRateAt((Date.now() - data.setup_data.startedAt) / 1000);
+        lines.push(`metric\tbreakpoint_rate_at_stop\t1\t${rate.toFixed(1)}`);
     }
 
     return lines;

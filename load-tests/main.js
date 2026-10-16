@@ -12,7 +12,10 @@ import { limitsBurst as limitsBurstScenario, limitsLogin as limitsLoginScenario,
 export const options = buildOptions(PROFILE);
 
 export function setup() {
-    return { ...discover(), burstAt: Date.now() + BURST_DELAY_MS };
+    const data = discover();
+
+    // When the scenarios start: the contention burst waits from here, and the breakpoint ramp counts from here.
+    return { ...data, startedAt: Date.now(), burstAt: Date.now() + BURST_DELAY_MS };
 }
 
 export function storefront(data) {

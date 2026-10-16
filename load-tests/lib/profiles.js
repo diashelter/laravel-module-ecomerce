@@ -18,7 +18,7 @@ const SHAPES = {
     soak: { startVUs: 0, stages: [['1m', 50], ['1h', 50], ['1m', 0]] },
 };
 
-const BREAKPOINT = { startRate: 5, targetRate: 500, duration: '15m', preAllocatedVUs: { storefront: 50, checkout: 15, backoffice: 5 }, maxVUs: { storefront: 750, checkout: 200, backoffice: 50 } };
+export const BREAKPOINT = { startRate: 5, targetRate: 500, duration: '15m', preAllocatedVUs: { storefront: 50, checkout: 15, backoffice: 5 }, maxVUs: { storefront: 750, checkout: 200, backoffice: 50 } };
 
 const COMMON = {
     // A VU logs in once and keeps its session across iterations, as a person keeps the tab open.
@@ -26,6 +26,14 @@ const COMMON = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'count'],
     setupTimeout: '3m',
 };
+
+/** The arrival rate the breakpoint ramp had reached after `seconds` (iterations/s, all flows). */
+export function breakpointRateAt(seconds) {
+    const total = 15 * 60;
+    const progress = Math.min(1, Math.max(0, seconds / total));
+
+    return BREAKPOINT.startRate + (BREAKPOINT.targetRate - BREAKPOINT.startRate) * progress;
+}
 
 /** The accepted p95 times 1.2, rounded up to the next 10 ms; the defaults while there is no baseline. */
 export function latencyThresholds(baseline) {
