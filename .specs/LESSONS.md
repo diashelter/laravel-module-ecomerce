@@ -62,6 +62,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: plan.md Impact (checks)
 - last seen: 2026-10-15T21:42:15Z
 
+### L-009 - Assert every field of a published envelope as built from the stored row, including its timestamp, not only on a hand-built envelope.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `outbox, relay` · harmful: 0
+- features: transactional-outbox
+- evidence: F5 backend/app/Modules/Shared/Repositories/OutboxMessageRepository.php:75 (outbox, relay)
+- last seen: 2026-10-16T01:17:32Z
+
+### L-010 - Every Caller sees cell of a design state table owes a check, including operator CLI output such as the failed job display name.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `queue, design` · harmful: 0
+- features: transactional-outbox
+- evidence: design EventConsumer state 'O consumidor falha'; backend/app/Modules/Shared/Messaging/DeliverEvent.php:51-54 (queue, design)
+- last seen: 2026-10-16T01:17:32Z
+
+### L-011 - A claim whose consequence depends on a transaction or row lock must be proven by observing the transaction, not only by the SQL text.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `relay, concurrency` · harmful: 0
+- features: transactional-outbox
+- evidence: C22 backend/tests/Feature/Outbox/OutboxRelayTest.php:83-87 (relay, concurrency)
+- last seen: 2026-10-16T01:17:32Z
+
+### L-012 - When a Test policy row names the edge for a decision, write each decision's check through that edge, not against the internal class it reaches.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `test-policy` · harmful: 0
+- features: transactional-outbox
+- evidence: Test policy row 1; C8, C9, C15, C16 backend/tests/Feature/Outbox/EventDeliveryTest.php:54,76,156,168 (test-policy)
+- last seen: 2026-10-16T01:17:32Z
+
+### L-013 - When a claim refuses every value except listed types, table-drive the refusal over each remaining PHP value type: array, object and resource.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `validation` · harmful: 0
+- features: transactional-outbox
+- evidence: C5 backend/tests/Feature/Outbox/EventOutboxTest.php:102-106 (validation)
+- last seen: 2026-10-16T01:17:32Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

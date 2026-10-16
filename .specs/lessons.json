@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 9,
+  "next_id": 14,
   "lessons": [
     {
       "id": "L-001",
@@ -148,6 +148,96 @@
       ],
       "created": "2026-10-15T21:42:15Z",
       "last_seen": "2026-10-15T21:42:15Z"
+    },
+    {
+      "id": "L-009",
+      "key": "surviving_mutant::assert every field of a published envelope as built from the stored row including its timestamp not only on a hand built envelope",
+      "text": "Assert every field of a published envelope as built from the stored row, including its timestamp, not only on a hand-built envelope.",
+      "signal": "surviving_mutant",
+      "scope": "outbox, relay",
+      "status": "candidate",
+      "features": [
+        "transactional-outbox"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "F5 backend/app/Modules/Shared/Repositories/OutboxMessageRepository.php:75 (outbox, relay)"
+      ],
+      "created": "2026-10-16T01:17:32Z",
+      "last_seen": "2026-10-16T01:17:32Z"
+    },
+    {
+      "id": "L-010",
+      "key": "ac_gap::every caller sees cell of a design state table owes a check including operator cli output such as the failed job display name",
+      "text": "Every Caller sees cell of a design state table owes a check, including operator CLI output such as the failed job display name.",
+      "signal": "ac_gap",
+      "scope": "queue, design",
+      "status": "candidate",
+      "features": [
+        "transactional-outbox"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "design EventConsumer state 'O consumidor falha'; backend/app/Modules/Shared/Messaging/DeliverEvent.php:51-54 (queue, design)"
+      ],
+      "created": "2026-10-16T01:17:32Z",
+      "last_seen": "2026-10-16T01:17:32Z"
+    },
+    {
+      "id": "L-011",
+      "key": "spec_precision_gap::a claim whose consequence depends on a transaction or row lock must be proven by observing the transaction not only by the sql text",
+      "text": "A claim whose consequence depends on a transaction or row lock must be proven by observing the transaction, not only by the SQL text.",
+      "signal": "spec_precision_gap",
+      "scope": "relay, concurrency",
+      "status": "candidate",
+      "features": [
+        "transactional-outbox"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C22 backend/tests/Feature/Outbox/OutboxRelayTest.php:83-87 (relay, concurrency)"
+      ],
+      "created": "2026-10-16T01:17:32Z",
+      "last_seen": "2026-10-16T01:17:32Z"
+    },
+    {
+      "id": "L-012",
+      "key": "spec_precision_gap::when a test policy row names the edge for a decision write each decision s check through that edge not against the internal class it reaches",
+      "text": "When a Test policy row names the edge for a decision, write each decision's check through that edge, not against the internal class it reaches.",
+      "signal": "spec_precision_gap",
+      "scope": "test-policy",
+      "status": "candidate",
+      "features": [
+        "transactional-outbox"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "Test policy row 1; C8, C9, C15, C16 backend/tests/Feature/Outbox/EventDeliveryTest.php:54,76,156,168 (test-policy)"
+      ],
+      "created": "2026-10-16T01:17:32Z",
+      "last_seen": "2026-10-16T01:17:32Z"
+    },
+    {
+      "id": "L-013",
+      "key": "ac_gap::when a claim refuses every value except listed types table drive the refusal over each remaining php value type array object and resource",
+      "text": "When a claim refuses every value except listed types, table-drive the refusal over each remaining PHP value type: array, object and resource.",
+      "signal": "ac_gap",
+      "scope": "validation",
+      "status": "candidate",
+      "features": [
+        "transactional-outbox"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C5 backend/tests/Feature/Outbox/EventOutboxTest.php:102-106 (validation)"
+      ],
+      "created": "2026-10-16T01:17:32Z",
+      "last_seen": "2026-10-16T01:17:32Z"
     }
   ]
 }
