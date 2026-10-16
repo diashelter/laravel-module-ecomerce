@@ -34,7 +34,10 @@ it('reports problems for each item', function () {
     ])->assertOk()->assertJsonPath('data.is_valid', false);
 
     $problems = collect($response->json('data.items'))->pluck('problem', 'product_id');
-    expect(collect($response->json('data.items'))->pluck('available_quantity', 'product_id')[$lowStock->id])->toBe(2)
+    $lines = collect($response->json('data.items'))->keyBy('product_id');
+    expect($lines[$lowStock->id]['available_quantity'])->toBe(2)
+        ->and($lines[$inactive->id]['is_available'])->toBeFalse()
+        ->and($lines[$inactive->id]['available_quantity'])->toBe(10)
         ->and($problems[$lowStock->id])->toBe('Estoque insuficiente. Disponível: 2.')
         ->and($problems[$inactive->id])->toBe('Produto indisponível.')
         ->and($problems[$unknown])->toBe('Produto não encontrado.');

@@ -41,3 +41,13 @@ it('counts orders per month since a date', function () {
     ])
         ->and($counts->of($thisMonth->copy()->subMonths(5)->format('Y-m')))->toBe(0);
 });
+
+it('counts the orders created exactly at the start date', function () {
+    $day = Carbon::today()->subDays(3);
+    $month = Carbon::today()->startOfMonth()->subMonths(2);
+    Order::factory()->create(['created_at' => $day]);
+    Order::factory()->create(['created_at' => $month]);
+
+    expect(app(OrderMetrics::class)->countPerDaySince($day)->of($day->toDateString()))->toBe(1)
+        ->and(app(OrderMetrics::class)->countPerMonthSince($month)->of($month->format('Y-m')))->toBe(1);
+});

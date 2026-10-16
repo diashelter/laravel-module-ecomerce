@@ -1,6 +1,9 @@
 <?php
 
+use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Catalog\ValueObjects\CatalogProducts;
+use App\Modules\Catalog\ValueObjects\ProductIds;
 
 beforeEach(fn () => $this->actingAs(admin()));
 
@@ -86,4 +89,37 @@ it('lists the stock with the same query count for 1 and 20 rows', function () {
     expect(count($full))->toBe(count($single))
         ->and($productReads)->toHaveCount(1)
         ->and($productReads[0])->toContain('"id" in (');
+});
+
+it('lists twenty stock rows per page by quantity and then by id', function () {
+    $ids = collect(range(1, 21))->map(fn () => stockOf(productWithStock(4))->id)->sort()->values();
+    stockOf(productWithStock(1));
+
+    $response = $this->getJson('/api/admin/stocks')->assertOk();
+    $second = $this->getJson('/api/admin/stocks?page=2')->assertOk();
+
+    expect($response->json('data'))->toHaveCount(20)
+        ->and($response->json('meta.per_page'))->toBe(20)
+        ->and($response->json('meta.total'))->toBe(22)
+        ->and($response->json('data.0.quantity'))->toBe(1)
+        ->and(collect($response->json('data'))->skip(1)->pluck('id')->all())->toBe($ids->take(19)->all())
+        ->and(collect($second->json('data'))->pluck('id')->all())->toBe($ids->skip(19)->values()->all());
+});
+
+it('keeps a stock row whose product is gone with a null product', function () {
+    $stock = stockOf(productWithStock(3));
+    app()->instance(ProductCatalog::class, new class implements ProductCatalog
+    {
+        public function findMany(ProductIds $ids): CatalogProducts
+        {
+            return new CatalogProducts;
+        }
+    });
+
+    $this->getJson('/api/admin/stocks')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $stock->id)
+        ->assertJsonPath('data.0.quantity', 3)
+        ->assertJsonPath('data.0.product', null);
 });

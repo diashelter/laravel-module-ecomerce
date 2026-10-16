@@ -41,10 +41,12 @@ it('replaces the product categories on update', function () {
     $product = productWithStock(3);
     $product->categories()->attach([$c1->id, $c2->id]);
 
-    $this->putJson("/api/admin/products/{$product->id}", productPayload(['category_ids' => [$c2->id, $c3->id]]))
+    $response = $this->putJson("/api/admin/products/{$product->id}", productPayload(['category_ids' => [$c2->id, $c3->id]]))
         ->assertOk();
 
-    expect($product->categories()->pluck('categories.id')->sort()->values()->all())
+    expect(collect($response->json('data.categories'))->pluck('id')->sort()->values()->all())
+        ->toBe(collect([$c2->id, $c3->id])->sort()->values()->all())
+        ->and($product->categories()->pluck('categories.id')->sort()->values()->all())
         ->toBe(collect([$c2->id, $c3->id])->sort()->values()->all());
 });
 

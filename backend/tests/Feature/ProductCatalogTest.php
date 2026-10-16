@@ -54,7 +54,11 @@ it('paginates products', function () {
         ->assertOk()
         ->assertJsonCount(3, 'data')
         ->assertJsonPath('meta.current_page', 2)
-        ->assertJsonPath('meta.total', 15);
+        ->assertJsonPath('meta.per_page', 12)
+        ->assertJsonPath('meta.total', 15)
+        ->assertJsonStructure(['links' => ['first', 'last', 'prev', 'next']])
+        ->assertJsonPath('links.next', null)
+        ->assertJsonPath('links.prev', url('/api/products').'?page=1');
 });
 
 it('shows an available product', function () {

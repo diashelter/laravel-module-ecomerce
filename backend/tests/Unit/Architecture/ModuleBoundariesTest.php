@@ -374,8 +374,8 @@ it('resolves the module contracts to their implementations', function (string $c
 $modulesWithQueries = array_values(array_filter(MODULES, fn (string $module) => is_dir(MODULES_PATH."/{$module}/Queries")));
 
 foreach ($modulesWithQueries as $module) {
-    foreach (['Repositories', 'UseCases'] as $layer) {
-        arch("queries do not use the module {$layer}: {$module}")
+    foreach (['repositories' => 'Repositories', 'use cases' => 'UseCases'] as $label => $layer) {
+        arch("queries do not use the module {$label}: {$module}")
             ->expect("App\\Modules\\{$module}\\Queries")
             ->not->toUse("App\\Modules\\{$module}\\{$layer}");
     }
