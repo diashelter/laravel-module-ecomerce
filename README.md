@@ -641,7 +641,7 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. **Todo id d
 
 Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `402`, `403`, `404`, `405`, `409`, `422`, `429`, `500`. O `403` existe só para o suporte nos `DELETE` e em `/api/admin/users*`.
 
-**Registros nas rotas** (HEL-11): nenhuma rota resolve registro. O controller recebe o id como `string` e o entrega ao use case (escrita) ou ao repositório ou a consulta (leitura), então:
+**Registros nas rotas** (HEL-11): nenhuma rota resolve registro. O controller recebe o id como `string` e o entrega ao use case (escrita) ou ao repositório ou à consulta (leitura), então:
 
 - o **corpo é validado antes da existência**: corpo inválido é `422` para qualquer id (do dono, de outro cliente ou desconhecido), e corpo válido com id desconhecido é `404` com `NOT_FOUND` e 'Recurso não encontrado.';
 - nas rotas do cliente com registro (pedido, pagamento e endereço), o **dono entra na busca**: o registro de outro cliente responde `404` com o corpo de um id desconhecido, antes de qualquer conferência de status (nunca `409`). Não há mais `403` nessas rotas, porque ele confirmaria a quem não é dono que o registro existe;

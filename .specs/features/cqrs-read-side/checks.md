@@ -171,6 +171,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="produces the same
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="renders every stock row with exactly the keys of today"`
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="paginates stocks by quantity ascending"`
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="lists stocks with their products"`
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="lists twenty stock rows per page by quantity and then by id"`
 
 **C35** - `GET /api/admin/stocks` com 1 linha e com 20 linhas faz o mesmo número de queries, e a única leitura de `products` é a do `ProductCatalog`, um `where in` pelos ids da página (AC 31)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="lists the stock with the same query count for 1 and 20 rows"`
@@ -204,7 +205,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="returns aggregate
 **C43** - `GET /api/admin/dashboard` com a loja vazia devolve `200` com os 6 cartões e os 2 números de estoque em 0, e 30 e 12 itens com `total` 0 (AC 40)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="returns zeros for an empty store"`
 
-**C44** - O `CustomerMetrics` conta só as contas de `customers`: com 2 clientes e 2 membros da equipe, responde 2 (AC 41, door 2)
+**C44** - O `CustomerMetrics` conta só as contas de `customers`: com 3 clientes e 2 membros da equipe, responde 3 (AC 41, door 2)
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="counts only customer accounts for the dashboard"`
 
 **C45** - As consultas dos donos respondem os contratos de métricas: o `CatalogMetrics`, a contagem por `ProductStatus` e o total; o `StockMetrics`, os produtos com unidades e o total de unidades, com 0 sem estoque; o `OrderMetrics`, o total e as contagens por dia (`Y-m-d`) e por mês (`Y-m`) desde a data dada, sem os pedidos de antes dela (door 2)
@@ -213,6 +214,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="counts products i
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="returns zero units when there is no stock"`
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="counts orders (per day|per month) since a date"`
 Proof: `docker compose exec -T api ./vendor/bin/pest --filter="counts all the orders for the dashboard"`
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="counts the orders created exactly at the start date"`
 
 **C46** - O `GetAdminDashboardUseCase` não existe em nenhum lugar do backend, e o `DashboardController` usa a consulta do Backoffice (AC 42)
 Proof: `! grep -rn "GetAdminDashboardUseCase" backend/app backend/routes backend/tests`
