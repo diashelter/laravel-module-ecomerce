@@ -31,7 +31,8 @@ case "$CASE" in
         [ -f "$RESULTS/smoke-$STAMP.json" ] || fail "falta o JSON smoke-$STAMP.json"
         ok "smoke-$STAMP.html e .json"
         expect_eq "nada de results/ no git status" "$(git status --porcelain "$RESULTS")" ""
-        git check-ignore -q "$HTML" "$RESULTS/smoke-$STAMP.json" || fail "os relatórios não são ignorados"
+        git check-ignore -q "$HTML" || fail "o HTML não é ignorado"
+        git check-ignore -q "$RESULTS/smoke-$STAMP.json" || fail "o JSON não é ignorado"
         ok "os relatórios são ignorados pelo git"
         ;;
     app-settings)
