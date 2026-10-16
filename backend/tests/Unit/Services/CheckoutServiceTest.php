@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Catalog\Enums\ProductStatus;
 use App\Modules\Catalog\ValueObjects\CatalogProduct;
 use App\Modules\Catalog\ValueObjects\CatalogProducts;
 use App\Modules\Inventory\ValueObjects\StockQuantities;
@@ -16,7 +17,7 @@ beforeEach(function () {
     $this->quantities = fn (array $byProduct) => new ProductQuantities(
         ...array_map(fn (int $label) => new CartItemDTO(($this->id)($label), $byProduct[$label]), array_keys($byProduct)),
     );
-    $this->product = fn (int $label, int $priceCents, bool $isActive = true) => new CatalogProduct(($this->id)($label), "Produto {$label}", null, $priceCents, $isActive);
+    $this->product = fn (int $label, int $priceCents, ProductStatus $status = ProductStatus::Active) => new CatalogProduct(($this->id)($label), "Produto {$label}", null, $priceCents, $status);
     $this->stock = fn (array $byProduct) => new StockQuantities(collect($byProduct)->mapWithKeys(fn (int $quantity, int $label) => [($this->id)($label) => $quantity]));
 });
 
@@ -27,7 +28,7 @@ it('accepts quantities that the stock can fulfil', function () {
 })->throwsNoExceptions();
 
 it('reports every product that cannot be bought, keyed by item', function () {
-    $products = new CatalogProducts(($this->product)(1, 1000), ($this->product)(2, 1000, isActive: false));
+    $products = new CatalogProducts(($this->product)(1, 1000), ($this->product)(2, 1000, ProductStatus::Inactive));
 
     try {
         $this->service->assertCanFulfil(($this->quantities)([1 => 3, 2 => 1, 3 => 1]), $products, ($this->stock)([1 => 2, 2 => 5]));

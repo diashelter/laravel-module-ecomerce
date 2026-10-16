@@ -39,8 +39,8 @@ it('places an order with every value in cents, decrements stock and stores a sna
         ->assertJsonPath('data.total_cents', 96480)
         ->assertJsonCount(2, 'data.items');
 
-    expect($mouse->stock->fresh()->quantity)->toBe(8)
-        ->and($keyboard->stock->fresh()->quantity)->toBe(0);
+    expect(stockOf($mouse)->quantity)->toBe(8)
+        ->and(stockOf($keyboard)->quantity)->toBe(0);
 
     $order = Order::query()->with('items')->sole();
     expect($order->customer_id)->toBe($user->id)
@@ -108,7 +108,7 @@ it('merges repeated products in the same cart', function () {
         ['product_id' => $product->id, 'quantity' => 2],
     ])->assertCreated()->assertJsonPath('data.items.0.quantity', 4);
 
-    expect($product->stock->fresh()->quantity)->toBe(1);
+    expect(stockOf($product)->quantity)->toBe(1);
 });
 
 it('returns 409 and changes nothing when stock is insufficient', function () {
@@ -128,8 +128,8 @@ it('returns 409 and changes nothing when stock is insufficient', function () {
 
     // The whole transaction was rolled back: no order and no stock change.
     expect(Order::query()->count())->toBe(0)
-        ->and($ok->stock->fresh()->quantity)->toBe(10)
-        ->and($low->stock->fresh()->quantity)->toBe(2)
+        ->and(stockOf($ok)->quantity)->toBe(10)
+        ->and(stockOf($low)->quantity)->toBe(2)
         ->and(outboxMessages('ordering.order_placed'))->toBeEmpty();
 });
 
@@ -147,8 +147,8 @@ it('rejects inactive and out of stock products', function () {
         ->toBe(["items.{$unknown}" => ['Produto não encontrado.']]);
 
     expect(Order::query()->count())->toBe(0)
-        ->and($inactive->stock->fresh()->quantity)->toBe(10)
-        ->and($empty->stock->fresh()->quantity)->toBe(0);
+        ->and(stockOf($inactive)->quantity)->toBe(10)
+        ->and(stockOf($empty)->quantity)->toBe(0);
 });
 
 it('never lets stock go negative (spec scenario: stock 5, buy 4 then 3)', function () {
@@ -160,7 +160,7 @@ it('never lets stock go negative (spec scenario: stock 5, buy 4 then 3)', functi
     $this->actingAs(customer());
     checkout([['product_id' => $product->id, 'quantity' => 3]])->assertConflict();
 
-    expect($product->stock->fresh()->quantity)->toBe(1)
+    expect(stockOf($product)->quantity)->toBe(1)
         ->and(Order::query()->count())->toBe(1);
 });
 
@@ -263,8 +263,8 @@ it('draws the order code again after a collision', function (int $collisions) {
 
     expect($stockLocks)->toHaveCount(1)
         ->and($generator->draws)->toBe($collisions + 1)
-        ->and($first->stock->fresh()->quantity)->toBe(3)
-        ->and($second->stock->fresh()->quantity)->toBe(4)
+        ->and(stockOf($first)->quantity)->toBe(3)
+        ->and(stockOf($second)->quantity)->toBe(4)
         ->and(Order::query()->where('customer_id', $account->id)->sole()->code)->toBe('CCCCCCCC')
         ->and(outboxMessages('ordering.order_placed'))->toHaveCount(1);
 })->with([1, 2]);
@@ -283,8 +283,8 @@ it('fails the whole order after three code collisions', function () {
     expect($generator->draws)->toBe(3)
         ->and(Order::query()->count())->toBe($ordersBefore)
         ->and(OrderItem::query()->count())->toBe(0)
-        ->and($first->stock->fresh()->quantity)->toBe(5)
-        ->and($second->stock->fresh()->quantity)->toBe(7)
+        ->and(stockOf($first)->quantity)->toBe(5)
+        ->and(stockOf($second)->quantity)->toBe(7)
         ->and(outboxMessages('ordering.order_placed'))->toBeEmpty();
 });
 

@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Backoffice\Services;
 
 use App\Modules\Catalog\Enums\ProductStatus;
+use App\Modules\Catalog\ValueObjects\ProductCountsByStatus;
+use App\Modules\Ordering\ValueObjects\OrderCountsByPeriod;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 
 /**
  * Builds the admin dashboard metrics from raw counts. The frontend only renders these numbers.
@@ -29,28 +30,27 @@ class DashboardService
     }
 
     /**
-     * @param  Collection<string, int>  $productsByStatus  [status => total]
-     * @param  Collection<string, int>  $ordersPerDay  ['YYYY-MM-DD' => total] since dailySeriesStart()
-     * @param  Collection<string, int>  $ordersPerMonth  ['YYYY-MM' => total] since monthlySeriesStart()
+     * The order counts are those since dailySeriesStart() (per day) and monthlySeriesStart() (per month).
+     *
      * @return array<string, mixed>
      */
     public function build(
-        Collection $productsByStatus,
+        ProductCountsByStatus $productsByStatus,
         int $productsInStock,
         int $totalStockUnits,
         int $totalCustomers,
         int $totalOrders,
-        Collection $ordersPerDay,
-        Collection $ordersPerMonth,
+        OrderCountsByPeriod $ordersPerDay,
+        OrderCountsByPeriod $ordersPerMonth,
         Carbon $today,
     ): array {
-        $totalProducts = (int) $productsByStatus->sum();
+        $totalProducts = $productsByStatus->total();
 
         return [
             'cards' => [
                 'total_products' => $totalProducts,
-                'active_products' => (int) ($productsByStatus[ProductStatus::Active->value] ?? 0),
-                'inactive_products' => (int) ($productsByStatus[ProductStatus::Inactive->value] ?? 0),
+                'active_products' => $productsByStatus->of(ProductStatus::Active),
+                'inactive_products' => $productsByStatus->of(ProductStatus::Inactive),
                 'total_stock_units' => $totalStockUnits,
                 'total_customers' => $totalCustomers,
                 'total_orders' => $totalOrders,
@@ -65,33 +65,31 @@ class DashboardService
     }
 
     /**
-     * @param  Collection<string, int>  $counts
      * @return list<array{date: string, label: string, total: int}>
      */
-    private function ordersPerDay(Collection $counts, Carbon $today): array
+    private function ordersPerDay(OrderCountsByPeriod $counts, Carbon $today): array
     {
         // Days without orders are filled with zero so the chart has no gaps.
         return collect(CarbonPeriod::create($this->dailySeriesStart($today), '1 day', $today->copy()->startOfDay()))
             ->map(fn (Carbon $day) => [
                 'date' => $day->toDateString(),
                 'label' => $day->format('d/m'),
-                'total' => (int) ($counts[$day->toDateString()] ?? 0),
+                'total' => $counts->of($day->toDateString()),
             ])
             ->values()
             ->all();
     }
 
     /**
-     * @param  Collection<string, int>  $counts
      * @return list<array{month: string, label: string, total: int}>
      */
-    private function ordersPerMonth(Collection $counts, Carbon $today): array
+    private function ordersPerMonth(OrderCountsByPeriod $counts, Carbon $today): array
     {
         return collect(CarbonPeriod::create($this->monthlySeriesStart($today), '1 month', $today->copy()->startOfMonth()))
             ->map(fn (Carbon $month) => [
                 'month' => $month->format('Y-m'),
                 'label' => $month->format('m/Y'),
-                'total' => (int) ($counts[$month->format('Y-m')] ?? 0),
+                'total' => $counts->of($month->format('Y-m')),
             ])
             ->values()
             ->all();

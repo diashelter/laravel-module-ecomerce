@@ -52,6 +52,6 @@ class ProductFactory extends Factory
 
     public function withStock(int $quantity): static
     {
-        return $this->has(Stock::factory()->state(['quantity' => $quantity]));
+        return $this->afterCreating(fn (Product $product) => Stock::factory()->create(['product_id' => $product->id, 'quantity' => $quantity]));
     }
 }

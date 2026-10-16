@@ -92,6 +92,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C5 backend/tests/Feature/Outbox/EventOutboxTest.php:102-106 (validation)
 - last seen: 2026-10-16T01:17:32Z
 
+### L-014 - When a check claims an HTTP result, the proof must call the route, not the query or use case behind it
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `tests` · harmful: 0
+- features: cqrs-read-side
+- evidence: C40 round 1 (tests)
+- last seen: 2026-10-16T14:02:09Z
+
+### L-015 - Run each cited test filter against a deliberate violation to confirm it matches the generated test names
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `tests` · harmful: 0
+- features: cqrs-read-side
+- evidence: C7 round 1 (tests)
+- last seen: 2026-10-16T14:02:09Z
+
+### L-016 - Assert page size and tie break ordering with more rows than one page and equal sort keys
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `tests` · harmful: 0
+- features: cqrs-read-side
+- evidence: C34 round 1 (tests)
+- last seen: 2026-10-16T14:02:09Z
+
+### L-017 - Pin an inclusive date bound with a row created exactly at the boundary
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests` · harmful: 0
+- features: cqrs-read-side
+- evidence: F5 round 1: OrderMetricsQuery >= to > (tests)
+- last seen: 2026-10-16T14:02:09Z
+
+### L-018 - Give each counted table a different row count in the fixture so counting the wrong table fails
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests` · harmful: 0
+- features: cqrs-read-side
+- evidence: F4 round 1: CustomerMetricsQuery counted users (tests)
+- last seen: 2026-10-16T14:02:09Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

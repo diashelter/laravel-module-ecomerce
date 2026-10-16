@@ -54,7 +54,11 @@ it('paginates products', function () {
         ->assertOk()
         ->assertJsonCount(3, 'data')
         ->assertJsonPath('meta.current_page', 2)
-        ->assertJsonPath('meta.total', 15);
+        ->assertJsonPath('meta.per_page', 12)
+        ->assertJsonPath('meta.total', 15)
+        ->assertJsonStructure(['links' => ['first', 'last', 'prev', 'next']])
+        ->assertJsonPath('links.next', null)
+        ->assertJsonPath('links.prev', url('/api/products').'?page=1');
 });
 
 it('shows an available product', function () {
@@ -79,4 +83,49 @@ it('lists categories', function () {
     Category::factory()->count(3)->create();
 
     $this->getJson('/api/categories')->assertOk()->assertJsonCount(3, 'data');
+});
+
+it('lists the catalog with the same query count for 1 and 12 products', function () {
+    $makeProduct = function () {
+        $product = productWithStock(3);
+        $product->categories()->attach(Category::factory()->count(2)->create());
+    };
+    $listing = fn () => queriesDuring(fn () => $this->getJson('/api/products')->assertOk());
+
+    $makeProduct();
+    $single = $listing();
+
+    foreach (range(1, 11) as $unused) {
+        $makeProduct();
+    }
+    $full = $listing();
+
+    expect($single)->not->toBeEmpty()
+        ->and(count($full))->toBe(count($single));
+});
+
+it('reads the stock of the catalog page through the inventory', function () {
+    Product::factory()->count(3)->withStock(2)->create();
+
+    $queries = queriesDuring(fn () => $this->getJson('/api/products')->assertOk());
+
+    $stockReads = array_values(array_filter($queries, fn (string $sql) => str_contains($sql, '"stocks"')));
+
+    expect($stockReads)->toHaveCount(1)
+        ->and($stockReads[0])->toContain('"product_id" in (')
+        ->and(array_filter($queries, fn (string $sql) => str_contains($sql, 'join') && str_contains($sql, '"stocks"')))->toBeEmpty();
+});
+
+it('renders a product without a stock row as unavailable', function () {
+    $product = Product::factory()->create();
+    $this->actingAs(admin());
+
+    $listed = collect($this->getJson('/api/products')->assertOk()->json('data'))->firstWhere('id', $product->id);
+    $opened = $this->getJson("/api/admin/products/{$product->id}")->assertOk()->json('data');
+
+    foreach ([$listed, $opened] as $item) {
+        expect($item['stock'])->toBeNull()
+            ->and($item['is_available'])->toBeFalse()
+            ->and($item['available_quantity'])->toBe(0);
+    }
 });

@@ -1,7 +1,7 @@
 # Análise de Domínio: Contextos Delimitados do Backend
 
 > Análise estratégica (DDD) do código em [`backend/`](../backend), feita em 06/10/2026.
-> Última atualização: 16/10/2026 (revisão do PR #15 da HEL-9: o link do consumidor `RecordEstimatedDelivery` aponta para a pasta `Consumers`; antes, em 15/10/2026, outbox transacional, HEL-9: todo evento é gravado em `outbox_messages` na transação da mudança que ele anuncia, com nome e versão próprios, o relay do container `outbox-relay` o publica pela porta `EventTransport` e cada consumidor inscrito recebe a sua entrega, com o `request_id` de origem; antes, no mesmo dia, ids UUID v7 e nenhuma rota resolvendo registro, HEL-11: toda chave de negócio é um UUID v7 em texto, o pedido ganha o código de 8 símbolos, o controller carrega o id até o use case ou o repositório, o dono entra na busca das rotas do cliente e as três policies de dono saem; antes, em 09/10/2026, vocabulário público dos módulos, HEL-10: de `DTOs`, `ValueObjects` e `Enums` só é público o que as assinaturas de `Contracts` e `Events` expõem, calculado pelo `ModuleBoundariesTest`, e o `Http` de cada módulo é privado, com o Customers e o Fulfillment usando os próprios adaptadores; antes, no mesmo dia, ajustes da revisão do PR #12: repository sem service, um só resource para a conta de cliente e a nota de deploy sobre payloads na fila; antes, em 08/10/2026: facades dos módulos: cada módulo é usado de fora só pelos seus contratos e eventos, que falam em dados, e o `ModuleBoundariesTest` virou uma lista do que é permitido; em 07/10/2026: endereços de entrega e frete: Customers com o caderno de endereços, Fulfillment com a tabela de frete e a data prevista, e o pedido com a cópia do endereço; equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
+> Última atualização: 16/10/2026 (lado de leitura com consultas, HEL-6: as leituras que cruzavam módulo viraram consultas do módulo que serve a rota, a regra de disponibilidade passou do Ordering para o `ProductAvailability` do Catalog e o `ModuleBoundariesTest` ficou sem nenhuma exceção; antes, ainda em 16/10/2026, revisão do PR #15 da HEL-9: o link do consumidor `RecordEstimatedDelivery` aponta para a pasta `Consumers`; antes, em 15/10/2026, outbox transacional, HEL-9: todo evento é gravado em `outbox_messages` na transação da mudança que ele anuncia, com nome e versão próprios, o relay do container `outbox-relay` o publica pela porta `EventTransport` e cada consumidor inscrito recebe a sua entrega, com o `request_id` de origem; antes, no mesmo dia, ids UUID v7 e nenhuma rota resolvendo registro, HEL-11: toda chave de negócio é um UUID v7 em texto, o pedido ganha o código de 8 símbolos, o controller carrega o id até o use case ou o repositório, o dono entra na busca das rotas do cliente e as três policies de dono saem; antes, em 09/10/2026, vocabulário público dos módulos, HEL-10: de `DTOs`, `ValueObjects` e `Enums` só é público o que as assinaturas de `Contracts` e `Events` expõem, calculado pelo `ModuleBoundariesTest`, e o `Http` de cada módulo é privado, com o Customers e o Fulfillment usando os próprios adaptadores; antes, no mesmo dia, ajustes da revisão do PR #12: repository sem service, um só resource para a conta de cliente e a nota de deploy sobre payloads na fila; antes, em 08/10/2026: facades dos módulos: cada módulo é usado de fora só pelos seus contratos e eventos, que falam em dados, e o `ModuleBoundariesTest` virou uma lista do que é permitido; em 07/10/2026: endereços de entrega e frete: Customers com o caderno de endereços, Fulfillment com a tabela de frete e a data prevista, e o pedido com a cópia do endereço; equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
 > O objetivo é identificar subdomínios (Core, Supporting, Generic), mapear os contextos delimitados (bounded contexts) e apontar problemas de coesão e acoplamento.
 
 ## Sumário
@@ -87,19 +87,23 @@ Score = (
 
  A facade de cada módulo é o seu Contracts mais os seus Events (dados, nunca models):
  Ordering → Catalog: ProductCatalog            Ordering → Inventory: StockLevels, StockReservation
- Catalog → Inventory: StockInitializer         Payment → Ordering: PayableOrders
+ Catalog → Inventory: StockInitializer,        Payment → Ordering: PayableOrders
+   StockLevels (estoque da vitrine)
  Customers → Ordering: CustomerOrderHistory    Customers → Identity: CustomerAccounts
+ Inventory → Catalog: ProductCatalog (produtos da lista de estoque)
 
-   Customer Account (Supporting) e Backoffice Reporting (read model) leem de todos.
+   Backoffice Reporting (read model) lê pelos contratos de métricas: Catalog → CatalogMetrics,
+   Inventory → StockMetrics, Identity → CustomerMetrics, Ordering → OrderMetrics.
 ```
 
 ### Padrões de integração atuais e recomendados
 
 | Upstream | Downstream | Padrão recomendado |
 |---|---|---|
-| Catalog | Ordering | Customer/Supplier: o Catalog fornece preço, nome e status pelo contrato `ProductCatalog` (`CatalogProduct`); o Ordering guarda um snapshot |
+| Catalog | Ordering | Customer/Supplier: o Catalog fornece preço, nome e status pelo contrato `ProductCatalog` (`CatalogProduct`, que responde a `availability()`); o Ordering guarda um snapshot |
 | Inventory | Ordering | Open Host Service: contratos `StockReservation` (bloqueio e débito de estoque) e `StockLevels` (quantidades sem bloqueio, para o carrinho), que devolvem `StockQuantities` |
-| Inventory | Catalog | Open Host Service: contrato `StockInitializer` (abertura do estoque de um produto novo) |
+| Inventory | Catalog | Open Host Service: contrato `StockInitializer` (abertura do estoque de um produto novo) e `StockLevels::stocksFor` (a linha de estoque de cada produto da página, `ProductStocks`, lida pela consulta da vitrine e do cadastro) |
+| Catalog | Inventory | Open Host Service: contrato `ProductCatalog` (`CatalogProducts`), lido pela consulta da lista de estoque do admin; o Inventory não conhece o model `Product` |
 | Ordering | Payment | Customer/Supplier: o Payment lê o pedido pelo contrato `PayableOrders` (`OrderForPayment`: cliente, total e status) e decide se ele pode ser pago |
 | Ordering | Customers | Open Host Service: contrato `CustomerOrderHistory` (contagens e `OrderSummaries`) para as telas da conta e de clientes |
 | Identity | Customers | Open Host Service: contrato `CustomerAccounts` (`CustomerProfile`); as regras da conta ficam no Identity |
@@ -111,7 +115,7 @@ Score = (
 | Customers | Ordering | Inversão de dependência: o contrato `DeliveryAddressBook` é definido pelo Ordering e implementado pelo Customers; o Ordering recebe a cópia de um endereço do cliente |
 | Fulfillment | Ordering | Inversão de dependência: o contrato `ShippingQuoter` é definido pelo Ordering e implementado pelo Fulfillment; o Ordering recebe o preço e o prazo para uma UF |
 | Identity | todos | Conformist: os outros contextos referenciam apenas o id da conta (um UUID em texto); o cliente autenticado entra neles só como id, e o dono é conferido na busca do registro |
-| todos | Backoffice Reporting | Read model, somente leitura |
+| Catalog, Inventory, Identity, Ordering | Backoffice Reporting | Open Host Service: os contratos de métricas `CatalogMetrics`, `StockMetrics`, `CustomerMetrics` e `OrderMetrics`, cada um implementado por uma consulta do dono e lido pela consulta do dashboard; somente leitura |
 
 ---
 
@@ -129,13 +133,13 @@ Score = (
 - `OrderItem` (Entity): item do pedido com snapshot de nome e preço.
 - `OrderStatus` (Enum): ciclo de vida `placed → awaiting_payment → payment_approved → delivered`.
 - `CartDTO` / `CartItemDTO` (DTOs): o carrinho carrega apenas ids e quantidades. O `CartDTO` é a lista tipada de `CartItemDTO` e entrega um `ProductQuantities`.
-- [`ValueObjects`](../backend/app/Modules/Ordering/ValueObjects/): `ProductQuantities`, `OrderLines`/`OrderLine`, `ValidatedCart`/`ValidatedCartLine`, `CustomerIds` e `OrderCountsByCustomer`, listas tipadas que calculam os próprios totais. As do carrinho e das linhas do pedido são privadas ao Ordering: nenhuma assinatura de contrato ou evento as expõe (problema 12).
+- [`ValueObjects`](../backend/app/Modules/Ordering/ValueObjects/): `ProductQuantities`, `OrderLines`/`OrderLine`, `ValidatedCart`/`ValidatedCartLine`, `CustomerIds`, `OrderCountsByCustomer` e `OrderCountsByPeriod` (a contagem por dia ou mês do `OrderMetrics`), listas tipadas que calculam os próprios totais. As do carrinho e das linhas do pedido são privadas ao Ordering: nenhuma assinatura de contrato ou evento as expõe (problema 12).
 - [`ValueObjects`](../backend/app/Modules/Ordering/ValueObjects/) do vocabulário que os contratos trocam: `DeliveryAddress` (a cópia de um endereço) e `ShippingQuote` (preço em centavos e prazo em dias úteis), e o enum `BrazilianState` (as 27 UFs).
 - [Contratos](../backend/app/Modules/Ordering/Contracts/) definidos pelo Ordering: `DeliveryAddressBook` (`find(customerId, addressId): ?DeliveryAddress`, implementado pelo Customers) e `ShippingQuoter` (`quote(BrazilianState): ShippingQuote`, implementado pelo Fulfillment).
-- Contratos publicados pelo Ordering e implementados pelo `OrderRepository`: `PayableOrders` (`findForPayment(orderId): ?OrderForPayment`, para o Payment) e `CustomerOrderHistory` (`countForCustomer`, `countPerCustomer`, `recentForCustomer(...): OrderSummaries`, para o Customers).
+- Contratos publicados pelo Ordering e implementados pelo `OrderRepository`: `PayableOrders` (`findForPayment(orderId): ?OrderForPayment`, para o Payment) e `CustomerOrderHistory` (`countForCustomer`, `countPerCustomer`, `recentForCustomer(...): OrderSummaries`, para o Customers). O `OrderMetrics` (`totalOrders`, `countPerDaySince` e `countPerMonthSince`, que devolvem `OrderCountsByPeriod`, para o dashboard) é implementado pela consulta `OrderMetricsQuery`, porque só lê.
 - `CheckoutService` (Service): valida o atendimento do pedido e monta os itens.
 - `CartValidationService` (Service): revalida o carrinho antes do checkout.
-- `PurchaseAvailabilityService` (Service): fonte única da regra "pode ser comprado" (produto ativo **e** com estoque).
+- `PurchaseAvailabilityService` (Service): só as mensagens do carrinho e do checkout (`Produto indisponível.` e `Estoque insuficiente. Disponível: N.`), montadas sobre o `ProductAvailability` do Catalog. A regra "pode ser comprado" morava aqui e passou ao Catalog na HEL-6 (problema 15).
 - `Customer` (Read model): o comprador visto pelo pedido, uma projeção somente leitura de `customers` (`id`, `name`, `email`). O pedido guarda `orders.customer_id`.
 - `PlaceOrderUseCase` (Use Case): checkout atômico. Resolve o endereço e o frete antes da transação (um endereço que não é do cliente responde `422` sem tocar no estoque) e grava o pedido com a cópia, o frete e o total.
 - `RecordEstimatedDeliveryUseCase` (Use Case) e o consumidor `RecordEstimatedDelivery`: gravam a data prevista que o Fulfillment anunciou, só se o pedido ainda não tem uma.
@@ -177,12 +181,15 @@ Score = (
 - `Product` (Entity), `Category` (Entity), `ProductStatus` (Enum).
 - `ProductService`, `CategoryService` (Services): imagem padrão e regras de exclusão.
 - `ProductCatalogFilterDTO`, `ProductDTO`, `CreateProductDTO`, `CategoryDTO`.
-- `ProductIds` e `CategoryIds` ([`ValueObjects`](../backend/app/Modules/Catalog/ValueObjects/)): listas tipadas de ids positivos e sem repetição. O `ProductIds` é o tipo dos contratos `ProductCatalog`, `StockLevels` e `StockReservation`.
-- [`ProductCatalog`](../backend/app/Modules/Catalog/Contracts/ProductCatalog.php) (contrato publicado, implementado pelo `ProductRepository` e ligado no `CatalogServiceProvider`): `findMany(ProductIds): CatalogProducts`, com o id, o nome, a imagem, o preço e se cada produto está ativo (`CatalogProduct`). É por ele que o carrinho e o checkout leem os produtos.
-- Use cases: `CreateProductUseCase`, `UpdateProductUseCase`, `DeleteProductUseCase`, `ChangeProductStatusUseCase`, `CreateCategoryUseCase`, `UpdateCategoryUseCase`, `DeleteCategoryUseCase`.
+- `ProductIds` e `CategoryIds` ([`ValueObjects`](../backend/app/Modules/Catalog/ValueObjects/)): listas tipadas de ids canônicos e sem repetição. O `ProductIds` é o tipo dos contratos `ProductCatalog`, `StockLevels` e `StockReservation`.
+- [`ProductCatalog`](../backend/app/Modules/Catalog/Contracts/ProductCatalog.php) (contrato publicado, implementado pela consulta [`ProductCatalogQuery`](../backend/app/Modules/Catalog/Queries/ProductCatalogQuery.php) e ligado no `CatalogServiceProvider`): `findMany(ProductIds): CatalogProducts`, com o id, o nome, a imagem, o preço e o `ProductStatus` de cada produto (`CatalogProduct`). É por ele que o carrinho, o checkout e a lista de estoque leem os produtos.
+- [`ProductAvailability`](../backend/app/Modules/Catalog/ValueObjects/ProductAvailability.php) (Value Object, HEL-6): a regra "pode ser comprado", produto ativo **e** com unidades em estoque. O `CatalogProduct::availability($unitsInStock)` a responde, e a vitrine, o cadastro do admin, a lista de estoque, o carrinho e o checkout leem a regra dali.
+- [`CatalogMetrics`](../backend/app/Modules/Catalog/Contracts/CatalogMetrics.php) (contrato publicado, implementado pela `CatalogMetricsQuery`): `productCountsByStatus(): ProductCountsByStatus`, para o dashboard.
+- [`ProductQuery`](../backend/app/Modules/Catalog/Queries/ProductQuery.php) (Consulta): a vitrine e o cadastro de produto do admin. Lê os produtos e as categorias e pede o estoque da página ao `StockLevels::stocksFor`, numa leitura só; devolve `ProductView` (privado). Os casos de uso de escrita devolvem um `ProductRecord`, e a consulta o completa sem reler o produto.
+- Use cases: `CreateProductUseCase`, `UpdateProductUseCase` e `ChangeProductStatusUseCase` (os três devolvem `ProductRecord`), `DeleteProductUseCase`, `CreateCategoryUseCase`, `UpdateCategoryUseCase`, `DeleteCategoryUseCase`.
 - `ProductController` (catálogo público), `Admin\ProductController`, `Admin\CategoryController`.
 
-**Coesão:** 9/10 ✅. Subiu de 7/10 em dois passos: a regra de disponibilidade saiu do `Product` (problema 1) e a criação do estoque passou pelo contrato `StockInitializer` (problema 4). O que ainda pesa é a leitura do estoque pela relação `Product::stock()` e o uso do `PurchaseAvailabilityService` do Ordering na vitrine (ver as [pendências](#pendências-depois-do-plano)).
+**Coesão:** 9/10 ✅. Subiu de 7/10 em dois passos: a regra de disponibilidade saiu do `Product` (problema 1) e a criação do estoque passou pelo contrato `StockInitializer` (problema 4). O que ainda pesava foi resolvido na HEL-6 (problema 15): a vitrine e o cadastro leem o estoque pelo contrato `StockLevels`, a relação `Product::stock()` deixou de existir e a regra de disponibilidade mora aqui, no `ProductAvailability`.
 
 **Contexto sugerido:** `CatalogContext`
 
@@ -196,11 +203,13 @@ Score = (
 
 **Conceitos principais:**
 
-- `Stock` (Entity): relação 1:1 com `Product`.
+- `Stock` (Entity): 1:1 com `Product` pela chave estrangeira `product_id`; desde a HEL-6 não há relação do Eloquent entre os dois (`Stock::product` deixou de existir).
 - `StockOperation` (Enum): `increase` / `decrease`.
 - `AdjustStockDTO`, `StockService`, `AdjustStockUseCase`.
-- `StockRepository`: `quantitiesFor`, `lockForProducts`, `lockById`, `decrement`. É de uso interno do Inventory.
-- Contratos publicados ([`App\Modules\Inventory\Contracts`](../backend/app/Modules/Inventory/Contracts)): `StockInitializer` (para o Catalog), `StockLevels` e `StockReservation` (para o Ordering), implementados pelo `StockRepository`. Falam em ids e devolvem [`StockQuantities`](../backend/app/Modules/Inventory/ValueObjects/StockQuantities.php) (quantidade por produto, 0 sem linha de estoque), nunca `Product` ou `Stock`.
+- `StockRepository`: `createForProduct`, `lockForProducts`, `lockById`, `decrement`. As escritas e os bloqueios; é de uso interno do Inventory.
+- Consultas ([`Queries/`](../backend/app/Modules/Inventory/Queries/), HEL-6): `StockLevelsQuery` (`quantitiesFor` e `stocksFor`), `StockMetricsQuery` e `StockListQuery` (a lista de estoque do admin, que pede os produtos da página ao `ProductCatalog`). A que responde o `StockLevels` não depende de nenhum contrato do Catalog, para a vitrine e a lista de estoque não formarem um ciclo.
+- Contratos publicados ([`App\Modules\Inventory\Contracts`](../backend/app/Modules/Inventory/Contracts)): `StockInitializer` (para o Catalog) e `StockReservation` (para o Ordering), implementados pelo `StockRepository` porque gravam ou travam; `StockLevels` (para o carrinho e para a vitrine) e `StockMetrics` (para o dashboard), implementados por consultas porque só leem. Falam em ids e devolvem [`StockQuantities`](../backend/app/Modules/Inventory/ValueObjects/StockQuantities.php) (quantidade por produto, 0 sem linha de estoque), `ProductStocks` (o id da linha e a quantidade, `null` sem linha) e `StockTotals`, nunca `Product` ou `Stock`.
+- `AdjustStockUseCase` devolve um `StockRecord` (o que gravou), e a `StockListQuery` o completa com o produto sem ler `stocks` de novo.
 - `Admin\StockController`.
 
 **Coesão:** 9/10 ✅. A regra "estoque nunca negativo" é aplicada em duas camadas: no `StockService` e na constraint `CHECK (quantity >= 0)` do banco. Subiu de 8/10 porque o que o Inventory oferece aos outros contextos agora está explícito em contratos.
@@ -310,8 +319,8 @@ Score = (
 
 ### Contexto de leitura: Backoffice Reporting (Dashboard)
 
-- `DashboardService` e `GetAdminDashboardUseCase` agregam contagens de Catalog, Inventory, Identity e Ordering.
-- Funciona como **read model** (lado de consulta). Depender de todos os contextos é aceitável aqui, desde que seja só leitura.
+- [`DashboardQuery`](../backend/app/Modules/Backoffice/Queries/DashboardQuery.php) (Consulta) lê os contratos de métricas `CatalogMetrics`, `StockMetrics`, `CustomerMetrics` e `OrderMetrics`, e o `DashboardService` monta os números e preenche com zero os dias e meses sem pedido.
+- Funciona como **read model** (lado de consulta), mas desde a HEL-6 sem exceção de fronteira: lê cada número do módulo que o tem, pelo contrato dele, e não usa nenhum repositório de outro módulo.
 
 ### Shared Kernel (infraestrutura, não é domínio)
 
@@ -323,7 +332,8 @@ Score = (
 
 | Contexto A | Contexto B | Acoplamento atual | Problema | Recomendação |
 |---|---|---|---|---|
-| Catalog | Inventory | Baixo | ✅ O estoque é criado pelo contrato `StockInitializer`, por id; restam as leituras por `Product::stock()` na vitrine, declaradas como exceção até a HEL-6 | Resolver as leituras na HEL-6 (CQRS) |
+| Catalog | Inventory | Baixo | ✅ O estoque é criado pelo contrato `StockInitializer` e lido pelo `StockLevels`, por id; a relação `Product::stock()` saiu na HEL-6 e a lista de estoque pede os produtos ao `ProductCatalog` | Manter os contratos |
+| Backoffice | Catalog, Inventory, Identity, Ordering | Baixo | ✅ O dashboard lê os contratos `CatalogMetrics`, `StockMetrics`, `CustomerMetrics` e `OrderMetrics`, e nenhum repositório de outro módulo (HEL-6) | Manter: um número novo no dashboard é um método novo no contrato do dono |
 | Ordering | Inventory | Alto (necessário) | ✅ O checkout usa só o contrato `StockReservation` e o carrinho o `StockLevels`, por id e com `StockQuantities`, na mesma transação | Manter: a consistência sob concorrência exige a transação única |
 | Ordering | Catalog | Baixo | ✅ O snapshot de nome e preço está correto, e o Ordering lê os produtos pelo contrato `ProductCatalog`, sem o model `Product` nem o `ProductRepository` | Customer/Supplier: o Catalog publica preço e status |
 | Ordering | Payment | Baixo | ✅ O Payment lê o pedido pelo contrato `PayableOrders` e só grava `PaymentApproved` (com o id) no outbox, na transação da tentativa aprovada; o Ordering muda o status. O Payment tem modelo próprio (`Payment`) e cobra pela porta `PaymentGateway` | Manter a integração por contrato e eventos |
@@ -347,18 +357,18 @@ Score = (
 
 - **Onde estava:** `Product::isAvailable()`, `Product::availableQuantity()` e `Product::purchaseProblem()`.
 - **Problema:** a entidade de catálogo decidia se algo "pode ser comprado". Essa é uma regra de venda que depende do estoque, e as mensagens ("Estoque insuficiente") pertencem ao Ordering.
-- **Solução aplicada:** a regra foi para o [`PurchaseAvailabilityService`](../backend/app/Modules/Ordering/Services/PurchaseAvailabilityService.php), um service puro que recebe o produto e o estoque explicitamente.
-  - O `Product` ficou só com `isActive()` (Catalog).
+- **Solução aplicada:** a regra foi para o [`PurchaseAvailabilityService`](../backend/app/Modules/Ordering/Services/PurchaseAvailabilityService.php), um service puro que recebe o produto e o estoque explicitamente. Na HEL-6 ela passou ao [`ProductAvailability`](../backend/app/Modules/Catalog/ValueObjects/ProductAvailability.php) do Catalog (problema 15), e o service ficou só com as mensagens.
+  - O `Product` ficou só com `isActive()` (Catalog); na HEL-6 o `isActive()` saiu, porque o `CatalogProduct` passou a carregar o `ProductStatus`.
   - O `Stock` ganhou `hasUnits()` (Inventory).
-  - `CheckoutService`, `CartValidationService`, `ProductController` e `ProductResource` recebem ou resolvem o service.
+  - `CheckoutService`, `CartValidationService`, `ProductController` e `ProductResource` recebiam ou resolviam o service; desde a HEL-6 leem o `ProductAvailability`.
 - **Nome:** a análise original sugeria `PurchaseAvailabilityPolicy`. A classe virou `Service` porque `app/Policies` é reservado às policies de autorização do Laravel, e `app/Services` já é a camada de regras puras do projeto. Na migração para módulos (passo 5), ela foi para `Modules/Ordering`.
-- **Testes:** [`PurchaseAvailabilityServiceTest`](../backend/tests/Unit/Services/PurchaseAvailabilityServiceTest.php).
+- **Testes:** [`ProductAvailabilityTest`](../backend/tests/Unit/ValueObjects/ProductAvailabilityTest.php) (a regra, HEL-6) e [`PurchaseAvailabilityServiceTest`](../backend/tests/Unit/Services/PurchaseAvailabilityServiceTest.php) (as mensagens).
 
 #### 2. ✅ Resolvido: regra de disponibilidade duplicada no estoque
 
 - **Onde estava:** `StockResource` (`isActive() && quantity > 0`).
 - **Problema:** era uma segunda fonte de verdade para a mesma regra. Se a regra mudasse, uma das cópias ia divergir.
-- **Solução aplicada:** o [`StockResource`](../backend/app/Modules/Inventory/Http/Resources/StockResource.php) passou a usar o `PurchaseAvailabilityService`.
+- **Solução aplicada:** o [`StockResource`](../backend/app/Modules/Inventory/Http/Resources/StockResource.php) passou a usar o `PurchaseAvailabilityService`; na HEL-6 ele lê o `ProductAvailability` do `CatalogProduct` (problema 15).
 
 #### 3. ✅ Resolvido: "User" tinha dois significados, identidade e cliente
 
@@ -384,11 +394,11 @@ Score = (
 - **Solução aplicada:** o [`CreateProductUseCase`](../backend/app/Modules/Catalog/UseCases/CreateProductUseCase.php) depende só do contrato [`StockInitializer`](../backend/app/Modules/Inventory/Contracts/StockInitializer.php), que tem uma única operação: `createForProduct()`.
 - **Por que não um evento `ProductCreated`:** o produto e o seu estoque precisam nascer juntos. Um produto sem estoque quebraria o 1:1 e a tela de estoque do admin. Por isso a criação continua na mesma transação, como a própria recomendação previa para o caso de consistência imediata.
 - **O que ainda fica (aceito por enquanto):**
-  - Leituras do estoque pela relação `Product::stock()`, no catálogo, no carrinho e no `ProductResource`. Elas são o read model da vitrine.
+  - Leituras do estoque pela relação `Product::stock()`, no catálogo e no `ProductResource`: resolvidas na HEL-6, que a trocou pelo contrato `StockLevels` (problema 15).
   - A exclusão de um produto remove o estoque por `cascadeOnDelete` na chave estrangeira.
-  - O dashboard lê o `StockRepository` diretamente. É um read model, e a dependência é só de leitura.
+  - O dashboard lia o `StockRepository` diretamente: resolvido na HEL-6, que o trocou pelo contrato `StockMetrics`.
 
-  Esses pontos continuam em aberto depois da migração para módulos (ver as [pendências](#pendências-depois-do-plano)).
+  O que sobra é a exclusão em cascata, que é regra do banco (ver as [pendências](#pendências-depois-do-plano)).
 
 #### 5. ✅ Resolvido: pagamento e entrega estavam embutidos no ciclo de vida do pedido
 
@@ -417,7 +427,7 @@ Score = (
 - **Observação mantida:** a transação única entre os contextos é uma **escolha correta** num monólito, porque garante a consistência do estoque sob concorrência.
 - **Solução aplicada:** o [`PlaceOrderUseCase`](../backend/app/Modules/Ordering/UseCases/PlaceOrderUseCase.php) depende só do contrato [`StockReservation`](../backend/app/Modules/Inventory/Contracts/StockReservation.php), com `lockForProducts()` e `decrement()`. O contrato documenta que as duas operações rodam dentro da transação de quem chama.
   - **Comportamento inalterado:** o `StockRepository` implementa os dois contratos e é ligado a eles no `InventoryServiceProvider` (`$bindings`). As consultas, a ordem dos bloqueios e o `FOR UPDATE` são exatamente os mesmos, e os testes de concorrência do `CheckoutTest` continuam passando.
-- **Fronteira verificada:** o teste de arquitetura [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) falha se qualquer módulo além do Inventory e do read model do Backoffice usar o `StockRepository`. A falha foi conferida introduzindo uma violação de propósito.
+- **Fronteira verificada:** o teste de arquitetura [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) falha se qualquer módulo além do Inventory usar o `StockRepository` (o Backoffice incluído, desde a HEL-6). A falha foi conferida introduzindo uma violação de propósito.
   - **Armadilha do Pest:** com uma *lista* de namespaces, o `not->toUse` dessa versão nunca falha. Por isso o teste gera uma expectativa por namespace.
 
 #### 9. ✅ Resolvido: equipe e cliente dividiam a mesma conta
@@ -465,7 +475,7 @@ Score = (
   - **Fora do Identity, o cliente autenticado é um id**, e o `{order}` do pagamento e o `{customer}` do admin de clientes eram resolvidos pelo contrato do dono, com `404` para id inexistente (a HEL-11 levou essa busca para dentro do use case e tirou o binding: ver o problema 13).
   - **Duas respostas da API ficaram mais estreitas**: o `202` do pagamento é a tentativa de pagamento, e os pedidos recentes da conta e do admin de clientes vêm resumidos (`id`, `status`, `status_label`, `total_cents`, `created_at`).
 - **Fronteira verificada:** o [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) virou uma lista do que é permitido. Ele gera uma expectativa por pasta privada de cada módulo, a partir das pastas que existem, mais uma por classe da raiz de cada módulo. Também confere que todo `Contracts` só tem interfaces e que nenhuma assinatura de contrato usa model ou coleção do Eloquent. As regras de direção de antes continuam. Quatro violações de propósito (um model do Ordering no Payment, o service provider do Payment no Ordering, uma classe concreta em `Contracts` e um contrato devolvendo `Product`) fizeram o teste falhar, cada uma na sua regra.
-- **Exceções declaradas, uma por travessia:** o Backoffice lendo os repositories de quatro módulos, e a vitrine e a lista de estoque do admin com `Product::stock`, `Stock::product` e a regra de disponibilidade do Ordering. Todas apontam para a HEL-6. `DTOs`, `ValueObjects`, `Enums` e `Http` de outro módulo continuaram permitidos nesta rodada e foram fechados na HEL-10 (problema 12).
+- **Exceções declaradas, uma por travessia:** o Backoffice lendo os repositories de quatro módulos, e a vitrine e a lista de estoque do admin com `Product::stock`, `Stock::product` e a regra de disponibilidade do Ordering. Todas apontam para a HEL-6, que as removeu (problema 15). `DTOs`, `ValueObjects`, `Enums` e `Http` de outro módulo continuaram permitidos nesta rodada e foram fechados na HEL-10 (problema 12).
 - **Desvio do plano (desfeito na HEL-11, problema 13):** o pedido do pagamento era resolvido antes da validação do corpo, para que um id inexistente continuasse `404` mesmo com corpo inválido. Agora o corpo é validado primeiro, e a busca roda dentro do `PayOrderUseCase`.
 - **Ajustes da revisão do PR #12** (09/10/2026):
   - a regra "a senha só muda quando uma nova é enviada" saiu do `UserService`, que foi apagado, para o [`UpdateUserProfileDTO::toArray()`](../backend/app/Modules/Identity/DTOs/UpdateUserProfileDTO.php), ao lado do `CreateUserDTO::toArray()`. O `CustomerAccountRepository` deixou de depender de um service, e o `ModuleBoundariesTest` ganhou a regra `repositories do not use the module services` (uma expectativa por módulo com as duas pastas; uma violação de propósito no Ordering fez o teste falhar);
@@ -478,10 +488,10 @@ Score = (
 - **Onde estava:** depois do problema 11, o `ModuleBoundariesTest` tratava `DTOs`, `ValueObjects`, `Enums` e `Http` de qualquer módulo como públicos por inteiro. Das 45 classes nas três primeiras pastas, 23 não apareciam em nenhuma assinatura de contrato ou de evento (`ValidatedCart`, `OrderLines`, `ProductQuantities`, `LoginCredentialsDTO`, `UserRole`...) e mesmo assim eram alcançáveis de fora. Das 57 referências de um módulo para essas quatro pastas de outro, 15 não deveriam existir: 14 para o `Http` de outro módulo (o Customers usando `EmailRule`, `PasswordRule`, `NormalizesEmailInput` e `CustomerProfileResource` do Identity, e o Customers e o Fulfillment usando o `NormalizesStateInput` do Ordering, que o próprio Ordering não usava) e 1 para um enum que nenhum contrato expõe (o `ProductStatus`, no dashboard do Backoffice).
 - **Problema:** o teste não distinguia um value object que um contrato devolve de um DTO interno ou de uma regra de validação, então uma travessia nova para qualquer um deles passava sem aviso. A HEL-6 e a HEL-12 precisavam de uma regra do que é público antes de criar contratos de leitura e reorganizar as pastas.
 - **Solução aplicada** (HEL-10, [design](../.design/module-vocabulary.md)):
-  - **Público é o que uma assinatura expõe.** O vocabulário de um módulo são as classes dele alcançadas pelos tipos nativos (parâmetros, retornos e propriedades públicas, o construtor incluído) dos métodos públicos das interfaces de `Contracts` e das classes de `Events` dele, seguindo os mesmos tipos de forma transitiva. Tipos só em docblock, embutidos, do framework e do `Shared` não contam, e o contrato de um módulo não torna público um tipo interno de outro. O cálculo roda a cada execução do teste, sem lista guardada: hoje são 22 tipos públicos e 23 privados.
+  - **Público é o que uma assinatura expõe.** O vocabulário de um módulo são as classes dele alcançadas pelos tipos nativos (parâmetros, retornos e propriedades públicas, o construtor incluído) dos métodos públicos das interfaces de `Contracts` e das classes de `Events` dele, seguindo os mesmos tipos de forma transitiva. Tipos só em docblock, embutidos, do framework e do `Shared` não contam, e o contrato de um módulo não torna público um tipo interno de outro. O cálculo roda a cada execução do teste, sem lista guardada: na HEL-10 eram 22 tipos públicos e 23 privados, e depois da HEL-6 são 29 e 28.
   - **O `Http` de cada módulo é privado, sem exceção.** O Customers ganhou os seus [`EmailRule` e `PasswordRule`](../backend/app/Modules/Customers/Http/Rules/), [`NormalizesEmailInput` e `NormalizesStateInput`](../backend/app/Modules/Customers/Http/Requests/Concerns/) e [`CustomerProfileResource`](../backend/app/Modules/Customers/Http/Resources/CustomerProfileResource.php), e o Fulfillment o seu [`NormalizesStateInput`](../backend/app/Modules/Fulfillment/Http/Requests/Concerns/NormalizesStateInput.php). Eles só traduzem para o Laravel o que `Email`, `Password` e `BrazilianState` decidem. O `NormalizesStateInput` do Ordering saiu. As rotas devolvem os mesmos códigos, corpos e mensagens.
 - **Fronteira verificada:** o [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) gera uma expectativa por classe de `DTOs`, `ValueObjects` e `Enums` fora do vocabulário do módulo dono e trata o `Http` como as outras pastas privadas. O percurso das assinaturas é provado com classes de teste em `Fixtures/`. O [`HttpAdaptersTest`](../backend/tests/Unit/Architecture/HttpAdaptersTest.php) confere que os adaptadores novos não escrevem limite, expressão regular nem lista de UFs, e o [`CustomerProfileResourceTest`](../backend/tests/Unit/Resources/CustomerProfileResourceTest.php), que a conta sai no mesmo formato no Identity e no Customers. Violações de propósito (um value object, um enum, um DTO fora do vocabulário e uma regra do `Http` do Identity no Customers) fizeram o teste falhar, cada uma na sua regra.
-- **Exceção declarada:** o Backoffice usando o `ProductStatus` do Catalog, até a HEL-6. Fazer um contrato do Catalog crescer só para expor o enum foi descartado.
+- **Exceção declarada na HEL-10, removida na HEL-6:** o Backoffice usando o `ProductStatus` do Catalog. Fazer um contrato do Catalog crescer só para expor o enum foi descartado então; na HEL-6 o enum entrou no vocabulário porque o `CatalogProduct` passou a carregá-lo (duas telas mostram o status).
 - **Desvio do plano:** nenhum. A subpasta de vocabulário em `Contracts` e um atributo nas classes públicas foram descartados no design: a primeira movia cerca de 20 classes antes da HEL-12, e o segundo seria uma segunda fonte para a mesma informação.
 
 #### 13. ✅ Resolvido: o id inteiro saía do banco e a rota resolvia o registro, fora do repositório
@@ -515,6 +525,21 @@ Score = (
 - **Desvios do plano:** o texto do plano para o `CheckoutTest` dizia que a décima query seria o `insert into "outbox_messages"`; ela é a nona em posição, porque o `load('items')` da resposta lê os itens depois do commit. A contagem foi de 9 para 10, como previsto, e o teste confere a posição real. Na execução manual com o Redis parado, o relay caía ao ler o sinal de reinício (o cache também é o Redis) e o container entrava em laço de reinício: agora ele segue publicando enquanto o cache não responde, adota o sinal quando o cache volta e imprime uma linha de aviso por falha, que aparece no `make logs-relay`.
 - **Ficou de fora** (ver o design): Horizon, RabbitMQ e a feature flag (HEL-13), migrations por módulo (HEL-12), métricas da fila e do outbox (HEL-8), inbox por consumidor, histórico e replay, ordem garantida entre mensagens e a leitura de versões antigas de um payload.
 - **Testes:** `Outbox/EventOutboxTest`, `Outbox/EventDeliveryTest`, `Outbox/OutboxRelayTest`, `Outbox/OrderEventsOutboxTest`, `Unit/Architecture/DomainEventsTest`, `Unit/Architecture/OrderEventPayloadTest` e os testes de checkout, pagamento e do fluxo do pedido conferindo as linhas de `outbox_messages`.
+
+#### 15. ✅ Resolvido: a leitura que juntava módulos passava por relações do Eloquent, repositórios e uma regra do módulo errado (HEL-6)
+
+- **Onde estava (antes da HEL-6):** nove exceções no `ModuleBoundariesTest`, que serviam 10 rotas. O dashboard do admin lia os repositories do Catalog, do Identity, do Inventory e do Ordering e usava o `ProductStatus`, que nenhum contrato expunha (5). A vitrine e o cadastro de produto do admin liam o estoque pela relação `Product::stock`, e a lista de estoque lia o produto por `Stock::product` (2). E o `Http` do Catalog e o do Inventory chamavam o `PurchaseAvailabilityService` do Ordering para decidir se o produto podia ser comprado, embora o Ordering dependa dos dois (2).
+- **Problema:** uma mudança em qualquer um de quatro repositories podia quebrar o dashboard, o Catalog e o Inventory não podiam mudar de dono da regra sem mexer no Ordering, e uma leitura nova que juntasse módulos não tinha onde nascer, então copiaria a relação do Eloquent. A HEL-12 vai reorganizar as pastas de todos os módulos, e fazer esta rodada depois dela significaria mover as nove exceções e reescrevê-las lá.
+- **Solução aplicada** (HEL-6, [design](../.design/cqrs-read-side.md)):
+  - **Toda leitura que cruzava módulo virou uma consulta** do módulo que serve a rota, na pasta privada `Queries/` ([`ProductQuery`](../backend/app/Modules/Catalog/Queries/ProductQuery.php), [`StockListQuery`](../backend/app/Modules/Inventory/Queries/StockListQuery.php) e [`DashboardQuery`](../backend/app/Modules/Backoffice/Queries/DashboardQuery.php)). Uma consulta devolve value objects, listas tipadas ou um `LengthAwarePaginator` deles, nunca um model; lê só as tabelas do próprio módulo; e pede ao dono, pelo contrato dele, por ids e uma vez para a página inteira, o que não é seu. O tamanho da página nunca muda o número de queries.
+  - **Um contrato de leitura é implementado por uma consulta do dono, e um contrato que grava ou trava continua no repositório.** O `ProductCatalog` e o `StockLevels` saíram dos repositories, o `StockLevels` ganhou `stocksFor` (o id da linha de estoque, em `ProductStocks`), e nasceram os contratos de métricas [`CatalogMetrics`](../backend/app/Modules/Catalog/Contracts/CatalogMetrics.php), [`StockMetrics`](../backend/app/Modules/Inventory/Contracts/StockMetrics.php), [`CustomerMetrics`](../backend/app/Modules/Identity/Contracts/CustomerMetrics.php) e [`OrderMetrics`](../backend/app/Modules/Ordering/Contracts/OrderMetrics.php). O `StockInitializer` e o `StockReservation` ficaram no `StockRepository`.
+  - **Nenhuma relação do Eloquent atravessa módulo.** `Product::stock` e `Stock::product` deixaram de existir na HEL-6; a chave estrangeira `stocks.product_id` e a exclusão em cascata continuam. O caso de uso do dashboard saiu, e o dashboard é uma consulta do Backoffice.
+  - **A escrita devolve os dados do que gravou**, num value object (`ProductRecord` e `StockRecord`, privados), e a consulta completa a resposta sem reler o registro. Devolver só o id e reler depois do commit somaria uma query a cada escrita e quebraria as contagens da HEL-11, que continuam: abrir o produto 3, editar 10, mudar o status 4 e ajustar o estoque 3, com um só `FOR UPDATE`.
+  - **A regra "pode ser comprado" mora no Catalog**, no `ProductAvailability`, que o `CatalogProduct` responde. O Ordering ficou com as mensagens (`Produto indisponível.` e `Estoque insuficiente. Disponível: N.`), e o Catalog e o Inventory deixaram de depender de quem depende deles. A parte "sem linha de estoque é zero" fica onde a quantidade é lida: no `StockQuantities` do Inventory (carrinho e checkout) e no `ProductView` do Catalog (vitrine e cadastro).
+  - **O `ProductStatus` entrou no vocabulário público do Catalog**, porque o `CatalogProduct` e o `ProductCountsByStatus` o carregam: duas telas mostram o status.
+- **Fronteira verificada:** o [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) perdeu a lista de exceções e o Backoffice perdeu a licença de usar o `StockRepository`. Entraram três regras das consultas: nenhuma assinatura pública declara model nem coleção do Eloquent (a falha nomeia a consulta e o método), nenhuma usa os repositories do próprio módulo e nenhuma usa os casos de uso do próprio módulo. Uma violação de propósito em cada uma das nove travessias antigas (e uma assinatura com `Product` numa consulta) fez o teste falhar na regra certa, e todas voltaram a passar sem editar o teste.
+- **Desvio do plano:** as consultas do Inventory são três (`StockLevelsQuery`, `StockMetricsQuery` e `StockListQuery`) e as do Catalog também (`ProductQuery`, `ProductCatalogQuery` e `CatalogMetricsQuery`): a que responde o contrato que o outro módulo consome não depende de contrato nenhum, para a vitrine (Catalog → Inventory) e a lista de estoque (Inventory → Catalog) não formarem um ciclo no container. O dashboard devolve o `array` que o `DashboardService` monta, em vez de um value object, porque converter mudaria as asserções do `DashboardServiceTest` sem ganho. A única diferença de corpo é o produto sem linha de estoque, estado que as rotas não produzem: agora `is_available: false` e `available_quantity: 0` (antes `null`).
+- **Testes (HEL-6):** `Unit/ValueObjects/ProductAvailabilityTest`, `Unit/Services/PurchaseAvailabilityServiceTest`, `Feature/Queries/*`, `Feature/ProductResponseShapeTest`, `Feature/ProductCatalogTest`, `Feature/Admin/StockTest`, `Feature/Admin/DashboardTest`, `Feature/UseCases/Stock/AdjustStockUseCaseTest`, `Feature/UseCases/Product/ProductUseCasesTest`, `Feature/Admin/StaffRecordRoutesTest` (as contagens de queries) e o `ModuleBoundariesTest`.
 
 ### Prioridade baixa
 
@@ -552,17 +577,17 @@ Score = (
 ```txt
 backend/app/Modules/
   Ordering/      Cart, Checkout, Order, OrderItem, OrderPlaced, OrderPaid, DeliveryAddressBook, ShippingQuoter, PayableOrders, CustomerOrderHistory ← Core
-  Catalog/       Product, Category, ProductStatus, ProductCatalog
-  Inventory/     Stock, StockOperation, AdjustStock, StockInitializer, StockLevels, StockReservation
+  Catalog/       Product, Category, ProductStatus, ProductAvailability, ProductCatalog, CatalogMetrics, ProductQuery
+  Inventory/     Stock, StockOperation, AdjustStock, StockInitializer, StockLevels, StockMetrics, StockReservation, StockListQuery
   Payment/       Payment, PaymentGateway, FakePaymentGateway, PayOrder, PaymentApproved
   Fulfillment/   ShippingRateTable, DeliveryCalendar, ScheduleDelivery, DeliverOrder, DeliveryScheduled, OrderDelivered
   Customers/     Account, Profile, admin customer management, CustomerAddress (address book)
   Identity/      User (staff), CustomerAccount, UserRole, Auth, Email, Password, EnsureUserIsAdmin, CustomerAccounts
-  Backoffice/    Dashboard (read model)
+  Backoffice/    DashboardQuery (consulta que lê os contratos de métricas)
   Shared/        ApiErrorCode, BusinessRuleException, BaseRepository, outbox (EventOutbox, OutboxRelay, EventSubscriptions)...
 ```
 
-A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`: as outras pastas são privadas, e o `ModuleBoundariesTest` gera as regras a partir das pastas que existem. De `DTOs/`, `ValueObjects/` e `Enums/`, só é público o vocabulário que as assinaturas de `Contracts/` e `Events/` expõem, e o `Http/` é privado: cada módulo tem os próprios adaptadores (problema 12). Cada módulo usa só as pastas de que precisa: `Contracts/`, `DTOs/`, `Enums/`, `Events/`, `Exceptions/`, `Http/` (`Controllers/`, `Requests/`, `Resources/`, `Middleware/`, com `Admin/` para a área administrativa), `Jobs/`, `Consumers/`, `Models/`, `Repositories/`, `Services/` e `UseCases/`.
+A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`: as outras pastas são privadas, e o `ModuleBoundariesTest` gera as regras a partir das pastas que existem. De `DTOs/`, `ValueObjects/` e `Enums/`, só é público o vocabulário que as assinaturas de `Contracts/` e `Events/` expõem, e o `Http/` é privado: cada módulo tem os próprios adaptadores (problema 12). Cada módulo usa só as pastas de que precisa: `Contracts/`, `DTOs/`, `Enums/`, `Events/`, `Exceptions/`, `Http/` (`Controllers/`, `Requests/`, `Resources/`, `Middleware/`, com `Admin/` para a área administrativa), `Jobs/`, `Consumers/`, `Models/`, `Queries/`, `Repositories/`, `Services/` e `UseCases/`.
 
 **Desvios em relação ao `AGENTS.md` do diretório pai:**
 
@@ -575,9 +600,10 @@ A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`: as outras
 | Termo | Contexto | Significado |
 |---|---|---|
 | Produto | Catalog | Item cadastrado, com nome, preço, descrição, imagem e status |
-| Disponível | Ordering | Produto ativo **e** com estoque suficiente para a quantidade pedida |
+| Disponível (`ProductAvailability`) | Catalog | Produto ativo **e** com unidades em estoque; o Ordering monta as mensagens de quantidade pedida sobre ela |
 | Estoque | Inventory | Quantidade de unidades de um produto, nunca negativa |
-| Produto do catálogo (`CatalogProduct`) | Catalog | O que outro módulo sabe de um produto: id, nome, imagem, preço e se está ativo |
+| Produto do catálogo (`CatalogProduct`) | Catalog | O que outro módulo sabe de um produto: id, nome, imagem, preço e status (e, com as unidades, se está disponível) |
+| Consulta (`Queries`) | o módulo que serve a rota | A classe de leitura do módulo: devolve value objects ou listas tipadas, nunca grava, lê só as tabelas do próprio módulo e pede o resto ao dono pelo contrato dele |
 | Quantidades em estoque (`StockQuantities`) | Inventory | A quantidade de cada produto, com 0 para o produto sem linha de estoque |
 | Pedido | Ordering | Compra confirmada, com itens congelados (snapshot) |
 | Tentativa de pagamento (`Payment`) | Payment | Uma cobrança de um pedido pelo gateway, aprovada ou recusada |
@@ -607,7 +633,7 @@ A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`: as outras
 
 A ordem abaixo prioriza o que reduz mais risco com o menor esforço:
 
-1. ✅ **Centralizar a disponibilidade** (problemas 1 e 2). Concluído em 06/10/2026 com o `PurchaseAvailabilityService`.
+1. ✅ **Centralizar a disponibilidade** (problemas 1 e 2). Concluído em 06/10/2026 com o `PurchaseAvailabilityService`; a regra passou ao `ProductAvailability` do Catalog na HEL-6 (problema 15).
 2. ✅ **Separar Customer de User** (problema 3). Concluído em 06/10/2026 com o modelo `Customer` e o `CustomerSummaryDTO`.
 3. ✅ **Separar Payment e Fulfillment por eventos** (problema 5). Concluído em 06/10/2026 com os eventos `OrderPaid` e `OrderDelivered`.
 4. ✅ **Expor interfaces do Inventory** (problemas 4 e 6). Concluído em 06/10/2026 com os contratos `StockInitializer` e `StockReservation`, sem mudar o comportamento transacional.
@@ -616,9 +642,10 @@ A ordem abaixo prioriza o que reduz mais risco com o menor esforço:
 
 Depois do plano:
 
+- ✅ **Lado de leitura com consultas** (problema 15, HEL-6). Concluído em 16/10/2026: a pasta `Queries/` no Catalog, no Inventory, no Identity, no Ordering e no Backoffice, os contratos de métricas, o `StockLevels::stocksFor`, a escrita devolvendo os dados que gravou, a regra de disponibilidade no `ProductAvailability` e o `ModuleBoundariesTest` sem exceção nenhuma. Ver o [design](../.design/cqrs-read-side.md).
 - ✅ **Outbox transacional** (problema 14, HEL-9). Concluído em 15/10/2026: `outbox_messages`, os 5 eventos com nome e versão gravados na transação da mudança, o relay no container `outbox-relay`, o transporte de fila atrás da porta `EventTransport`, os consumidores inscritos pelo módulo que consome e o `DomainEventsTest`. Ver o [design](../.design/transactional-outbox.md).
 - ✅ **Ids UUID v7 e nenhuma rota resolvendo registro** (problema 13, HEL-11). Concluído em 15/10/2026: as 9 tabelas de negócio com chave `uuid`, ids `string` em toda assinatura, o código do pedido, o dono na busca das rotas do cliente sem as três policies, seis rotas com uma query a menos e o `RouteBindingTest` recusando qualquer binding. Ver o [design](../.design/uuid-record-ids.md).
-- ✅ **Vocabulário público dos módulos** (problema 12, HEL-10). Concluído em 09/10/2026: o vocabulário calculado das assinaturas de `Contracts` e `Events`, o `Http` privado e os adaptadores próprios do Customers e do Fulfillment, com a exceção do `ProductStatus` declarada até a HEL-6. Ver o [design](../.design/module-vocabulary.md).
+- ✅ **Vocabulário público dos módulos** (problema 12, HEL-10). Concluído em 09/10/2026: o vocabulário calculado das assinaturas de `Contracts` e `Events`, o `Http` privado e os adaptadores próprios do Customers e do Fulfillment, com a exceção do `ProductStatus`, que a HEL-6 removeu. Ver o [design](../.design/module-vocabulary.md).
 - ✅ **Facades dos módulos** (problema 11, HEL-7). Concluído em 08/10/2026: cinco contratos novos, os contratos do Inventory e os eventos falando em dados, e o `ModuleBoundariesTest` como lista do que é permitido, com as exceções da HEL-6 declaradas. Ver o [design](../.design/module-facades.md).
 - ✅ **Endereços de entrega e frete** (problema 10). Concluído em 07/10/2026: o caderno de endereços no Customers, a tabela de frete e a data prevista no Fulfillment, a cópia do endereço no pedido e os contratos `DeliveryAddressBook` e `ShippingQuoter`, com as regras novas no `ModuleBoundariesTest`. Ver o [design](../.design/addresses-and-shipping.md).
 - ✅ **Modelo `Payment` próprio e gateway fake atrás de uma porta** (recomendação da matriz Ordering × Payment). Concluído em 06/10/2026: tabela `payments`, porta `PaymentGateway` ligada ao `FakePaymentGateway` e recusa com `402`, com as regras da porta verificadas pelo `ModuleBoundariesTest`. Ver o [design](../.design/fake-payment-gateway.md).
@@ -629,12 +656,12 @@ Os 5 passos organizaram o código e tornaram as fronteiras explícitas e verific
 
 | Pendência | Onde | Por que ficou |
 |---|---|---|
-| Leituras do estoque pela relação `Product::stock()` | Vitrine e cadastro do admin (`ProductResource`), lista de estoque (`Stock::product`) | São o read model da vitrine; o carrinho e o checkout já leem pelo Inventory. Exceção declarada no `ModuleBoundariesTest` até a HEL-6 |
+| ✅ Resolvida: leituras do estoque pela relação `Product::stock()` | Vitrine e cadastro do admin (`ProductResource`), lista de estoque (`Stock::product`) | Resolvida na HEL-6 (problema 15): as relações saíram, e a consulta de cada módulo pede ao dono pelo contrato (`StockLevels::stocksFor` e `ProductCatalog`) |
 | Estoque excluído por `cascadeOnDelete` | FK `stocks.product_id` | É a regra 1:1 garantida pelo banco |
-| Catalog e Inventory usam uma regra do Ordering na vitrine e na lista de estoque (achado ao resolver o problema 7) | `ProductResource`, `ProductController` e `StockResource` usam o `PurchaseAvailabilityService` | Gera dependência do Catalog para o Ordering, que por sua vez depende do Catalog. A regra de disponibilidade foi para o Ordering no passo 1 e agora recebe dados. Exceção declarada até a HEL-6, que decide onde a regra mora numa leitura que junta Catalog e Inventory |
+| ✅ Resolvida: Catalog e Inventory usavam uma regra do Ordering na vitrine e na lista de estoque (achado ao resolver o problema 7) | `ProductResource`, `ProductController` e `StockResource` usavam o `PurchaseAvailabilityService` | Resolvida na HEL-6 (problema 15): a regra mora no `ProductAvailability` do Catalog, e o Ordering ficou só com as mensagens |
 | Tentativas de pagamento presas ao pedido por `restrictOnDelete` | FK `payments.order_id` | O Payment grava na própria tabela, mas referencia `orders`; pedidos nunca são apagados, então a FK só protege o histórico |
 | ✅ Resolvida: eventos carregavam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered`, `DeliveryScheduled`, `DeliverOrder` | Resolvida no problema 11: carregam o `orderId` e os valores de que o consumidor precisa. O envelope e o outbox vieram na HEL-9 (problema 14) |
-| Dashboard lê os repositories de vários módulos | `GetAdminDashboardUseCase` e o `DashboardService` (que usa o enum `ProductStatus` do Catalog, fora do vocabulário) | É um read model; a dependência é só de leitura. Exceções declaradas no `ModuleBoundariesTest` até a HEL-6 |
+| ✅ Resolvida: o dashboard lia os repositories de vários módulos | O caso de uso do dashboard e o `DashboardService` (que usa o enum `ProductStatus` do Catalog) | Resolvida na HEL-6 (problema 15): o `DashboardQuery` lê os contratos de métricas, e o `ProductStatus` entrou no vocabulário do Catalog |
 | ✅ Resolvida: um módulo usa `Http`, `ValueObjects`, `Enums` e `DTOs` de outro | O Customers usava as regras de e-mail e senha e o resource da conta do Identity, e o Customers e o Fulfillment, o trait de UF do Ordering | Resolvida no problema 12 (HEL-10): só o vocabulário que as assinaturas de `Contracts` e `Events` expõem é público, o `Http` é privado e cada módulo tem os próprios adaptadores |
 
 > As classificações e fronteiras desta análise foram derivadas do código. Elas devem ser validadas com quem conhece o negócio antes de qualquer refatoração estrutural.

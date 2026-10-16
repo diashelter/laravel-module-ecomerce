@@ -1,6 +1,8 @@
 <?php
 
 use App\Modules\Backoffice\Services\DashboardService;
+use App\Modules\Catalog\ValueObjects\ProductCountsByStatus;
+use App\Modules\Ordering\ValueObjects\OrderCountsByPeriod;
 use Illuminate\Support\Carbon;
 
 beforeEach(function () {
@@ -16,13 +18,13 @@ it('starts the daily series 29 days ago and the monthly series 11 months ago', f
 
 it('builds the cards and fills the series gaps with zero', function () {
     $summary = $this->service->build(
-        productsByStatus: collect(['active' => 3, 'inactive' => 1]),
+        productsByStatus: new ProductCountsByStatus(collect(['active' => 3, 'inactive' => 1])),
         productsInStock: 2,
         totalStockUnits: 40,
         totalCustomers: 5,
         totalOrders: 7,
-        ordersPerDay: collect(['2026-10-05' => 4, '2026-09-06' => 1]),
-        ordersPerMonth: collect(['2026-10' => 6]),
+        ordersPerDay: new OrderCountsByPeriod(collect(['2026-10-05' => 4, '2026-09-06' => 1])),
+        ordersPerMonth: new OrderCountsByPeriod(collect(['2026-10' => 6])),
         today: $this->today,
     );
 

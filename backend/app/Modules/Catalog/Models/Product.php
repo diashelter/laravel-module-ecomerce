@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Catalog\Models;
 
 use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Inventory\Models\Stock;
+use App\Modules\Catalog\ValueObjects\ProductRecord;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['name', 'price_cents', 'description', 'image_url', 'status'])]
 #[UseFactory(ProductFactory::class)]
@@ -30,24 +29,24 @@ class Product extends Model
         ];
     }
 
-    /** @return HasOne<Stock, $this> */
-    public function stock(): HasOne
-    {
-        return $this->hasOne(Stock::class);
-    }
-
     /** @return BelongsToMany<Category, $this> */
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class);
     }
 
-    /**
-     * Catalog status only. Whether the product can be bought (active AND in stock)
-     * is decided by PurchaseAvailabilityService.
-     */
-    public function isActive(): bool
+    /** The data of this row, for the callers that must not hold the model. */
+    public function toRecord(): ProductRecord
     {
-        return $this->status === ProductStatus::Active;
+        return new ProductRecord(
+            $this->id,
+            $this->name,
+            $this->price_cents,
+            $this->description,
+            $this->image_url,
+            $this->status,
+            $this->created_at?->toImmutable(),
+            $this->updated_at?->toImmutable(),
+        );
     }
 }

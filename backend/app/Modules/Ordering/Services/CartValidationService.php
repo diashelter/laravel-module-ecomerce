@@ -31,15 +31,17 @@ class CartValidationService
                 continue;
             }
 
+            $availability = $product->availability($stock->of($productId));
+
             $lines[] = new ValidatedCartLine(
                 productId: $product->id,
                 name: $product->name,
                 imageUrl: $product->imageUrl,
                 unitPriceCents: $product->priceCents,
                 quantity: $quantity,
-                availableQuantity: $stock->of($productId),
-                isAvailable: $this->availability->isAvailable($product->isActive, $stock->of($productId)),
-                problem: $this->availability->purchaseProblem($product->isActive, $stock->of($productId), $quantity),
+                availableQuantity: $availability->availableQuantity(),
+                isAvailable: $availability->isAvailable(),
+                problem: $this->availability->purchaseProblem($availability, $quantity),
             );
         }
 

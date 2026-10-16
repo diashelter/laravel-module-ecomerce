@@ -1,13 +1,20 @@
 <?php
 
+use App\Modules\Catalog\Contracts\CatalogMetrics;
 use App\Modules\Catalog\Contracts\ProductCatalog;
 use App\Modules\Catalog\Contracts\ProductOrderHistory;
-use App\Modules\Catalog\Repositories\ProductRepository;
+use App\Modules\Catalog\Enums\ProductStatus;
+use App\Modules\Catalog\Queries\ProductCatalogQuery;
+use App\Modules\Catalog\ValueObjects\CatalogProduct;
 use App\Modules\Catalog\ValueObjects\CatalogProducts;
 use App\Modules\Catalog\ValueObjects\CategoryIds;
+use App\Modules\Catalog\ValueObjects\ProductAvailability;
+use App\Modules\Catalog\ValueObjects\ProductCountsByStatus;
 use App\Modules\Catalog\ValueObjects\ProductIds;
+use App\Modules\Catalog\ValueObjects\ProductRecord;
 use App\Modules\Customers\Repositories\CustomerAddressRepository;
 use App\Modules\Identity\Contracts\CustomerAccounts;
+use App\Modules\Identity\Contracts\CustomerMetrics;
 use App\Modules\Identity\DTOs\CreateUserDTO;
 use App\Modules\Identity\DTOs\LoginCredentialsDTO;
 use App\Modules\Identity\Enums\UserRole;
@@ -18,16 +25,24 @@ use App\Modules\Identity\ValueObjects\Email;
 use App\Modules\Identity\ValueObjects\Password;
 use App\Modules\Inventory\Contracts\StockInitializer;
 use App\Modules\Inventory\Contracts\StockLevels;
+use App\Modules\Inventory\Contracts\StockMetrics;
 use App\Modules\Inventory\Contracts\StockReservation;
+use App\Modules\Inventory\Queries\StockLevelsQuery;
 use App\Modules\Inventory\Repositories\StockRepository;
+use App\Modules\Inventory\ValueObjects\ProductStock;
+use App\Modules\Inventory\ValueObjects\ProductStocks;
 use App\Modules\Inventory\ValueObjects\StockQuantities;
+use App\Modules\Inventory\ValueObjects\StockRecord;
+use App\Modules\Inventory\ValueObjects\StockTotals;
 use App\Modules\Ordering\Contracts\CustomerOrderHistory;
 use App\Modules\Ordering\Contracts\DeliveryAddressBook;
+use App\Modules\Ordering\Contracts\OrderMetrics;
 use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
+use App\Modules\Ordering\ValueObjects\OrderCountsByPeriod;
 use App\Modules\Ordering\ValueObjects\OrderForPayment;
 use App\Modules\Ordering\ValueObjects\OrderLines;
 use App\Modules\Ordering\ValueObjects\ProductQuantities;
@@ -71,24 +86,6 @@ const PUBLIC_DIRECTORIES = ['Contracts', 'Events'];
  * run and never kept as a list here.
  */
 const VOCABULARY_DIRECTORIES = ['DTOs', 'ValueObjects', 'Enums'];
-
-/*
- * Crossings into private folders, or into classes outside the vocabulary, that stay until HEL-6
- * builds the read side: the dashboard read model, and the storefront and stock list availability
- * (Product::stock, Stock::product and the one availability rule). Each entry: [source namespace,
- * target namespace or class, issue].
- */
-const BOUNDARY_EXCEPTIONS = [
-    ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Repositories', 'HEL-6'],
-    ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Enums\\ProductStatus', 'HEL-6'],
-    ['App\\Modules\\Backoffice', 'App\\Modules\\Identity\\Repositories', 'HEL-6'],
-    ['App\\Modules\\Backoffice', 'App\\Modules\\Inventory\\Repositories', 'HEL-6'],
-    ['App\\Modules\\Backoffice', 'App\\Modules\\Ordering\\Repositories', 'HEL-6'],
-    ['App\\Modules\\Catalog\\Models', 'App\\Modules\\Inventory\\Models\\Stock', 'HEL-6'],
-    ['App\\Modules\\Inventory\\Models', 'App\\Modules\\Catalog\\Models\\Product', 'HEL-6'],
-    ['App\\Modules\\Catalog\\Http', 'App\\Modules\\Ordering\\Services\\PurchaseAvailabilityService', 'HEL-6'],
-    ['App\\Modules\\Inventory\\Http', 'App\\Modules\\Ordering\\Services\\PurchaseAvailabilityService', 'HEL-6'],
-];
 
 /** @return list<string> the folders of a module that no other module may use */
 function privateDirectoriesOf(string $module): array
@@ -194,39 +191,15 @@ function rootClassesOf(string $module): array
 foreach (MODULES as $source) {
     foreach (array_diff(MODULES, [$source, 'Shared']) as $target) {
         foreach (privateDirectoriesOf($target) as $directory) {
-            $targetNamespace = 'App\\Modules\\'.$target.'\\'.$directory;
-            $exceptions = array_filter(BOUNDARY_EXCEPTIONS, fn (array $exception) => str_starts_with($exception[0], 'App\\Modules\\'.$source)
-                && ($exception[1] === $targetNamespace || str_starts_with($exception[1], $targetNamespace.'\\')));
-
-            // The whole folder is allowed to this source (the dashboard read model).
-            if (array_filter($exceptions, fn (array $exception) => $exception[1] === $targetNamespace) !== []) {
-                continue;
-            }
-
             arch("{$source} reaches another module only through its public directories: {$target}\\{$directory}")
                 ->expect('App\\Modules\\'.$source)
-                ->not->toUse($targetNamespace)
-                ->ignoring(array_values(array_map(fn (array $exception) => $exception[0], $exceptions)));
-
-            // An excepted source may use the one excepted class, and nothing else in that folder.
-            foreach ($exceptions as [$exceptedSource, $exceptedClass]) {
-                foreach (glob(MODULES_PATH."/{$target}/{$directory}/*.php") as $file) {
-                    $class = $targetNamespace.'\\'.basename($file, '.php');
-
-                    if ($class !== $exceptedClass) {
-                        arch("{$source} reaches another module only through its public directories: {$target}\\{$directory}\\".basename($file, '.php'))
-                            ->expect($exceptedSource)
-                            ->not->toUse($class);
-                    }
-                }
-            }
+                ->not->toUse('App\\Modules\\'.$target.'\\'.$directory);
         }
     }
 }
 
 it('generates the private directory rules from the folders that exist', function () {
     $private = array_unique(array_merge(...array_map('privateDirectoriesOf', MODULES)));
-    $httpExceptions = array_filter(BOUNDARY_EXCEPTIONS, fn (array $exception) => preg_match('/\\\\Http(\\\\|$)/', $exception[1]) === 1);
 
     expect(PUBLIC_DIRECTORIES)->toBe(['Contracts', 'Events'])
         ->and($private)->toContain('Consumers', 'Exceptions', 'Gateways', 'Http', 'Jobs', 'Models', 'Repositories', 'Services', 'UseCases')
@@ -235,7 +208,7 @@ it('generates the private directory rules from the folders that exist', function
         ->and($private)->not->toContain('DTOs')
         ->and($private)->not->toContain('Enums')
         ->and($private)->not->toContain('ValueObjects')
-        ->and($httpExceptions)->toBeEmpty();
+        ->and($private)->toContain('Queries');
 
     // Every pair of modules gets the Http rule: each business module has its own Http folder.
     foreach (array_diff(MODULES, ['Shared']) as $module) {
@@ -248,12 +221,6 @@ it('generates the private directory rules from the folders that exist', function
 foreach (array_diff(MODULES, ['Shared']) as $target) {
     foreach (classesOutsideVocabularyOf($target) as $class) {
         foreach (array_diff(MODULES, [$target]) as $source) {
-            $excepted = array_filter(BOUNDARY_EXCEPTIONS, fn (array $exception) => $exception[0] === 'App\\Modules\\'.$source && $exception[1] === $class);
-
-            if ($excepted !== []) {
-                continue;
-            }
-
             arch("{$source} uses only the public vocabulary of {$target}: {$class}")
                 ->expect('App\\Modules\\'.$source)
                 ->not->toUse($class);
@@ -322,6 +289,14 @@ it('computes the vocabulary the contracts expose today', function () {
     }
 });
 
+it('computes the vocabulary the read side exposes', function () {
+    expect(vocabularyOf('Catalog'))->toContain(ProductStatus::class, ProductAvailability::class, CatalogProduct::class, ProductCountsByStatus::class)
+        ->and(vocabularyOf('Catalog'))->not->toContain(ProductRecord::class)
+        ->and(vocabularyOf('Inventory'))->toContain(ProductStocks::class, ProductStock::class, StockTotals::class)
+        ->and(vocabularyOf('Inventory'))->not->toContain(StockRecord::class)
+        ->and(vocabularyOf('Ordering'))->toContain(OrderCountsByPeriod::class);
+});
+
 // A module root class (its service provider) is wiring, never something another module calls.
 foreach (MODULES as $source) {
     foreach (array_diff(MODULES, [$source]) as $target) {
@@ -337,18 +312,10 @@ it('does not use another module root class: every module root is covered', funct
     expect(count(array_merge(...array_map('rootClassesOf', MODULES))))->toBeGreaterThanOrEqual(7);
 });
 
-it('declares exactly the HEL-6 exceptions', function () {
-    expect(BOUNDARY_EXCEPTIONS)->toBe([
-        ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Repositories', 'HEL-6'],
-        ['App\\Modules\\Backoffice', 'App\\Modules\\Catalog\\Enums\\ProductStatus', 'HEL-6'],
-        ['App\\Modules\\Backoffice', 'App\\Modules\\Identity\\Repositories', 'HEL-6'],
-        ['App\\Modules\\Backoffice', 'App\\Modules\\Inventory\\Repositories', 'HEL-6'],
-        ['App\\Modules\\Backoffice', 'App\\Modules\\Ordering\\Repositories', 'HEL-6'],
-        ['App\\Modules\\Catalog\\Models', 'App\\Modules\\Inventory\\Models\\Stock', 'HEL-6'],
-        ['App\\Modules\\Inventory\\Models', 'App\\Modules\\Catalog\\Models\\Product', 'HEL-6'],
-        ['App\\Modules\\Catalog\\Http', 'App\\Modules\\Ordering\\Services\\PurchaseAvailabilityService', 'HEL-6'],
-        ['App\\Modules\\Inventory\\Http', 'App\\Modules\\Ordering\\Services\\PurchaseAvailabilityService', 'HEL-6'],
-    ]);
+it('declares no boundary exception', function () {
+    $constants = array_keys(get_defined_constants(true)['user'] ?? []);
+
+    expect(array_filter($constants, fn (string $name) => str_contains($name, 'EXCEPTION')))->toBe([]);
 });
 
 // Contracts: interfaces only, in every module that publishes or defines one.
@@ -394,15 +361,68 @@ it('speaks only data in every contract signature', function () {
 it('resolves the module contracts to their implementations', function (string $contract, string $implementation) {
     expect(app($contract))->toBeInstanceOf($implementation);
 })->with([
-    [ProductCatalog::class, ProductRepository::class],
-    [StockLevels::class, StockRepository::class],
+    [ProductCatalog::class, ProductCatalogQuery::class],
+    [StockLevels::class, StockLevelsQuery::class],
     [PayableOrders::class, OrderRepository::class],
     [CustomerOrderHistory::class, OrderRepository::class],
     [CustomerAccounts::class, CustomerAccountRepository::class],
 ]);
 
-// Inventory: other modules use its contracts, never its repository (the dashboard read model may read it).
-foreach (array_diff(MODULES, ['Inventory', 'Backoffice']) as $module) {
+// Queries: the read side of a module. A query serves a route, reads the module's own tables, and asks
+// the owner of anything else through that owner's contract. It never uses the module's repositories
+// (writes) or use cases, and it never speaks the Eloquent types in a public signature.
+$modulesWithQueries = array_values(array_filter(MODULES, fn (string $module) => is_dir(MODULES_PATH."/{$module}/Queries")));
+
+foreach ($modulesWithQueries as $module) {
+    foreach (['repositories' => 'Repositories', 'use cases' => 'UseCases'] as $label => $layer) {
+        arch("queries do not use the module {$label}: {$module}")
+            ->expect("App\\Modules\\{$module}\\Queries")
+            ->not->toUse("App\\Modules\\{$module}\\{$layer}");
+    }
+}
+
+it('every module with queries is covered', function () use ($modulesWithQueries) {
+    expect($modulesWithQueries)->toBe(['Backoffice', 'Catalog', 'Identity', 'Inventory', 'Ordering']);
+});
+
+it('speaks only data in every query signature', function () {
+    $queries = array_map(
+        fn (string $file) => 'App\\Modules\\'.basename(dirname($file, 2)).'\\Queries\\'.basename($file, '.php'),
+        glob(MODULES_PATH.'/*/Queries/*.php'),
+    );
+
+    expect(count($queries))->toBeGreaterThanOrEqual(9);
+
+    foreach ($queries as $query) {
+        foreach ((new ReflectionClass($query))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+            $types = [$method->getReturnType(), ...array_map(fn (ReflectionParameter $parameter) => $parameter->getType(), $method->getParameters())];
+
+            foreach ($types as $type) {
+                foreach (namedTypesIn($type) as $name) {
+                    expect(is_a($name, Model::class, true) || is_a($name, EloquentCollection::class, true))
+                        ->toBeFalse("{$query}::{$method->getName()} speaks the Eloquent type {$name}");
+                }
+            }
+        }
+    }
+});
+
+it('resolves the read contracts to the owner queries', function (string $contract, string $module) {
+    $implementation = app($contract);
+
+    expect($implementation::class)->toStartWith("App\\Modules\\{$module}\\Queries\\")
+        ->and($implementation)->toBeInstanceOf($contract);
+})->with([
+    [ProductCatalog::class, 'Catalog'],
+    [StockLevels::class, 'Inventory'],
+    [CatalogMetrics::class, 'Catalog'],
+    [StockMetrics::class, 'Inventory'],
+    [CustomerMetrics::class, 'Identity'],
+    [OrderMetrics::class, 'Ordering'],
+]);
+
+// Inventory: other modules use its contracts, never its repository.
+foreach (array_diff(MODULES, ['Inventory']) as $module) {
     arch("{$module} reaches the inventory only through its contracts")
         ->expect("App\\Modules\\{$module}")
         ->not->toUse(StockRepository::class);

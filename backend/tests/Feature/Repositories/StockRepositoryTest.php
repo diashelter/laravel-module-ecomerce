@@ -2,7 +2,6 @@
 
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\ValueObjects\ProductIds;
-use App\Modules\Inventory\Contracts\StockLevels;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Inventory\Repositories\StockRepository;
 use App\Modules\Inventory\ValueObjects\StockQuantities;
@@ -19,17 +18,6 @@ it('creates the stock row of a product', function () {
     expect(Stock::query()->where('product_id', $product->id)->pluck('quantity')->all())->toBe([7]);
 });
 
-it('paginates stocks by quantity ascending', function () {
-    $high = productWithStock(30)->stock;
-    $low = productWithStock(1)->stock;
-    $middle = productWithStock(10)->stock;
-
-    $page = $this->repository->paginateByQuantity(20);
-
-    expect($page->pluck('id')->all())->toBe([$low->id, $middle->id, $high->id])
-        ->and($page->first()->relationLoaded('product'))->toBeTrue();
-});
-
 it('locks the stock rows of the given products keyed by product id', function () {
     $first = productWithStock(5);
     $second = productWithStock(8);
@@ -43,7 +31,7 @@ it('locks the stock rows of the given products keyed by product id', function ()
 });
 
 it('locks a single stock row by id', function () {
-    $stock = productWithStock(5)->stock;
+    $stock = stockOf(productWithStock(5));
     Stock::query()->whereKey($stock->id)->update(['quantity' => 9]);
 
     $locked = DB::transaction(fn () => $this->repository->lockById($stock->id));
@@ -61,33 +49,6 @@ it('decrements the stock quantity', function () {
 
     $this->repository->decrement($product->id, 2);
 
-    expect($product->stock->fresh()->quantity)->toBe(3)
-        ->and($other->stock->fresh()->quantity)->toBe(5);
-});
-
-it('reads the stock quantities of the given products without locking', function () {
-    $first = productWithStock(4);
-    $second = productWithStock(9);
-    $withoutStock = Product::factory()->create();
-
-    DB::enableQueryLog();
-    $stock = app(StockLevels::class)->quantitiesFor(new ProductIds($first->id, $second->id, $withoutStock->id));
-
-    expect($stock->of($first->id))->toBe(4)
-        ->and($stock->of($second->id))->toBe(9)
-        ->and($stock->of($withoutStock->id))->toBe(0)
-        ->and(collect(DB::getQueryLog())->pluck('query')->filter(fn (string $sql) => str_contains($sql, 'for update')))->toBeEmpty();
-});
-
-it('counts products in stock and the total units', function () {
-    productWithStock(10);
-    productWithStock(5);
-    productWithStock(0);
-
-    expect($this->repository->countInStock())->toBe(2)
-        ->and($this->repository->totalUnits())->toBe(15);
-});
-
-it('returns zero units when there is no stock', function () {
-    expect($this->repository->totalUnits())->toBe(0);
+    expect(stockOf($product)->quantity)->toBe(3)
+        ->and(stockOf($other)->quantity)->toBe(5);
 });

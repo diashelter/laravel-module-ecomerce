@@ -12,8 +12,10 @@ use App\Modules\Ordering\Consumers\MarkOrderAsDelivered;
 use App\Modules\Ordering\Consumers\MarkOrderAsPaid;
 use App\Modules\Ordering\Consumers\RecordEstimatedDelivery;
 use App\Modules\Ordering\Contracts\CustomerOrderHistory;
+use App\Modules\Ordering\Contracts\OrderMetrics;
 use App\Modules\Ordering\Contracts\PayableOrders;
 use App\Modules\Ordering\Events\OrderPlaced;
+use App\Modules\Ordering\Queries\OrderMetricsQuery;
 use App\Modules\Ordering\Repositories\OrderRepository;
 use App\Modules\Payment\Events\PaymentApproved;
 use App\Modules\Shared\Messaging\EventSubscriptions;
@@ -28,6 +30,7 @@ class OrderingServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     public array $bindings = [
         CustomerOrderHistory::class => OrderRepository::class,
+        OrderMetrics::class => OrderMetricsQuery::class,
         PayableOrders::class => OrderRepository::class,
         ProductOrderHistory::class => OrderRepository::class,
     ];

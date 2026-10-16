@@ -12,11 +12,3 @@ it('paginates customer accounts newest first', function () {
 
     expect($page->pluck('id')->take(2)->all())->toBe([$newer->id, $older->id]);
 });
-
-it('counts only customer accounts', function () {
-    customer();
-    customer();
-    admin();
-
-    expect($this->repository->count())->toBe(2);
-});
