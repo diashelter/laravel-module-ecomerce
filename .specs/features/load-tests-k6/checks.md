@@ -435,3 +435,16 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
 - Total: ~73k, abaixo do budget de 150k. Um builder só, sem corte.
 - Mechanism: one builder (o total cabe no budget).
 - Bloqueio: C60 a C62 esperam `helterdias/fix-per-route-throttle` na `main` e a `main` nesta branch (pergunta aberta 1 do plano). O resto não depende disso. O C78 também espera o push desta branch, que precisa de autorização.
+- **Boundary:** C1 a C59 e C63 a C87 fechados no código em `e467086` (pilha, seeder e scripts), `25fb9dc` (CI), `86126c1` (taxa na parada do `breakpoint`) e nos commits seguintes (limites da linha de base e documentos). Ficam abertos até o PR [#18](https://github.com/diashelter/laravel-module-ecomerce/pull/18) entrar na `main` e a `main` entrar nesta branch: C60 a C62 e C64 (o `limits`), C35 e C54 (o 2º cadastro e o login do suporte no `smoke` com os limites reais) e C65 (o `smoke` inteiro), porque sem a correção as rotas limitadas de um mesmo IP somam num contador só e o 11º pedido anônimo recebe `429`. Com o limitador inerte (`make load-test TYPE=smoke LOAD_LIMITER=array`), os 48 checks do `smoke` passaram. O C78 espera também o push.
+- **Settled mid-build:**
+  - O AC 66 foi lido com a vitrine ficando com o restante (ver "Interpretação do AC 66").
+  - O `about --json` mostra os logs como `"stderr"`, não como lista: o C17 foi corrigido antes do código.
+  - `CACHE_LIMITER` vazio quebrava a API (o cache não tem store `""`), então a configuração lê `env('CACHE_LIMITER') ?: null`.
+  - O painel do k6 só exporta o HTML com 3 períodos de dados, então `K6_WEB_DASHBOARD_PERIOD=2s`.
+  - O `dataset.sh` para o worker e o relay durante o `migrate:fresh`, porque o relay cai quando a tabela some.
+  - Os casos de erro sem fração no plano rodam em 1 de 10 iterações dos perfis de volume.
+  - O `breakpoint` mantém as pausas de 1 a 3 s, com no máximo 1.000 VUs.
+  - As duas rodadas do `breakpoint` aceitas para a linha ficaram em commits diferentes com o mesmo código medido; o `load-tests/README.md` registra isso.
+- **Abandoned:**
+  - Guardar o `X-Request-ID` enviado na resposta do k6: a resposta é um objeto do host e não aceita propriedade nova. Ficou uma variável do módulo.
+  - Medir o primeiro `breakpoint` sem a taxa na parada: a taxa passou a ser calculada no `handleSummary` a partir do fim do `setup()`.

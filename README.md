@@ -35,9 +35,10 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 14. [API REST](#api-rest)
 15. [Frontend](#frontend)
 16. [Testes](#testes)
-17. [Containers](#containers)
-18. [Fluxo completo para demonstração](#fluxo-completo-para-demonstração)
-19. [Escopo e decisões](#escopo-e-decisões)
+17. [Testes de carga (k6)](#testes-de-carga-k6)
+18. [Containers](#containers)
+19. [Fluxo completo para demonstração](#fluxo-completo-para-demonstração)
+20. [Escopo e decisões](#escopo-e-decisões)
 
 ---
 
@@ -138,6 +139,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 │   ├── node/Dockerfile
 │   ├── php/Dockerfile, php.ini, entrypoint.sh
 │   └── postgres/init/               cria o banco de testes
+├── load-tests/                      testes de carga com k6 (ver Testes de carga): o Compose do projeto `ecommerce-load`, os fluxos, os perfis, as provas dos scripts e a linha de base
 ├── storage-dumps/                   destino do `make db-dump`
 ├── docker-compose.yml
 ├── Makefile
@@ -199,6 +201,7 @@ Variáveis importantes do `backend/.env`:
 | `SANCTUM_STATEFUL_DOMAINS` | `localhost:8080,...` | Domínios que autenticam por cookie. **Se mudar `APP_PORT`, atualize aqui.** |
 | `APP_FAKER_LOCALE` | `pt_BR` | Locale do Faker |
 | `ORDER_DELIVERY_DELAY_SECONDS` | `10` | Delay do job de entrega simulada |
+| `CACHE_LIMITER` | vazio | Armazenamento das contagens do limitador de requisições. Vazio usa o armazenamento padrão, e os limites das rotas valem. Só a pilha de carga define (`array`); ver [Testes de carga (k6)](#testes-de-carga-k6) |
 
 ---
 
@@ -259,6 +262,13 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 | `make test` | Executa todos os testes (Pest) |
 | `make test-filter FILTER="..."` | Executa testes filtrados. Ex.: `make test-filter FILTER=CheckoutTest` |
 | `make test-frontend` | Executa os testes do frontend (Vitest) no container `frontend` |
+
+### Testes de carga
+
+| Comando | Descrição |
+| --- | --- |
+| `make load-test TYPE=<perfil>` | Recria a pilha de carga (`ecommerce-load`, com banco e Redis próprios) e roda um perfil do k6: `smoke`, `load`, `stress`, `spike`, `breakpoint`, `soak`, `contention` ou `limits`. A pilha de dev não muda |
+| `make load-down` | Remove a pilha de carga e os volumes dela |
 
 ### Frontend
 
@@ -722,6 +732,8 @@ O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em todo p
 
 Se algum passo falhar, os logs dos containers `db` e `api` aparecem no próprio run. Um push novo na mesma branch cancela o run anterior que ainda estiver em andamento.
 
+Um segundo job, `load-smoke`, roda em paralelo o `make load-test TYPE=smoke` na pilha de carga, com os limites de requisição reais. Ele confere só os códigos e os corpos das respostas, sem limite de latência, e falha quando uma rota, um status ou um payload muda e os scripts do k6 não acompanham. Na falha, imprime os logs da pilha de carga, e no fim sempre roda `make load-down`. Ver [Testes de carga (k6)](#testes-de-carga-k6).
+
 O frontend ainda não é verificado no CI.
 
 | Arquivo | Cobertura |
@@ -776,6 +788,36 @@ O frontend ainda não é verificado no CI.
 | `Unit/Architecture/HttpAdaptersTest` | os adaptadores HTTP do Customers e do Fulfillment não escrevem limite, expressão regular nem lista de UFs e delegam a `Email`, `Password` e `BrazilianState`; cada request de UF usa o `NormalizesStateInput` do próprio módulo |
 | `Unit/Resources/CustomerProfileResourceTest` | o `CustomerProfileResource` do Identity e o do Customers mostram a conta no mesmo formato |
 | `SeederTest` | quantidades mínimas exigidas, as 2 contas da equipe e os 10 clientes (em `customers`), endereço para todo cliente, pedidos com cópia e frete da tabela, data prevista só nos pedidos pagos e determinismo dos seeders |
+| `RateLimiterStoreTest` | sem `CACHE_LIMITER`, o limitador de requisições usa o armazenamento padrão (os limites valem como sempre) |
+
+---
+
+## Testes de carga (k6)
+
+A pasta [`load-tests/`](load-tests/README.md) guarda os testes de desempenho e de carga com o [k6](https://grafana.com/docs/k6/latest/) (HEL-14; design em [.design/load-tests-k6.md](.design/load-tests-k6.md)). Os números são uma **linha de base**: comparam uma rodada com a próxima, na mesma máquina, com a mesma configuração e o mesmo conjunto de dados. Não dizem quanto um servidor de produção aguentaria.
+
+```bash
+make load-test TYPE=smoke
+```
+
+- **Pilha de carga.** Cada rodada recria o projeto Compose `ecommerce-load` (`load-tests/docker-compose.yml`): Postgres (`ecommerce_load`) e Redis próprios, a API com configuração de produção (sem debug, opcache sem revalidação, caches em `/tmp/laravel` dentro do container, PHP-FPM estático com 16 workers), o worker, o relay, o Nginx e o k6. Ela compartilha com a de dev só a imagem do PHP e a árvore `backend/`, e nenhuma porta é publicada no host.
+- **Dados.** O `LoadTestSeeder` (fora do `DatabaseSeeder`) cria sempre os mesmos 1.000 clientes (`load-customer-<n>@example.com`), a equipe, 201 produtos (170 disponíveis, 10 sem unidades, 20 inativos e o `Produto Disputado`, com 10) e 10.000 pedidos de histórico, em cerca de 5 segundos.
+- **Mistura.** Os perfis de volume dividem os VUs em cerca de 75% vitrine, 20% compra e 5% equipe. Cada requisição declara os status que espera: um `404` ou um `409` esperados não são erro.
+- **Limites de requisição.** Nos perfis de volume e no `contention`, a pilha roda com `CACHE_LIMITER=array`, e nenhum limite é atingido. O `smoke` e o `limits` rodam com os limites reais.
+- **Espera até pagar.** A compra consulta o pedido a cada 2 segundos, como o frontend, até `awaiting_payment`. O tempo desde o `201` é a métrica `order_payable_wait`, que mede o relay do outbox e o worker sob carga.
+
+| Perfil | O que faz |
+| --- | --- |
+| `smoke` | 1 VU por fluxo, uma iteração, passando por todos os casos de erro; também roda no CI |
+| `load` | 50 VUs por 5 minutos: a carga da linha de base |
+| `stress` | 150 VUs por 5 minutos |
+| `spike` | de 50 para 300 VUs em 10 segundos e de volta |
+| `breakpoint` | taxa de chegada de 5 a 500 iterações/s em 15 minutos, até quebrar |
+| `soak` | 50 VUs por 1 hora |
+| `contention` | 50 clientes disputam as 10 unidades do `Produto Disputado`, e 50 pares de pedidos cruzam a ordem dos itens |
+| `limits` | cada rota limitada até o limite e mais uma, e uma rajada de 30 logins simultâneos |
+
+Os relatórios (HTML do painel do k6, JSON e a lista de checks) vão para `load-tests/results/`, fora do git. Os limites de aprovação de cada perfil, a regra para aceitar uma linha na tabela da linha de base e a tabela ficam no [README da pasta](load-tests/README.md).
 
 ---
 
@@ -792,6 +834,8 @@ O frontend ainda não é verificado no CI.
 | `redis` | `redis:8-alpine` | Fila, sessões e cache |
 
 O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O worker e o relay precisam de `make queue-restart` após mudanças em jobs, consumidores ou no relay.
+
+Os testes de carga sobem um segundo projeto Compose, o `ecommerce-load` (`load-tests/docker-compose.yml`), com os seus próprios `db`, `redis`, `api`, `queue-worker`, `outbox-relay` e `nginx`, mais o `k6` (`grafana/k6`). Ele existe só durante as rodadas e não publica portas; ver [Testes de carga (k6)](#testes-de-carga-k6).
 
 ---
 
