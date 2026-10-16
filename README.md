@@ -615,19 +615,19 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. **Todo id d
 | GET | `/api/products?category=&sort=&page=` | público | Listagem paginada; `sort`: `name`, `price_asc`, `price_desc` |
 | GET | `/api/products/{product}` | público | Detalhe (somente disponíveis) |
 | GET | `/api/categories` | público | Categorias |
-| GET | `/api/shipping/quote?state=UF` | público | Frete e prazo de uma UF: `data: { state, price_cents, delivery_business_days }`. A UF é normalizada (`sp` → `SP`); `422` se ausente ou desconhecida; `throttle:60,1` |
+| GET | `/api/shipping/quote?state=UF` | público | Frete e prazo de uma UF: `data: { state, price_cents, delivery_business_days }`. A UF é normalizada (`sp` → `SP`); `422` se ausente ou desconhecida; `throttle:60,1,shipping-quote` |
 | POST | `/api/cart/validate` | público | Revalida o carrinho |
-| POST | `/api/orders` | cliente | Checkout: `items` e `address_id` (um endereço do próprio cliente). `201` com `code`, `items_total_cents`, `shipping_cents`, `total_cents` e `delivery`; `422` em `address_id` se faltar (`Escolha um endereço de entrega.`) ou não for do cliente (`Endereço de entrega não encontrado.`); `throttle:20,1` |
+| POST | `/api/orders` | cliente | Checkout: `items` e `address_id` (um endereço do próprio cliente). `201` com `code`, `items_total_cents`, `shipping_cents`, `total_cents` e `delivery`; `422` em `address_id` se faltar (`Escolha um endereço de entrega.`) ou não for do cliente (`Endereço de entrega não encontrado.`); `throttle:20,1,checkout` |
 | GET | `/api/orders` | cliente | Pedidos do cliente |
 | GET | `/api/orders/{order}` | dono | Detalhe do pedido (com o bloco `delivery`): `200`, `404` (inclusive o pedido de outro cliente) |
-| POST | `/api/orders/{order}/payment` | dono | Paga com `card_token` (gateway fake): `202` aprovado, com a tentativa em `data: { id, order_id, status, amount_cents }`; `402 PAYMENT_DECLINED` recusado; `404` pedido inexistente ou de outro cliente; `409` se não pode ser pago; `422` do corpo, validado antes de buscar o pedido; `throttle:20,1` |
+| POST | `/api/orders/{order}/payment` | dono | Paga com `card_token` (gateway fake): `202` aprovado, com a tentativa em `data: { id, order_id, status, amount_cents }`; `402 PAYMENT_DECLINED` recusado; `404` pedido inexistente ou de outro cliente; `409` se não pode ser pago; `422` do corpo, validado antes de buscar o pedido; `throttle:20,1,payment` |
 | GET | `/api/account` | cliente | Resumo da área do cliente: `customer`, `orders_count`, `last_order`, `recent_orders` (até 5). Cada pedido vem resumido: `id`, `code`, `status`, `status_label`, `total_cents`, `created_at` |
 | PUT | `/api/account/profile` | cliente | Atualiza nome, e-mail e senha |
 | GET | `/api/account/addresses` | cliente | O caderno do cliente, o mais recente primeiro |
 | POST | `/api/account/addresses` | cliente | Cadastra um endereço (`recipient_name`, `postal_code`, `street`, `number`, `complement?`, `district`, `city`, `state`): `201`, `409 BUSINESS_RULE_VIOLATION` no 11º endereço, `422` |
 | PUT | `/api/account/addresses/{address}` | dono | Substitui o endereço (mesmos campos do `POST`): `200`, `404` (inclusive o endereço de outro cliente), `422` (validado antes de buscar o endereço) |
 | DELETE | `/api/account/addresses/{address}` | dono | Exclui o endereço, sem lê-lo antes: `204`, `404` (inclusive o endereço de outro cliente). Pedidos já feitos não mudam |
-| POST | `/api/admin/auth/login` | público | Login da equipe (guard `staff`, contra `users`): `id`, `name`, `email`, `role`, `role_label`, `created_at`; `throttle:10,1` |
+| POST | `/api/admin/auth/login` | público | Login da equipe (guard `staff`, contra `users`): `id`, `name`, `email`, `role`, `role_label`, `created_at`; `throttle:10,1,staff-login` |
 | POST | `/api/admin/auth/logout` | equipe | Logout (encerra a sessão do navegador, as duas áreas) |
 | GET | `/api/admin/auth/me` | equipe | Membro da equipe autenticado |
 | GET | `/api/admin/dashboard` | equipe | Métricas agregadas |
@@ -650,6 +650,8 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. **Todo id d
 "Equipe" é qualquer sessão do guard `staff` (admin ou suporte); **admin** exige o papel `admin` (middleware `admin`, `EnsureUserIsAdmin`) e responde `403` ao suporte. Uma sessão de cliente nas rotas `/api/admin/*`, ou uma sessão de equipe nas rotas da loja, recebe `401`.
 
 Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `402`, `403`, `404`, `405`, `409`, `422`, `429`, `500`. O `403` existe só para o suporte nos `DELETE` e em `/api/admin/users*`.
+
+**Limites de requisição**: cada limite é literal na rota, em `routes/api.php`, e cada rota tem o seu contador, nomeado no terceiro parâmetro do `throttle`: `throttle:10,1,registration` no cadastro, `throttle:10,1,customer-login` e `throttle:10,1,staff-login` nos dois logins, `throttle:20,1,checkout` e `throttle:20,1,payment` no checkout e no pagamento, e `throttle:60,1,cart-validation` e `throttle:60,1,shipping-quote` na validação do carrinho e na cotação de frete. Acima do limite, a resposta é `429` com `TOO_MANY_REQUESTS`. A chave do contador é o nome da rota mais o cliente: o cliente autenticado (pelo id) ou, sem sessão, o **IP da conexão**, o `REMOTE_ADDR` que o Nginx entrega ao PHP-FPM. Cada rota conta só as próprias requisições: 60 cotações de frete no mesmo minuto deixam a 61ª em `429`, e o login do mesmo IP continua com as 10 tentativas. O Laravel não confia em nenhum proxy, então um `X-Forwarded-For` enviado pelo cliente (e também `X-Forwarded-Host`, `-Proto`, `-Port` e `-Prefix`) é ignorado e não troca a chave do limite (ver [Containers](#containers)). Uma rota nova com `throttle` nomeia um contador que nenhuma outra usa: sem o nome, ela somaria no contador que o Laravel monta só com o cliente. O `RateLimitTest` cobra (ver [Escopo e decisões](#escopo-e-decisões)).
 
 **Registros nas rotas** (HEL-11): nenhuma rota resolve registro. O controller recebe o id como `string` e o entrega ao use case (escrita) ou ao repositório ou à consulta (leitura), então:
 
@@ -738,9 +740,10 @@ O frontend ainda não é verificado no CI.
 
 | Arquivo | Cobertura |
 | --- | --- |
-| `Auth/AuthTest` | cadastro em `customers` (sem `users`, ignorando `role`), e-mail igual ao da equipe, login só do cliente com as 4 chaves, credenciais da equipe recusadas, logout, `429` do cadastro e dos dois logins |
+| `Auth/AuthTest` | cadastro em `customers` (sem `users`, ignorando `role`), e-mail igual ao da equipe, login só do cliente com as 4 chaves, credenciais da equipe recusadas, logout, `429` do cadastro e dos dois logins, também com um `X-Forwarded-For` forjado diferente a cada tentativa |
 | `Auth/StaffAuthTest` | login da equipe (`admin` e `support`, sessão lida de novo na próxima requisição), credenciais de cliente e senha errada recusadas, logout, `CHECK` do `role` direto no banco |
 | `AuthorizationTest` | `401` a visitante e a sessão de cliente em todas as 27 rotas `/api/admin/*` (percorrendo a tabela de rotas), `401` a sessão de equipe nas 11 rotas da loja (inclui as 4 do caderno), pedido de outro cliente (`404`, como um id desconhecido), nenhuma rota com `auth:sanctum` |
+| `RateLimitTest` | as 7 rotas com `throttle` (percorrendo a tabela de rotas, que precisa ser igual à lista do teste), cada uma com um contador nomeado que nenhuma outra repete; esgotar uma rota deixa só ela em `429`, e as outras continuam abertas ao mesmo visitante (pelo IP, nas 5 rotas públicas) e ao mesmo cliente (pelo id, nas 7). Visto falhando antes da correção e com um nome de contador apagado ou repetido de propósito |
 | `ProductCatalogTest` | listagem com inativos, filtro, ordenações, paginação, detalhe indisponível, a mesma contagem de queries com 1 e com 12 produtos, a única leitura de `stocks` (um `where in` pelos ids da página, sem `join`) e o produto sem linha de estoque (`stock` nulo, indisponível) |
 | `ProductResponseShapeTest` | as 7 rotas que devolvem produto com as chaves de hoje, na ordem de hoje; o cadastro de admin com 15 por página, do mais novo ao mais antigo; o produto criado com o estoque e as categorias do corpo |
 | `Queries/*` | as consultas contra o banco: o filtro, as ordenações e as páginas da vitrine e do admin, o produto completado sem ler o registro de novo, o `ProductCatalog`, o `StockLevels` (a linha de cada produto numa query só, sem `for update`), a lista de estoque (inclusive a linha cujo produto sumiu) e as métricas do dashboard (produtos por status, estoque, só as contas de cliente, pedidos por dia e por mês) |
@@ -825,7 +828,7 @@ Os relatórios (HTML do painel do k6, JSON e a lista de checks) vão para `load-
 
 | Container | Imagem | Função |
 | --- | --- | --- |
-| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api` e `/sanctum` para o PHP-FPM e o resto para o Vite (inclui WebSocket do HMR) |
+| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api` e `/sanctum` para o PHP-FPM, com o IP da conexão em `REMOTE_ADDR`, e o resto para o Vite (inclui WebSocket do HMR) |
 | `api` | `docker/php/Dockerfile` (PHP 8.5-FPM) | Laravel. Instala as dependências do Composer na primeira execução |
 | `queue-worker` | mesma imagem da `api` | `php artisan queue:work redis` — processa as entregas aos consumidores (`DeliverEvent`) e os jobs |
 | `outbox-relay` | mesma imagem da `api` | `php artisan outbox:relay` — publica as mensagens pendentes de `outbox_messages` na fila, em até 1 s, e apaga as publicadas há mais de 7 dias |
@@ -836,6 +839,8 @@ Os relatórios (HTML do painel do k6, JSON e a lista de checks) vão para `load-
 O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O worker e o relay precisam de `make queue-restart` após mudanças em jobs, consumidores ou no relay.
 
 Os testes de carga sobem um segundo projeto Compose, o `ecommerce-load` (`load-tests/docker-compose.yml`), com os seus próprios `db`, `redis`, `api`, `queue-worker`, `outbox-relay` e `nginx`, mais o `k6` (`grafana/k6`). Ele existe só durante as rodadas e não publica portas; ver [Testes de carga (k6)](#testes-de-carga-k6).
+
+**IP do cliente:** o Nginx fala FastCGI com o PHP-FPM, e não HTTP, então para o Laravel ele não é um proxy. O `fastcgi_params` já entrega o endereço da conexão (`REMOTE_ADDR`, o `$remote_addr` do Nginx) e o esquema (`HTTPS` e `REQUEST_SCHEME`). Por isso o `bootstrap/app.php` não chama `trustProxies()`, e o `docker/nginx/default.conf` não repassa nenhum `X-Forwarded-*` próprio ao PHP. No Docker local, quem chega pela porta publicada aparece com o gateway da rede do Compose (por exemplo, `172.20.0.1`), então todo o tráfego do host divide, em cada rota, o mesmo contador por IP. Se um balanceador ou uma CDN entrar na frente do Nginx, o IP real deve ser restaurado no próprio Nginx (`set_real_ip_from` com o endereço do balanceador e `real_ip_header X-Forwarded-For`), nunca com `trustProxies(at: '*')`.
 
 ---
 
@@ -938,3 +943,12 @@ Decisões relevantes:
   - **Sem migração de dados**: a tabela é nova. Quem tem banco local roda `make fresh` (ou `make migrate`) e `make queue-restart`, e o `make up` sobe o container novo.
 - **Pagamento recusado** não cria status no pedido: a recusa (`402`) é gravada em `payments` e o pedido continua em `awaiting_payment`, mantendo os quatro status de negócio da especificação.
 - **Gateway de pagamento atrás de uma porta:** o `PayOrderUseCase` só conhece a interface `PaymentGateway`, ligada ao `FakePaymentGateway` no `PaymentServiceProvider`. Trocar de gateway é uma classe nova e uma ligação. O fake decide pelo cartão de teste (`fake_card_approved`, `fake_card_insufficient_funds`, `fake_card_declined`; qualquer outro é cartão inválido). A cobrança é síncrona: um gateway que confirme depois (Pix, webhook) exigiria um estado pendente. Ver [.design/fake-payment-gateway.md](.design/fake-payment-gateway.md).
+- **Nenhum proxy confiável** (o IP forjado, achado na discovery da HEL-14): o `trustProxies(at: '*')` saiu do `bootstrap/app.php`. Com ele, o Laravel aceitava o `X-Forwarded-For` de qualquer conexão, e um cliente trocava o próprio IP, e com ele a chave do limite, a cada requisição, anulando o `throttle:10,1` do login e do cadastro contra força bruta. Agora o IP é o `REMOTE_ADDR` que o Nginx entrega por FastCGI (ver [Containers](#containers)). Duas alternativas foram descartadas:
+  - **Confiar só na rede do Compose** não fecha a falha: o `REMOTE_ADDR` não é o Nginx, e sim quem se conectou a ele, que para o tráfego do host é o gateway da própria rede. Confiar na rede seria confiar em todo o tráfego do host.
+  - **Manter o `*` e fazer o Nginx sobrescrever o `X-Forwarded-For`** exigiria sobrescrever também o `X-Forwarded-Host`, `-Proto`, `-Port` e `-Prefix`, que o `*` também aceitava do cliente, e a correção só existiria no Nginx, onde um teste Pest não a alcança.
+
+  O `fastcgi_param HTTP_X_FORWARDED_PROTO` do Nginx saiu junto, porque o Laravel não o lia mais: o esquema vem do `HTTPS` do `fastcgi_params`. O `AuthTest` prova a correção: a 11ª tentativa de cadastro ou de login, com um `X-Forwarded-For` forjado diferente em cada uma, ainda recebe `429`.
+- **Um contador por rota** (achado no smoke test da correção do IP forjado): o `throttle:N,M` do Laravel monta a chave só com o cliente (o id do usuário, ou o domínio e o IP, em `ThrottleRequests::resolveRequestSignature`), sem a rota. As 7 rotas com limite dividiam um só contador por cliente, e cada uma comparava o total com o próprio limite: 10 cotações de frete no mesmo minuto deixavam o login do mesmo IP em `429`. Agora o terceiro parâmetro do `throttle` nomeia o contador de cada rota (`throttle:10,1,customer-login`) e entra na frente da chave. Os limites não mudaram.
+  - **O nome no `throttle` venceu os limitadores nomeados** (`RateLimiter::for` num service provider). Os dois separam os contadores, mas o nome é uma palavra a mais em cada rota e deixa o limite escrito nela. Os limitadores nomeados passam a valer a pena quando uma rota precisar de mais de um limite, de um limite diferente para visitante e cliente, ou de uma chave além do cliente (por exemplo, o e-mail tentado no login).
+  - **O cadastro e os dois logins não dividem um contador.** Um contador comum não reduz a força bruta: contra cada formulário, o atacante continua com 10 tentativas por minuto por IP. E um formulário bloquearia os outros para todos atrás do mesmo IP (uma rede de escritório, ou o gateway do Compose no Docker local): as senhas erradas de clientes travariam o login da equipe, e um cadastro recusado (o `422` também conta) gastaria as tentativas de login.
+  - O `RateLimitTest` percorre a tabela de rotas e falha se uma rota com `throttle` não nomear o contador ou repetir o nome de outra, e esgota cada rota para provar que as outras continuam abertas.
