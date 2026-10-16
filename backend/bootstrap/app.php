@@ -21,8 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Sanctum SPA: requests coming from the frontend domain use session cookies + CSRF.
         $middleware->statefulApi();
 
-        // Requests arrive through the Nginx container.
-        $middleware->trustProxies(at: '*');
+        // No trustProxies(): Nginx talks FastCGI, not HTTP, and passes the client's address as REMOTE_ADDR.
+        // Trusting a proxy here would let any client pick its IP (and its rate limit key) with X-Forwarded-For.
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,

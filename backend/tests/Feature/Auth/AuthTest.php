@@ -113,3 +113,13 @@ it('throttles registration and both logins after 10 attempts per minute', functi
 
     $this->postJson($uri, [])->assertStatus(429);
 })->with(['/api/auth/register', '/api/auth/login', '/api/admin/auth/login']);
+
+it('keeps the throttle key on the connection address when X-Forwarded-For is forged', function (string $uri) {
+    foreach (range(1, 10) as $attempt) {
+        $response = $this->withHeader('X-Forwarded-For', "203.0.113.{$attempt}")->postJson($uri, []);
+
+        expect($response->status())->not->toBe(429);
+    }
+
+    $this->withHeader('X-Forwarded-For', '203.0.113.11')->postJson($uri, [])->assertStatus(429);
+})->with(['/api/auth/register', '/api/auth/login', '/api/admin/auth/login']);
