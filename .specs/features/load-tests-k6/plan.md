@@ -47,7 +47,7 @@ Reaproveita, em vez de duplicar, a imagem `ecommerce-php` e o seu entrypoint (ex
 | seeders | `LoadTestSeeder` novo. O `DatabaseSeeder`, o `OrderSeeder`, o `SeederTest` e o `make fresh` não mudam |
 | stored data | nothing to migrate: nenhuma tabela, coluna ou índice muda, e o banco de carga é descartável a cada rodada |
 | docs | README: comandos do `Makefile`, configuração do `.env` (`CACHE_LIMITER`), testes (uma seção "Testes de carga (k6)" com os oito perfis, os limites de aprovação e o link da linha de base), containers (o projeto de carga) e o sumário. `AGENTS.md`: a regra de não gravar na árvore compartilhada a partir do container de carga, e o smoke de carga no checklist. `load-tests/README.md` novo, com a tabela da linha de base. A análise de domínio não muda, porque nenhum contexto muda |
-| branches | as correções `helterdias/fix-forged-client-ip` e `helterdias/fix-per-route-throttle` também editam o README e o `routes/api.php`. A integração com esta branch deve ter conflito no README, e o `limits` (S6) depende da segunda (pergunta aberta 1) |
+| branches | as correções do `X-Forwarded-For` e do contador por rota entraram na `main` pelos PRs [#17](https://github.com/diashelter/laravel-module-ecomerce/pull/17) e [#18](https://github.com/diashelter/laravel-module-ecomerce/pull/18) e foram trazidas para esta branch no merge `d851b01`, com os conflitos do README e do `AGENTS.md` resolvidos mantendo os dois lados |
 
 ## Relations
 
@@ -246,7 +246,7 @@ Uma rota ou um payload que muda sem o script acompanhar quebra o pull request.
 
 | # | Kind | Question | Until answered |
 | --- | --- | --- | --- |
-| 1 | blocks | As branches `helterdias/fix-forged-client-ip` e `helterdias/fix-per-route-throttle` entram na `main` antes de S6 ser construído? Recomendação: abrir os PRs das duas correções, integrar e trazer a `main` para esta branch antes do `limits`. Sem a segunda, as rotas limitadas de um mesmo cliente somam num contador só | AC 55 a 57 não podem passar: a 11ª tentativa de login quebraria depois de uma validação de carrinho, por exemplo |
+| 1 | resolvida | As branches das duas correções entram na `main` antes de S6? Sim: #17 e #18 foram integradas em 2026-10-16 e a `main` entrou nesta branch em `d851b01`. Sem a segunda, as rotas limitadas de um mesmo IP somavam num contador só, o que também quebrava o `smoke` com os limites reais | nada: AC 55 a 57 e o `smoke` passam desde o merge |
 
 ## Observable
 
