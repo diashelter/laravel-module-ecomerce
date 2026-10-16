@@ -23,12 +23,15 @@ use Illuminate\Support\Facades\Route;
 /*
 | All routes below are prefixed with /api (see bootstrap/app.php).
 | Authentication uses Sanctum SPA mode (session cookie), see /sanctum/csrf-cookie.
+|
+| Every `throttle:N,M` names its counter in the third parameter: without it the key is only the
+| client (user id or IP), and all throttled routes would add to one counter (RateLimitTest).
 */
 
 // Store authentication (guard `customer`)
 Route::prefix('auth')->group(function (): void {
-    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
-    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1,registration');
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1,customer-login');
 
     Route::middleware('auth:customer')->group(function (): void {
         Route::post('logout', [AuthController::class, 'logout']);
@@ -40,15 +43,15 @@ Route::prefix('auth')->group(function (): void {
 Route::get('products', [ProductController::class, 'index']);
 Route::get('products/{product}', [ProductController::class, 'show']);
 Route::get('categories', [CategoryController::class, 'index']);
-Route::post('cart/validate', [CartController::class, 'validate'])->middleware('throttle:60,1');
-Route::get('shipping/quote', [ShippingQuoteController::class, 'show'])->middleware('throttle:60,1');
+Route::post('cart/validate', [CartController::class, 'validate'])->middleware('throttle:60,1,cart-validation');
+Route::get('shipping/quote', [ShippingQuoteController::class, 'show'])->middleware('throttle:60,1,shipping-quote');
 
 // Store, logged-in shopper (guard `customer`)
 Route::middleware('auth:customer')->group(function (): void {
     Route::get('orders', [OrderController::class, 'index']);
-    Route::post('orders', [OrderController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('orders', [OrderController::class, 'store'])->middleware('throttle:20,1,checkout');
     Route::get('orders/{order}', [OrderController::class, 'show']);
-    Route::post('orders/{order}/payment', [PaymentController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('orders/{order}/payment', [PaymentController::class, 'store'])->middleware('throttle:20,1,payment');
 
     Route::get('account', [AccountController::class, 'show']);
     Route::put('account/profile', [ProfileController::class, 'update']);
@@ -62,7 +65,7 @@ Route::middleware('auth:customer')->group(function (): void {
 // Administration (guard `staff`). Reading and editing is open to both roles; every DELETE and
 // the staff management sit in the `admin` group below, so a new DELETE route is born restricted.
 Route::prefix('admin')->name('admin.')->group(function (): void {
-    Route::post('auth/login', [StaffAuthController::class, 'login'])->middleware('throttle:10,1')->name('auth.login');
+    Route::post('auth/login', [StaffAuthController::class, 'login'])->middleware('throttle:10,1,staff-login')->name('auth.login');
 
     Route::middleware('auth:staff')->group(function (): void {
         Route::post('auth/logout', [StaffAuthController::class, 'logout'])->name('auth.logout');
