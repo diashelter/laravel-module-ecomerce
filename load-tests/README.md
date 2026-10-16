@@ -74,7 +74,7 @@ Os perfis de volume dividem os VUs entre três fluxos:
 | Perfil | Forma da carga | Limites de requisição | Limites de aprovação |
 |---|---|---|---|
 | `smoke` | 1 VU por fluxo, uma iteração, passando por todos os casos de erro | reais | nenhum erro inesperado e 100% dos checks |
-| `load` | 0 a 50 VUs em 1 min, 5 min em 50, 1 min descendo | inertes | erro inesperado < 1%; p95 da vitrine < 500 ms; p95 de `POST /api/orders` < 1 s; p95 de `order_payable_wait` < 10 s |
+| `load` | 0 a 50 VUs em 1 min, 5 min em 50, 1 min descendo | inertes | erro inesperado < 1%; p95 da vitrine, de `POST /api/orders` e de `order_payable_wait` abaixo dos limites da linha de base (hoje 40 ms, 60 ms e 2.450 ms) |
 | `stress` | 0 a 150 VUs em 2 min, 5 min em 150, 2 min descendo | inertes | os mesmos do `load` |
 | `spike` | 50 VUs por 1 min, salto para 300 em 10 s, 1 min em 300, volta a 50 em 10 s e 2 min em 50 | inertes | erro inesperado < 5% |
 | `breakpoint` | taxa de chegada de 5 a 500 iterações/s em 15 min (`ramping-arrival-rate`) | inertes | aborta com erro inesperado > 5% ou p95 > 2 s, avaliado depois de 30 s |
@@ -105,7 +105,7 @@ Quando um limite cai, o `make load-test` sai com código diferente de zero, e os
 - **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 2 segundos, como o frontend faz, então a resolução da métrica é de 2 segundos. Ela mede o relay do outbox e o worker sob carga.
 - **`rate_limit_overshoot`:** quantos logins da rajada simultânea do `limits` passaram além do limite de 10. A métrica é só registrada, sem limite de aprovação.
 
-Os limites de latência valem até a primeira linha de base. Depois dela, passam a ser o p95 registrado vezes 1,2, arredondado para cima até a dezena de ms seguinte (`BASELINE` em `lib/profiles.js`).
+Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine, 1 s em `POST /api/orders` e 10 s em `order_payable_wait`. Agora eles são o p95 da linha do `load` vezes 1,2, arredondado para cima até a dezena de ms seguinte: 40 ms, 60 ms e 2.450 ms (`BASELINE` em `lib/profiles.js`). O `stress` e o `soak` usam os mesmos limites, então eles costumam reprovar: o relatório mostra quanto a API degradou.
 
 ## Os relatórios
 
@@ -127,6 +127,13 @@ O k6 roda na mesma VM do Docker que a API e disputa CPU com ela. Por isso, os n�
 
 | Data | Commit | Máquina | Perfil | VUs ou taxa | req/s | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Erro inesperado | Ponto de ruptura | Mudou desde a série anterior |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-16 | e467086 | Apple M1, VM do Docker com 8 CPUs e 4 GB | load | 50 VUs | 47.3 | 30.0 | 45.9 | 2034 | 0% | - | primeira série |
+| 2026-10-16 | 86126c1 | Apple M1, VM do Docker com 8 CPUs e 4 GB | breakpoint | 5 a 500 it/s | 106.0 | - | - | 3971 | 0% | 42.6 it/s (p95 acima de 2 s aos 70 s) | primeira série |
+
+Como as linhas foram aceitas:
+
+- **`load`:** a rodada anterior, no mesmo commit, teve p95 de 33,0 ms na vitrine, 54,6 ms em `POST /api/orders` e 2.040 ms em `order_payable_wait`. Todos ficaram a menos de 20% da linha registrada. A espera até pagar fica perto de 2 segundos porque é a resolução da consulta: o pedido já está pagável na primeira leitura.
+- **`breakpoint`:** a rodada anterior, com o mesmo código medido e só sem a métrica da taxa na parada, abortou aos 82 s. Pela rampa, isso dá cerca de 47 it/s, a menos de 20% de 42,6. A ruptura vem da fila do PHP-FPM: com 16 workers e as pausas de 1 a 3 s de cada passo, a taxa de chegada acumula mais de 500 VUs antes do aborto.
 
 ## As provas dos scripts
 
