@@ -10,10 +10,15 @@ use App\Modules\Payment\Contracts\PaymentGateway;
 use App\Modules\Payment\DTOs\ChargeRequest;
 use App\Modules\Payment\DTOs\ChargeResult;
 use App\Modules\Payment\Gateways\FakePaymentGateway;
+use App\Modules\Shared\Messaging\EventTransport;
+use App\Modules\Shared\Models\OutboxMessage;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Tests\Feature\Outbox\Fixtures\SpyTransport;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
@@ -189,6 +194,48 @@ function spyPaymentGateway(?Closure $answer = null): object
     };
 
     app()->instance(PaymentGateway::class, $spy);
+
+    return $spy;
+}
+
+/**
+ * The outbox messages recorded under an event name, oldest first.
+ *
+ * @return Collection<int, OutboxMessage>
+ */
+function outboxMessages(string $name): Collection
+{
+    return OutboxMessage::query()->where('name', $name)->orderBy('occurred_at')->orderBy('id')->get();
+}
+
+/** One `php artisan outbox:relay --once`: hands every pending message to the transport. Returns the exit code. */
+function relayOnce(): int
+{
+    return Artisan::call('outbox:relay', ['--once' => true]);
+}
+
+/**
+ * Runs the relay until no message is pending. With the sync queue each cycle runs the consumers,
+ * which may record the next events of the chain.
+ */
+function relayUntilIdle(): void
+{
+    for ($cycle = 1; OutboxMessage::query()->whereNull('published_at')->exists(); $cycle++) {
+        expect($cycle)->toBeLessThanOrEqual(10, 'The outbox never went idle.')
+            ->and(relayOnce())->toBe(0);
+    }
+}
+
+/**
+ * Binds a spy as the event transport the relay publishes through. It refuses the message ids in
+ * $failing with RuntimeException('transport down').
+ *
+ * @param  list<string>  $failing
+ */
+function spyTransport(array $failing = [], ?Closure $onPublish = null): SpyTransport
+{
+    $spy = new SpyTransport($failing, $onPublish);
+    app()->instance(EventTransport::class, $spy);
 
     return $spy;
 }

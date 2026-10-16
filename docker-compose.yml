@@ -36,6 +36,12 @@ services:
     command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--timeout=60"]
     restart: unless-stopped
 
+  # Publishes the pending outbox messages to the queue (one DeliverEvent per consumer).
+  outbox-relay:
+    <<: *php
+    command: ["php", "artisan", "outbox:relay"]
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
