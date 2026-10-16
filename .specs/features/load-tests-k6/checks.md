@@ -80,7 +80,7 @@ Proof: `sh load-tests/tests/make.sh --only down`
 **C16** - Uma rodada do `smoke` com a pilha de dev no ar deixa iguais, no banco de dev, as contagens de `customers`, `orders`, `products`, `stocks` e `outbox_messages`, e a listagem de `backend/bootstrap/cache` (AC 15, door 2)
 Proof: `sh load-tests/tests/isolation.sh --only dev-untouched`
 
-**C17** - `php artisan about --json` na `api` de carga informa `environment` `production`, `debug_mode` `false` e os logs `["stderr"]`, e o ambiente dela tem `LOG_LEVEL=warning` (AC 16, door 3)
+**C17** - `php artisan about --json` na `api` de carga informa `environment` `production`, `debug_mode` `false` e os logs `"stderr"`, e o ambiente dela tem `LOG_LEVEL=warning` (AC 16, door 3)
 Proof: `sh load-tests/tests/stack.sh --only app-settings`
 
 **C18** - Na `api` de carga, `opcache.validate_timestamps` é `0`. `/tmp/laravel/config.php`, `/tmp/laravel/routes-v7.php` e `/tmp/laravel/events.php` existem, e `config.php`, `routes-v7.php` e `events.php` não existem em `/var/www/backend/bootstrap/cache` (AC 17, doors 2 e 3)

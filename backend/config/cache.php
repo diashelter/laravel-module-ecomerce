@@ -19,6 +19,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Rate Limiter Store
+    |--------------------------------------------------------------------------
+    |
+    | The store the rate limiter keeps its counts in; null uses the default
+    | store. Only the load test stack sets it (CACHE_LIMITER=array): under
+    | PHP-FPM the array store lives for one request, so no limit is reached
+    | while k6 measures the API (load-tests/README.md). An empty value means
+    | the default store too: the cache manager has no store named "".
+    |
+    */
+
+    'limiter' => env('CACHE_LIMITER') ?: null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Cache Stores
     |--------------------------------------------------------------------------
     |

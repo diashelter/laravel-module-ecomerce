@@ -5,3 +5,6 @@
 
 # agent-skills CLI backup files
 .agents/*.backup
+
+# Reports of the k6 load test runs (make load-test)
+load-tests/results/
