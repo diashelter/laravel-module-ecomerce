@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 19,
+  "next_id": 26,
   "lessons": [
     {
       "id": "L-001",
@@ -328,6 +328,132 @@
       ],
       "created": "2026-10-16T14:02:09Z",
       "last_seen": "2026-10-16T14:02:09Z"
+    },
+    {
+      "id": "L-019",
+      "key": "surviving_mutant::prove what a wrapper hands to an external client with a fake client at its own layer not only the pure helpers it calls",
+      "text": "Prove what a wrapper hands to an external client with a fake client at its own layer, not only the pure helpers it calls.",
+      "signal": "surviving_mutant",
+      "scope": "load-tests/lib",
+      "status": "candidate",
+      "features": [
+        "load-tests-k6"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C74 F3, F3c (verification rounds 1 and 2) (load-tests/lib)"
+      ],
+      "created": "2026-10-16T21:08:51Z",
+      "last_seen": "2026-10-16T21:08:51Z"
+    },
+    {
+      "id": "L-020",
+      "key": "surviving_mutant::when a flow wires a tested decision to a metric pass the metric itself and pin the exact call so a no op callback cannot replace it",
+      "text": "When a flow wires a tested decision to a metric, pass the metric itself and pin the exact call, so a no-op callback cannot replace it.",
+      "signal": "surviving_mutant",
+      "scope": "load-tests/flows",
+      "status": "candidate",
+      "features": [
+        "load-tests-k6"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C42 F1, F1b (verification rounds 1 and 2) (load-tests/flows)"
+      ],
+      "created": "2026-10-16T21:08:51Z",
+      "last_seen": "2026-10-16T21:08:51Z"
+    },
+    {
+      "id": "L-021",
+      "key": "surviving_mutant::assert the distinctive output of the step a claim names not a message an earlier step already printed",
+      "text": "Assert the distinctive output of the step a claim names, not a message an earlier step already printed.",
+      "signal": "surviving_mutant",
+      "scope": "load-tests/tests",
+      "status": "candidate",
+      "features": [
+        "load-tests-k6"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C14 F5 (verification round 1), Makefile:154 (load-tests/tests)"
+      ],
+      "created": "2026-10-16T21:08:51Z",
+      "last_seen": "2026-10-16T21:08:51Z"
+    },
+    {
+      "id": "L-022",
+      "key": "surviving_mutant::when a rule applies to several variants assert it for every variant not only the first",
+      "text": "When a rule applies to several variants, assert it for every variant, not only the first.",
+      "signal": "surviving_mutant",
+      "scope": "load-tests/lib",
+      "status": "candidate",
+      "features": [
+        "load-tests-k6"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C77 F2 (verification round 1) (load-tests/lib)"
+      ],
+      "created": "2026-10-16T21:08:51Z",
+      "last_seen": "2026-10-16T21:08:51Z"
+    },
+    {
+      "id": "L-023",
+      "key": "surviving_mutant::prove what a counter counts through a tested decision a lower bound on its total cannot tell the counted outcome from its opposite",
+      "text": "Prove what a counter counts through a tested decision; a lower bound on its total cannot tell the counted outcome from its opposite.",
+      "signal": "surviving_mutant",
+      "scope": "load-tests/scenarios",
+      "status": "candidate",
+      "features": [
+        "load-tests-k6"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C63 burst counter mutant (verification round 2), scenarios/limits.js:77 (load-tests/scenarios)"
+      ],
+      "created": "2026-10-16T21:08:52Z",
+      "last_seen": "2026-10-16T21:08:52Z"
+    },
+    {
+      "id": "L-024",
+      "key": "spec_deviation::record a baseline only on a commit whose measured code stays unchanged until the feature closes and prove it with a diff over the measured paths",
+      "text": "Record a baseline only on a commit whose measured code stays unchanged until the feature closes, and prove it with a diff over the measured paths.",
+      "signal": "spec_deviation",
+      "scope": "load-tests",
+      "status": "candidate",
+      "features": [
+        "load-tests-k6"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C76, AC 71 (verification round 1) (load-tests)"
+      ],
+      "created": "2026-10-16T21:08:52Z",
+      "last_seen": "2026-10-16T21:08:52Z"
+    },
+    {
+      "id": "L-025",
+      "key": "ac_gap::prove a documented rule by grepping its full sentence a short fragment also matches the surrounding text",
+      "text": "Prove a documented rule by grepping its full sentence; a short fragment also matches the surrounding text.",
+      "signal": "ac_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "load-tests-k6"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C85 (verification round 2), tests/docs.sh:56 (docs)"
+      ],
+      "created": "2026-10-16T21:08:52Z",
+      "last_seen": "2026-10-16T21:08:52Z"
     }
   ]
 }

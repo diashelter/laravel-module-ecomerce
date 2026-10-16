@@ -122,6 +122,48 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: F4 round 1: CustomerMetricsQuery counted users (tests)
 - last seen: 2026-10-16T14:02:09Z
 
+### L-019 - Prove what a wrapper hands to an external client with a fake client at its own layer, not only the pure helpers it calls.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `load-tests/lib` · harmful: 0
+- features: load-tests-k6
+- evidence: C74 F3, F3c (verification rounds 1 and 2) (load-tests/lib)
+- last seen: 2026-10-16T21:08:51Z
+
+### L-020 - When a flow wires a tested decision to a metric, pass the metric itself and pin the exact call, so a no-op callback cannot replace it.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `load-tests/flows` · harmful: 0
+- features: load-tests-k6
+- evidence: C42 F1, F1b (verification rounds 1 and 2) (load-tests/flows)
+- last seen: 2026-10-16T21:08:51Z
+
+### L-021 - Assert the distinctive output of the step a claim names, not a message an earlier step already printed.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `load-tests/tests` · harmful: 0
+- features: load-tests-k6
+- evidence: C14 F5 (verification round 1), Makefile:154 (load-tests/tests)
+- last seen: 2026-10-16T21:08:51Z
+
+### L-022 - When a rule applies to several variants, assert it for every variant, not only the first.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `load-tests/lib` · harmful: 0
+- features: load-tests-k6
+- evidence: C77 F2 (verification round 1) (load-tests/lib)
+- last seen: 2026-10-16T21:08:51Z
+
+### L-023 - Prove what a counter counts through a tested decision; a lower bound on its total cannot tell the counted outcome from its opposite.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `load-tests/scenarios` · harmful: 0
+- features: load-tests-k6
+- evidence: C63 burst counter mutant (verification round 2), scenarios/limits.js:77 (load-tests/scenarios)
+- last seen: 2026-10-16T21:08:52Z
+
+### L-024 - Record a baseline only on a commit whose measured code stays unchanged until the feature closes, and prove it with a diff over the measured paths.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `load-tests` · harmful: 0
+- features: load-tests-k6
+- evidence: C76, AC 71 (verification round 1) (load-tests)
+- last seen: 2026-10-16T21:08:52Z
+
+### L-025 - Prove a documented rule by grepping its full sentence; a short fragment also matches the surrounding text.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: load-tests-k6
+- evidence: C85 (verification round 2), tests/docs.sh:56 (docs)
+- last seen: 2026-10-16T21:08:52Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

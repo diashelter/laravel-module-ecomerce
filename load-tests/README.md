@@ -134,7 +134,8 @@ Como as linhas foram aceitas:
 
 - **`load`:** a rodada anterior, no mesmo commit, teve p95 de 29,1 ms na vitrine, 46,7 ms em `POST /api/orders` e 2.041 ms em `order_payable_wait`. Todos ficaram a menos de 20% da linha registrada. A espera até pagar fica perto de 2 segundos porque é a resolução da consulta: o pedido já está pagável na primeira leitura.
 - **`breakpoint`:** a rodada anterior, no mesmo commit, parou em 48,6 it/s, a menos de 20% de 46,1. A ruptura vem da fila do PHP-FPM: com 16 workers e as pausas de 1 a 3 s de cada passo, a taxa de chegada acumula centenas de VUs antes do aborto.
-- O código medido (`backend/`, `docker/`, o `Makefile` e o Compose e o JavaScript desta pasta) não mudou entre `09760e2` e o fim da HEL-14. Depois da medição mudaram só esta tabela e `lib/baseline.js`.
+- Depois de `09760e2`, a rodada 2 da verificação mudou o código medido sem mudar as requisições: o `send()` passou a ser montado sobre um cliente HTTP, a espera passou a receber a métrica, e a rajada passou a contar por uma decisão testada. Por isso as linhas acima precisam ser medidas de novo.
+- **Rodadas não aceitas.** Em `d563093`, cinco rodadas seguidas do `load` deram p95 de vitrine e de `POST /api/orders` de 42,2 e 71,7 ms, 36,5 e 58,9 ms, 44,9 e 74,8 ms, 39,4 e 63,9 ms e 30,7 e 47,9 ms. Nenhum par seguido ficou a menos de 20%, medido sobre o menor p95. A carga média da máquina estava entre 3 e 6, com outros aplicativos abertos. O `breakpoint` parou em 39,5 e 36,1 it/s. Nenhuma linha nova entrou.
 
 ## As provas dos scripts
 

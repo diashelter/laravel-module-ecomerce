@@ -484,3 +484,12 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
 - **Abandoned:**
   - Guardar o `X-Request-ID` enviado na resposta do k6: a resposta é um objeto do host e não aceita propriedade nova. Ficou uma variável do módulo.
   - Medir o primeiro `breakpoint` sem a taxa na parada: a taxa passou a ser calculada no `handleSummary` a partir do fim do `setup()`.
+- **Rodada 2 da verificação (FAIL, 4 mutantes vivos):** corrigida em `51897fb`.
+  - O `send()` passou a ser montado sobre um cliente HTTP (`createSender`), e o teste usa um cliente falso para provar o que ele entrega ao k6 (C74, mutante F3c).
+  - O `countGiveUp` passou a receber a própria métrica, e a prova fixa a chamada exata no fluxo (C42, F1b).
+  - A rajada conta pela decisão `passedTheLimiter`, testada, com a chamada exata fixada (C63).
+  - A regra dos 20% é conferida pela frase inteira (C85). A `order_payable_wait` ganhou um teto de 60 s (C41).
+  - O texto do C14 diz de onde vem a mensagem. O `make.sh` cria `results/`, e os scripts recusam uma opção sem valor em vez de travar.
+  - As 4 variantes foram mortas num worktree antes da rodada 3 (F3c com saída 99).
+- **Linha de base em aberto:** a correção da rodada 2 mudou o código medido, e as linhas em `09760e2` deixaram de valer pelo C76. Em `d563093`, cinco rodadas do `load` variaram até 33% entre pares seguidos, com a máquina ocupada (carga média de 3 a 6). Nenhum par cumpriu a regra dos 20% da Key decision 8, e nada foi aceito. O C76 continua vermelho até uma medição numa máquina ociosa, ou até diashelter mudar a regra de aceite.
+- **Lições:** L-019 a L-025 foram gravadas como candidatas a partir das rodadas 1 e 2.
