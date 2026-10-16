@@ -1,9 +1,7 @@
 <?php
 
-use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Payment\Models\Payment;
-use Illuminate\Support\Facades\Event;
 
 const DELIVERY_ADDRESS_KEYS = ['recipient_name', 'postal_code', 'street', 'number', 'complement', 'district', 'city', 'state'];
 
@@ -27,7 +25,6 @@ function rioOrderSetup(): array
 }
 
 it('places an order with the delivery address and the shipping of its state', function () {
-    Event::fake([OrderPlaced::class]);
     [$user, $address, , $body] = rioOrderSetup();
 
     $response = $this->actingAs($user)->postJson('/api/orders', $body)
@@ -53,7 +50,6 @@ it('places an order with the delivery address and the shipping of its state', fu
 });
 
 it('stores the delivery copy and the shipping on the order row', function () {
-    Event::fake([OrderPlaced::class]);
     [$user, $address, , $body] = rioOrderSetup();
 
     $this->actingAs($user)->postJson('/api/orders', $body)->assertCreated();
@@ -78,13 +74,14 @@ it('charges the order total with the shipping', function () {
     $this->actingAs($user);
 
     $orderId = $this->postJson('/api/orders', $body)->assertCreated()->json('data.id');
+    // The relay publishes OrderPlaced, and the consumer moves the order to "awaiting_payment".
+    relayOnce();
     $this->postJson("/api/orders/{$orderId}/payment", ['card_token' => 'fake_card_approved'])->assertAccepted();
 
     expect(Payment::query()->sole()->amount_cents)->toBe(22200);
 });
 
 it('requires a delivery address to place an order', function () {
-    Event::fake([OrderPlaced::class]);
     $product = productWithStock(10);
 
     $response = $this->actingAs(customer())
@@ -97,7 +94,6 @@ it('requires a delivery address to place an order', function () {
 });
 
 it('refuses a delivery address that is not in the customer address book', function (string $kind) {
-    Event::fake([OrderPlaced::class]);
     $product = productWithStock(10);
     $addressId = $kind === 'another customer' ? addressOf(customer())->id : unknownId();
 
@@ -111,7 +107,6 @@ it('refuses a delivery address that is not in the customer address book', functi
 })->with(['another customer', 'unknown id']);
 
 it('ignores shipping and totals sent by the client', function () {
-    Event::fake([OrderPlaced::class]);
     [$user, , , $body] = rioOrderSetup();
 
     $this->actingAs($user)->postJson('/api/orders', [...$body, 'shipping_cents' => 0, 'total_cents' => 1, 'delivery_state' => 'SP'])
@@ -124,7 +119,6 @@ it('ignores shipping and totals sent by the client', function () {
 });
 
 it('keeps the delivery copy when the address changes later', function (string $change) {
-    Event::fake([OrderPlaced::class]);
     [$user, $address, , $body] = rioOrderSetup();
     $this->actingAs($user);
     $orderId = $this->postJson('/api/orders', $body)->assertCreated()->json('data.id');
@@ -143,7 +137,6 @@ it('keeps the delivery copy when the address changes later', function (string $c
 })->with(['edit', 'delete']);
 
 it('throttles order placement after 20 requests per minute', function () {
-    Event::fake([OrderPlaced::class]);
     $user = customer();
     $address = addressOf($user);
     $product = productWithStock(100);

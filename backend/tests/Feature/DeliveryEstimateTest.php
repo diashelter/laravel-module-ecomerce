@@ -16,9 +16,12 @@ it('shows the delivery estimate after the payment is approved', function () {
 
     $this->getJson("/api/orders/{$orderId}")->assertOk()->assertJsonPath('data.delivery.estimated_on', null);
 
+    // QUEUE_CONNECTION=sync: each relay cycle runs the consumers of the messages it publishes.
+    relayUntilIdle();
     $this->postJson("/api/orders/{$orderId}/payment", ['card_token' => 'fake_card_approved'])->assertAccepted();
 
-    // QUEUE_CONNECTION=sync: PaymentApproved -> OrderPaid -> DeliveryScheduled already ran.
+    // PaymentApproved -> OrderPaid -> DeliveryScheduled, one relay cycle each.
+    relayUntilIdle();
     $this->getJson("/api/orders/{$orderId}")
         ->assertOk()
         ->assertJsonPath('data.delivery.estimated_on', '2026-10-09')

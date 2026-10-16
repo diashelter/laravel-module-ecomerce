@@ -16,6 +16,7 @@ use App\Modules\Payment\Models\Payment;
 use App\Modules\Payment\Repositories\PaymentRepository;
 use App\Modules\Payment\Services\PaymentService;
 use App\Modules\Shared\Exceptions\BusinessRuleException;
+use App\Modules\Shared\Messaging\EventOutbox;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -23,8 +24,9 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Customer: pays an order through the payment gateway. Every attempt is recorded.
- * An approval is only announced (PaymentApproved): the order status is changed asynchronously
- * by the ordering side (see MarkOrderAsPaidUseCase). A decline leaves the order as it was.
+ * An approval is only announced (PaymentApproved, recorded with the approved attempt): the order
+ * status is changed asynchronously by the ordering side (see MarkOrderAsPaidUseCase). A decline
+ * leaves the order as it was.
  */
 final class PayOrderUseCase
 {
@@ -33,6 +35,7 @@ final class PayOrderUseCase
         private readonly PaymentService $rules,
         private readonly PaymentRepository $payments,
         private readonly PaymentGateway $gateway,
+        private readonly EventOutbox $outbox,
     ) {}
 
     /**
@@ -53,8 +56,17 @@ final class PayOrderUseCase
 
         try {
             // A savepoint when a transaction is already open: the unique violation then rolls back
-            // only this insert instead of aborting the caller's transaction (PostgreSQL).
-            $payment = DB::transaction(fn (): Payment => $this->payments->record($request, $result));
+            // only this insert instead of aborting the caller's transaction (PostgreSQL). The approved
+            // attempt and its PaymentApproved commit together: neither exists without the other.
+            $payment = DB::transaction(function () use ($request, $result, $order): Payment {
+                $payment = $this->payments->record($request, $result);
+
+                if ($result->status === PaymentStatus::Approved) {
+                    $this->outbox->record(new PaymentApproved($order->id));
+                }
+
+                return $payment;
+            });
         } catch (UniqueConstraintViolationException) {
             // A concurrent request recorded the approval first: this order is no longer payable.
             throw $this->rules->notPayable();
@@ -71,8 +83,6 @@ final class PayOrderUseCase
         if ($result->status === PaymentStatus::Declined) {
             throw new PaymentDeclinedException($result->declineReason);
         }
-
-        PaymentApproved::dispatch($order->id);
 
         return $payment;
     }

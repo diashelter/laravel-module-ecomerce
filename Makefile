@@ -14,7 +14,7 @@ DB_USERNAME ?= ecommerce
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down build rebuild ps logs logs-api logs-worker \
+.PHONY: help up down build rebuild ps logs logs-api logs-worker logs-relay \
 	shell artisan migrate migrate-fresh seed fresh optimize clear \
 	db-shell db-reset db-dump db-restore \
 	queue queue-restart queue-failed queue-retry \
@@ -40,14 +40,17 @@ rebuild: ## Reconstrói as imagens e inicia os containers
 ps: ## Mostra o status dos containers
 	$(DC) ps
 
-logs: ## Mostra os logs principais (api, worker, nginx, frontend)
-	$(DC) logs -f --tail=100 api queue-worker nginx frontend
+logs: ## Mostra os logs principais (api, worker, relay, nginx, frontend)
+	$(DC) logs -f --tail=100 api queue-worker outbox-relay nginx frontend
 
 logs-api: ## Mostra os logs da API
 	$(DC) logs -f --tail=100 api
 
 logs-worker: ## Mostra os logs do worker de filas
 	$(DC) logs -f --tail=100 queue-worker
+
+logs-relay: ## Mostra os logs do relay do outbox
+	$(DC) logs -f --tail=100 outbox-relay
 
 ## ---------- Laravel ----------
 
@@ -97,7 +100,7 @@ db-restore: ## Restaura um dump: make db-restore FILE=storage-dumps/dump.sql
 queue: ## Executa um worker em primeiro plano (além do container queue-worker)
 	$(ARTISAN) queue:work redis --sleep=1 --tries=3 --verbose
 
-queue-restart: ## Reinicia os workers (necessário após alterar código de jobs/listeners)
+queue-restart: ## Reinicia os workers e o relay (necessário após alterar jobs, consumidores ou o relay)
 	$(ARTISAN) queue:restart
 
 queue-failed: ## Lista os jobs que falharam

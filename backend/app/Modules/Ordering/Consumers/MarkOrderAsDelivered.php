@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Ordering\Listeners;
+namespace App\Modules\Ordering\Consumers;
 
 use App\Modules\Fulfillment\Events\OrderDelivered;
 use App\Modules\Ordering\UseCases\MarkOrderAsDeliveredUseCase;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Modules\Shared\Messaging\EventConsumer;
 
 /**
- * Queued listener (ordering): order delivered by the carrier -> order closed.
+ * Consumer (ordering): order delivered by the carrier -> order closed.
  */
-class MarkOrderAsDelivered implements ShouldQueue
+class MarkOrderAsDelivered implements EventConsumer
 {
-    public int $tries = 3;
-
     public function handle(OrderDelivered $event): void
     {
         app(MarkOrderAsDeliveredUseCase::class)->execute($event->orderId);

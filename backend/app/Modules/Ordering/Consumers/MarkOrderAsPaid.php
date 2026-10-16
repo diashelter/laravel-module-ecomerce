@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Ordering\Listeners;
+namespace App\Modules\Ordering\Consumers;
 
 use App\Modules\Ordering\UseCases\MarkOrderAsPaidUseCase;
 use App\Modules\Payment\Events\PaymentApproved;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Modules\Shared\Messaging\EventConsumer;
 
 /**
- * Queued listener (ordering): payment approved -> order paid.
+ * Consumer (ordering): payment approved -> order paid.
  */
-class MarkOrderAsPaid implements ShouldQueue
+class MarkOrderAsPaid implements EventConsumer
 {
-    public int $tries = 3;
-
     public function handle(PaymentApproved $event): void
     {
         app(MarkOrderAsPaidUseCase::class)->execute($event->orderId);

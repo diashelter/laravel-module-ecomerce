@@ -3,12 +3,8 @@
 use App\Modules\Identity\Models\CustomerAccount;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Models\Order;
-use App\Modules\Payment\Events\PaymentApproved;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
-
-beforeEach(fn () => Event::fake([PaymentApproved::class]));
 
 /** The 4 routes of the customer that point to a record: [method, uri, kind of record, expected status for the owner]. */
 dataset('customer record routes', [
@@ -70,8 +66,8 @@ it('answers another customer record as an unknown id', function (string $method,
     assertApiError($foreign->assertNotFound(), 'NOT_FOUND', 'Recurso não encontrado.');
     expect(Arr::except($foreign->json(), 'request_id'))->toBe(Arr::except($unknown->json(), 'request_id'))
         ->and(customerRecordRows())->toBe($before)
-        ->and($gateway->charges)->toBeEmpty();
-    Event::assertNotDispatched(PaymentApproved::class);
+        ->and($gateway->charges)->toBeEmpty()
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
 })->with('customer record routes');
 
 it('answers 404 before the status for another customer order', function (OrderStatus $status) {
@@ -92,8 +88,8 @@ it('answers 404 to the payment of an unknown order', function () {
 
     assertApiError($response->assertNotFound(), 'NOT_FOUND', 'Recurso não encontrado.');
     expect($gateway->charges)->toBeEmpty()
-        ->and(DB::table('payments')->count())->toBe(0);
-    Event::assertNotDispatched(PaymentApproved::class);
+        ->and(DB::table('payments')->count())->toBe(0)
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
 });
 
 it('validates the body before the owner in the customer routes', function (string $method, string $uri, string $kind, string $whose) {
@@ -143,8 +139,13 @@ it('keeps the query count of the owner reads and updates', function (string $rou
 
     expect($response->isSuccessful())->toBeTrue()
         ->and($queries)->toHaveCount($expected, implode("\n", $queries));
+
+    // The approved payment records its PaymentApproved in the outbox, in the same transaction.
+    if ($route === 'pay order') {
+        expect($queries[3])->toStartWith('insert into "outbox_messages"');
+    }
 })->with([
     ['show order', 2],
-    ['pay order', 3],
+    ['pay order', 4],
     ['update address', 2],
 ]);

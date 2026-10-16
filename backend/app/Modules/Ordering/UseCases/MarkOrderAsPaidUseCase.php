@@ -7,6 +7,8 @@ namespace App\Modules\Ordering\UseCases;
 use App\Modules\Ordering\Enums\OrderStatus;
 use App\Modules\Ordering\Events\OrderPaid;
 use App\Modules\Ordering\Repositories\OrderRepository;
+use App\Modules\Shared\Messaging\EventOutbox;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -15,19 +17,30 @@ use Illuminate\Support\Facades\Log;
  */
 final class MarkOrderAsPaidUseCase
 {
-    public function __construct(private readonly OrderRepository $orders) {}
+    public function __construct(
+        private readonly OrderRepository $orders,
+        private readonly EventOutbox $outbox,
+    ) {}
 
     public function execute(string $orderId): void
     {
         $order = $this->orders->findOrFail($orderId);
 
-        // A duplicated or late PaymentApproved does nothing, so OrderPaid is fired only once.
-        if (! $this->orders->transitionStatus($order, OrderStatus::AwaitingPayment, OrderStatus::PaymentApproved)) {
-            return;
+        // The transition and OrderPaid commit together: if recording fails, the order stays awaiting
+        // payment and the retried delivery moves it. A duplicated or late PaymentApproved moves
+        // nothing and records nothing, so OrderPaid is recorded only once.
+        $paid = DB::transaction(function () use ($order): bool {
+            if (! $this->orders->transitionStatus($order, OrderStatus::AwaitingPayment, OrderStatus::PaymentApproved)) {
+                return false;
+            }
+
+            $this->outbox->record(new OrderPaid($order->id, $order->delivery_business_days));
+
+            return true;
+        });
+
+        if ($paid) {
+            Log::info('Order payment approved.', ['order_id' => $order->id]);
         }
-
-        Log::info('Order payment approved.', ['order_id' => $order->id]);
-
-        OrderPaid::dispatch($order->id, $order->delivery_business_days);
     }
 }

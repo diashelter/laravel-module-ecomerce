@@ -8,7 +8,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 - Relacionamentos **1:1** (`Product` ↔ `Stock`) e **N:N** (`Product` ↔ `Category`)
 - Carrinho com **Pinia** e checkout validado no backend
 - **Transação atômica** + `lockForUpdate()` para controle de **concorrência** de estoque
-- **Eventos, listeners e jobs assíncronos** em fila **Redis**
+- **Eventos pelo outbox transacional**, consumidores e jobs assíncronos em fila **Redis**
 - Endereços de entrega, **frete por UF** calculado pelo servidor e **data prevista** de entrega
 - Dashboard administrativo com dados agregados no backend
 - Testes automatizados com **Pest**
@@ -30,7 +30,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 9. [Usuários de teste e dados disponíveis](#usuários-de-teste-e-dados-disponíveis)
 10. [Fluxo de checkout](#fluxo-de-checkout)
 11. [Transação e concorrência de estoque](#transação-e-concorrência-de-estoque)
-12. [Eventos, listeners, jobs e filas](#eventos-listeners-jobs-e-filas)
+12. [Eventos, outbox, consumidores e filas](#eventos-outbox-consumidores-e-filas)
 13. [Regra de disponibilidade do produto](#regra-de-disponibilidade-do-produto)
 14. [API REST](#api-rest)
 15. [Frontend](#frontend)
@@ -69,9 +69,14 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
             ┌───────▼┐   ┌─▼──────┐      ┌──────────────┐
             │   db   │   │ redis  │◄─────┤ queue-worker │  php artisan queue:work redis
             │ PG 18  │   │ fila / │      │ (mesma imagem│
-            └───▲────┘   │ sessão │      │   da api)    │
-                │        └────────┘      └──────┬───────┘
-                └───────────────────────────────┘
+            └▲───▲───┘   │ sessão │      │   da api)    │
+             │   │       └───▲────┘      └──────┬───────┘
+             │   └───────────┼──────────────────┘
+             │           ┌───┴──────────┐
+             └───────────┤ outbox-relay │  php artisan outbox:relay
+                         │ (mesma imagem│  outbox_messages → fila
+                         │   da api)    │
+                         └──────────────┘
 ```
 
 - **Frontend e backend no mesmo host** (`localhost:8080`): o Nginx encaminha `/api/*` e `/sanctum/*` para o Laravel e o restante para o Vite. Isso permite autenticação por cookie de sessão sem CORS.
@@ -85,7 +90,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
   - **Value objects** (`ValueObjects/`): conceitos com invariante própria, `final readonly`, que lançam `InvalidArgumentException` se construídos com um valor inválido. Hoje existem no Identity: `Email` e `Password`. Os Form Requests os usam pelas regras `EmailRule` e `PasswordRule`, que cada módulo com formulário de conta tem no seu `Http/Rules` (Identity e Customers, porque o `Http` de um módulo é privado) e que só traduzem o que o value object decide, e eles viram `string` só na gravação, no `toArray()` do `CreateUserDTO` e do `UpdateUserProfileDTO` (este deixa a senha de fora quando nenhuma nova é enviada).
   - **Listas tipadas** (também em `ValueObjects/`): as listas de domínio que atravessam camadas não são `array`. Cada uma é `final readonly`, implementa `IteratorAggregate` e `Countable`, é construída com parâmetro variádico tipado (um elemento de outro tipo lança `TypeError`) e calcula os próprios totais. No Catalog: `ProductIds` e `CategoryIds` (ids no formato canônico do UUID e sem repetição, senão `InvalidArgumentException`) e `CatalogProducts`/`CatalogProduct` (o que o contrato `ProductCatalog` devolve: id, nome, imagem, preço e se o produto está ativo). No Inventory: `StockQuantities` (quantidade por produto, 0 para produto sem linha de estoque). No Ordering: `ProductQuantities` (quantidade por produto, em ordem de `product_id`), `OrderLines`/`OrderLine` (linhas do pedido novo e o total derivado), `ValidatedCart`/`ValidatedCartLine` (resultado da validação do carrinho, com `total_cents` e `is_valid` derivados), `CustomerIds` e `OrderCountsByCustomer` (responde zero para cliente sem pedidos). Também no Ordering, `DeliveryAddress` (a cópia de um endereço que o pedido guarda) e `ShippingQuote` (preço e prazo de uma UF) são o vocabulário dos contratos `DeliveryAddressBook` e `ShippingQuoter`, `OrderForPayment` é o que o `PayableOrders` devolve e `OrderSummaries`/`OrderSummary` (id, status, total e data) são o histórico que o `CustomerOrderHistory` devolve. No Identity, `CustomerProfile` (a conta sem credenciais) é o que o `CustomerAccounts` devolve. O `CartDTO` é a lista tipada de `CartItemDTO`. O `array` só aparece onde o Laravel o exige: `whereIn`, `sync`, `createMany` e o `ValidatedCartResource`.
 - **Fronteiras verificadas por teste**: o `ModuleBoundariesTest` (teste de arquitetura do Pest) é uma lista do que é permitido. Ele gera uma expectativa para cada pasta privada de cada módulo (o `Http` incluído), a partir das pastas que existem, e uma para cada classe de `DTOs`, `ValueObjects` e `Enums` fora do vocabulário do módulo dono, a partir dos arquivos que existem, e falha se outro módulo usar uma delas ou a classe da raiz de um módulo (o service provider). Também confere que `Contracts` só tem interfaces, que nenhuma assinatura de contrato usa model ou coleção do Eloquent e que nenhum repository usa os services do próprio módulo, além das regras de direção entre módulos.
-- **Processamento assíncrono**: mudanças de status do pedido são feitas por listeners/jobs executados pelo container `queue-worker`.
+- **Processamento assíncrono**: mudanças de status do pedido são feitas por consumidores e jobs executados pelo container `queue-worker`. Os eventos chegam a eles pelo **outbox transacional**: o caso de uso grava o evento na mesma transação da mudança, e o container `outbox-relay` o publica na fila (ver [Eventos, outbox, consumidores e filas](#eventos-outbox-consumidores-e-filas)).
 
 ---
 
@@ -104,8 +109,8 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 │   │   │   ├── Identity/            as duas contas (User = equipe, CustomerAccount = comprador), papéis, logins (Sanctum, um guard por área), Email e Password (ValueObjects), EnsureUserIsAdmin; publica Contracts/ (CustomerAccounts) e IdentityServiceProvider
 │   │   │   ├── Customers/           "Minha conta", o caderno de endereços (`customer_addresses`) e a tela Clientes do admin (CustomerSummaryDTO), pelas contas do CustomerAccounts e pelo histórico do CustomerOrderHistory, com os próprios adaptadores HTTP de e-mail, senha, UF e conta; CustomersServiceProvider
 │   │   │   ├── Backoffice/          dashboard do admin (read model que lê todos os módulos)
-│   │   │   └── Shared/              infraestrutura comum: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID
-│   │   └── Providers/               AppServiceProvider (configurações globais)
+│   │   │   └── Shared/              infraestrutura comum: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID e o outbox transacional (Messaging/: DomainEvent, EventOutbox, EventTransport, EventSubscriptions, DeliverEvent, OutboxRelay; Console/: outbox:relay)
+│   │   └── Providers/               AppServiceProvider (configurações globais e a ligação do EventOutbox, do EventTransport e das inscrições)
 │   ├── config/shop.php              configurações da loja (delay da entrega, paginação, tabela de frete por UF)
 │   ├── database/
 │   │   ├── factories/
@@ -210,9 +215,10 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 | `make build` | Reconstrói as imagens (`docker compose build`) |
 | `make rebuild` | Reconstrói as imagens e inicia os containers |
 | `make ps` | Mostra o status dos containers |
-| `make logs` | Logs principais (api, queue-worker, nginx, frontend) |
+| `make logs` | Logs principais (api, queue-worker, outbox-relay, nginx, frontend) |
 | `make logs-api` | Logs da API |
 | `make logs-worker` | Logs do worker de filas |
+| `make logs-relay` | Logs do relay do outbox (`outbox-relay`) |
 
 ### Laravel
 
@@ -241,7 +247,7 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 | Comando | Descrição |
 | --- | --- |
 | `make queue` | Executa `php artisan queue:work redis` em primeiro plano (útil para ver o processamento ao vivo) |
-| `make queue-restart` | Reinicia os workers (**necessário após alterar código de jobs/listeners**) |
+| `make queue-restart` | Reinicia os workers e o relay do outbox (**necessário após alterar código de jobs, consumidores ou do relay**) |
 | `make queue-failed` | Lista os jobs que falharam |
 | `make queue-retry` | Reprocessa todos os jobs falhos (ou um: `make queue-retry ID=<uuid>`) |
 
@@ -302,6 +308,7 @@ customer_addresses                               categories
 | `orders` | `total_cents bigint` (centavos, itens + frete) com `CHECK (total_cents >= 0)`, `shipping_cents bigint` (`CHECK >= 0`), `delivery_business_days smallint` (`CHECK > 0`, o prazo prometido), `estimated_delivery_on date` (nula até o pagamento ser aprovado), a **cópia do endereço de entrega** em colunas `delivery_*` `NOT NULL` (exceto o complemento), com `CHECK` de CEP com 8 dígitos e de UF entre as 27, e `CHECK (total_cents >= shipping_cents)`. `status` (`placed`, `awaiting_payment`, `payment_approved`, `delivered`). `code char(8)` **único**, o código que as pessoas leem (ver abaixo), com `CHECK orders_code_format` |
 | `payments` | uma linha por **tentativa** de pagamento: `amount_cents` (cópia do total do pedido), `status` (`approved` / `declined`), `decline_reason`, `card_token`, `gateway`, `gateway_transaction_id`. Índice **único parcial** em `order_id` onde `status = 'approved'` (no máximo um aprovado por pedido) e `CHECK` de motivo só na recusa e de valor `>= 0` |
 | `order_items` | **snapshot** de `product_name` e `unit_price_cents`; `subtotal_cents bigint` (`unit_price_cents × quantity`), os dois com `CHECK >= 0`. Mudar o produto não altera pedidos antigos |
+| `outbox_messages` | o **outbox transacional**: uma linha por evento, gravada na transação da mudança que ele anuncia. `id uuid` (v7 da aplicação, também o id da mensagem), `name varchar(100)` (`ordering.order_paid`), `version smallint`, `payload jsonb` (só escalares), `request_id varchar(128)` (nulo fora de uma requisição), `occurred_at` e `published_at` (nulo enquanto pendente). Índice parcial `outbox_messages_pending_index (occurred_at, id) WHERE published_at IS NULL` para o relay e índice em `published_at` para a retenção. Sem chave estrangeira: o payload leva os ids como dado, e apagar uma mensagem não toca em nenhum outro registro |
 
 **Código do pedido:** toda tela mostra `#K7Q2M9XA` no lugar do id. O código tem 8 símbolos do alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (sem `0`, `O`, `1`, `I` e `L`, cerca de 850 bilhões de combinações), é sorteado pelo `OrderCodeGenerator` (`random_int`), é único e nunca muda. Só a colocação do pedido o grava. Ele vale só para leitura: URLs, contratos e eventos continuam com o id, e nenhum contrato recebe o código como parâmetro. O banco recusa um código nulo, de outro tamanho, com símbolo fora do alfabeto ou repetido.
 
@@ -383,10 +390,10 @@ Após o seed você terá: 2 membros da equipe, 10 clientes (todos com endereço)
    7. **recalcula os preços** a partir do catálogo em centavos inteiros (`unit_price_cents × quantity`, soma em `int`), sem `float`;
    8. **reduz o estoque** por `product_id`;
    9. cria o pedido (`placed`) com o **código sorteado**, a cópia do endereço, `shipping_cents`, `delivery_business_days` e `total_cents` = itens + frete, e os itens (snapshot de nome e preço). A gravação do pedido e dos itens roda num savepoint (`DB::transaction()` aninhado) aberto pelo próprio use case: se o código já existe, só o savepoint é desfeito e o código é sorteado de novo, até 3 sorteios, sem soltar o bloqueio nem refazer a baixa de estoque. Na terceira colisão seguida a exceção sobe, a transação inteira é desfeita e a API responde `500` (cerca de 1 em 850 bilhões por pedido existente);
-   10. **confirma a transação**;
-   11. dispara o evento `OrderPlaced`, com o id do pedido (somente após o commit).
+   10. grava o evento `OrderPlaced` no outbox, com o id do pedido, **ainda dentro da transação** (sem pedido não há mensagem, e sem mensagem não há pedido);
+   11. **confirma a transação**. O relay publica o `OrderPlaced` em seguida, e o consumidor move o pedido para `awaiting_payment`.
 6. O frontend limpa o carrinho e redireciona para `/payment/{orderId}` (o id do pedido, nunca o código), que mostra Subtotal, Frete e Total. O pagamento cobra o `total_cents` do pedido.
-7. Depois que o pagamento é aprovado, o Fulfillment calcula a data prevista e o pedido passa a mostrar "Entrega prevista: dd/mm/aaaa" (ver [Eventos, listeners, jobs e filas](#eventos-listeners-jobs-e-filas)).
+7. Depois que o pagamento é aprovado, o Fulfillment calcula a data prevista e o pedido passa a mostrar "Entrega prevista: dd/mm/aaaa" (ver [Eventos, outbox, consumidores e filas](#eventos-outbox-consumidores-e-filas)).
 
 Respostas: `201` (pedido criado, com o `code`), `409` (estoque insuficiente / produto indisponível, com detalhes por item em `errors`), `422` (dados inválidos, ou endereço fora do caderno do cliente), `401`/`403`/`429`.
 
@@ -436,7 +443,7 @@ Para ver a concorrência na prática, com o ambiente rodando, deixe um produto c
 
 ---
 
-## Eventos, listeners, jobs e filas
+## Eventos, outbox, consumidores e filas
 
 O ciclo de vida do pedido envolve três partes, que só conversam por eventos:
 
@@ -444,62 +451,94 @@ O ciclo de vida do pedido envolve três partes, que só conversam por eventos:
 - **Pagamento** (Payment): cobra pelo gateway, grava cada tentativa e só anuncia que o pagamento foi aprovado.
 - **Entrega** (Fulfillment): decide o frete e a data prevista, e anuncia que a data foi calculada e que a transportadora (fake) entregou.
 
+Todo evento passa pelo **outbox transacional** (HEL-9, design em [.design/transactional-outbox.md](.design/transactional-outbox.md)):
+
+1. O caso de uso grava o evento pelo `EventOutbox` **dentro da transação da mudança que ele anuncia**. O commit grava a mudança e a mensagem (uma linha de `outbox_messages`, pendente enquanto `published_at` é nulo) juntas, e um rollback desfaz as duas.
+2. O **relay** (`php artisan outbox:relay`, no container `outbox-relay`) reserva as mensagens pendentes das mais antigas para as mais novas, em lotes de 100 (`SELECT ... FOR UPDATE SKIP LOCKED`, então dois relays nunca pegam a mesma), entrega cada uma ao `EventTransport` e só então grava `published_at`.
+3. O transporte de hoje, o `QueueEventTransport`, põe na fila padrão (Redis) um job `DeliverEvent` **para cada consumidor inscrito** no nome do evento, com o envelope inteiro.
+4. O `queue-worker` roda o `DeliverEvent`: devolve ao `Context` o `request_id` da requisição que gravou o evento, reconstrói o evento (`fromPayload`) e chama o `handle()` do consumidor, que delega ao caso de uso. Esse caso de uso pode gravar o próximo evento da cadeia, de volta ao passo 1.
+
 ```
-POST /api/orders ──► OrderPlaced ──(fila)──► MarkOrderAsAwaitingPayment        placed → awaiting_payment
+POST /api/orders ──► OrderPlaced ══► MarkOrderAsAwaitingPayment              placed → awaiting_payment
 
 POST /api/orders/{order}/payment {card_token}
   Pagamento ──► PaymentGateway (fake) ──► payments (approved | declined)
              recusado: 402, pedido inalterado
-  Pagamento ──► PaymentApproved ──(fila)──► MarkOrderAsPaid                    awaiting_payment → payment_approved
-                                                │
-  Pedidos   ◄───────────────────────────────────┘──► OrderPaid
-                                                       │
-  Entrega   ──(fila)──► ScheduleOrderDelivery ──► DeliveryScheduled (data prevista)
-                                │                       │
-                                │       Pedidos ──(fila)──► RecordEstimatedDelivery      grava orders.estimated_delivery_on, sem mudar o status
-                                ▼
-                         DeliverOrder (job, delay 10s) ──► OrderDelivered
-                                                            │
-  Pedidos   ──(fila)──► MarkOrderAsDelivered ◄──────────────┘   payment_approved → delivered
+  Pagamento ──► PaymentApproved ══► MarkOrderAsPaid                          awaiting_payment → payment_approved
+                                        │
+  Pedidos   ◄───────────────────────────┘──► OrderPaid
+                                               │
+  Entrega   ══► ScheduleOrderDelivery ──► DeliveryScheduled (data prevista)
+                        │                       │
+                        │       Pedidos ══► RecordEstimatedDelivery          grava orders.estimated_delivery_on, sem mudar o status
+                        ▼
+                 DeliverOrder (job, delay 10s) ──► OrderDelivered
+                                                    │
+  Pedidos   ══► MarkOrderAsDelivered ◄──────────────┘                        payment_approved → delivered
+
+══►  gravado no outbox na transação ─► outbox-relay ─► DeliverEvent na fila ─► consumidor no queue-worker
 ```
 
 | Classe | Parte | Tipo | O que faz |
 | --- | --- | --- | --- |
-| `App\Modules\Ordering\Events\OrderPlaced` | Pedidos | Evento (`ShouldDispatchAfterCommit`) | Disparado após o commit do checkout |
-| `App\Modules\Ordering\Listeners\MarkOrderAsAwaitingPayment` | Pedidos | Listener (`ShouldQueue`) | Move o pedido para `awaiting_payment` (`MarkOrderAsAwaitingPaymentUseCase`) |
-| `App\Modules\Payment\Events\PaymentApproved` | Pagamento | Evento (`ShouldDispatchAfterCommit`) | Disparado pelo `PayOrderUseCase` quando o gateway aprova e a tentativa é gravada |
-| `App\Modules\Ordering\Listeners\MarkOrderAsPaid` | Pedidos | Listener (`ShouldQueue`) | Move para `payment_approved` e dispara `OrderPaid` (`MarkOrderAsPaidUseCase`) |
-| `App\Modules\Ordering\Events\OrderPaid` | Pedidos | Evento | Disparado só pela transição que de fato marcou o pedido como pago |
-| `App\Modules\Fulfillment\Listeners\ScheduleOrderDelivery` | Entrega | Listener (`ShouldQueue`) | Calcula a data prevista (`DeliveryCalendar`), registra no log, publica `DeliveryScheduled` e agenda o job de entrega (`ScheduleDeliveryUseCase`) |
-| `App\Modules\Fulfillment\Events\DeliveryScheduled` | Entrega | Evento (`ShouldDispatchAfterCommit`) | Carrega o id do pedido e a data prevista |
-| `App\Modules\Ordering\Listeners\RecordEstimatedDelivery` | Pedidos | Listener (`ShouldQueue`) | Grava `estimated_delivery_on`, **só se estiver vazia**, sem tocar no status (`RecordEstimatedDeliveryUseCase`) |
-| `App\Modules\Fulfillment\Jobs\DeliverOrder` | Entrega | Job (`ShouldQueue`) | Após `ORDER_DELIVERY_DELAY_SECONDS`, simula a entrega e dispara `OrderDelivered` (`DeliverOrderUseCase`) |
-| `App\Modules\Fulfillment\Events\OrderDelivered` | Entrega | Evento | Anuncia que a transportadora (fake) entregou o pedido |
-| `App\Modules\Ordering\Listeners\MarkOrderAsDelivered` | Pedidos | Listener (`ShouldQueue`) | Move para `delivered` (`MarkOrderAsDeliveredUseCase`) |
+| `App\Modules\Ordering\Events\OrderPlaced` | Pedidos | Evento `ordering.order_placed` (v1) | Gravado na transação do checkout |
+| `App\Modules\Ordering\Consumers\MarkOrderAsAwaitingPayment` | Pedidos | Consumidor | Move o pedido para `awaiting_payment` (`MarkOrderAsAwaitingPaymentUseCase`) |
+| `App\Modules\Payment\Events\PaymentApproved` | Pagamento | Evento `payment.payment_approved` (v1) | Gravado pelo `PayOrderUseCase` na mesma transação da tentativa aprovada |
+| `App\Modules\Ordering\Consumers\MarkOrderAsPaid` | Pedidos | Consumidor | Move para `payment_approved` e grava `OrderPaid` na mesma transação (`MarkOrderAsPaidUseCase`) |
+| `App\Modules\Ordering\Events\OrderPaid` | Pedidos | Evento `ordering.order_paid` (v1) | Gravado só pela transição que de fato marcou o pedido como pago |
+| `App\Modules\Fulfillment\Consumers\ScheduleOrderDelivery` | Entrega | Consumidor | Calcula a data prevista (`DeliveryCalendar`), registra no log, grava `DeliveryScheduled` numa transação só dele e, depois do commit, agenda o job de entrega (`ScheduleDeliveryUseCase`) |
+| `App\Modules\Fulfillment\Events\DeliveryScheduled` | Entrega | Evento `fulfillment.delivery_scheduled` (v1) | Carrega o id do pedido e a data prevista |
+| `App\Modules\Ordering\Consumers\RecordEstimatedDelivery` | Pedidos | Consumidor | Grava `estimated_delivery_on`, **só se estiver vazia**, sem tocar no status (`RecordEstimatedDeliveryUseCase`) |
+| `App\Modules\Fulfillment\Jobs\DeliverOrder` | Entrega | Job (`ShouldQueue`) | Após `ORDER_DELIVERY_DELAY_SECONDS`, simula a entrega e grava `OrderDelivered` numa transação só dele (`DeliverOrderUseCase`) |
+| `App\Modules\Fulfillment\Events\OrderDelivered` | Entrega | Evento `fulfillment.order_delivered` (v1) | Anuncia que a transportadora (fake) entregou o pedido |
+| `App\Modules\Ordering\Consumers\MarkOrderAsDelivered` | Pedidos | Consumidor | Move para `delivered` (`MarkOrderAsDeliveredUseCase`) |
 
+A camada de publicar e consumir fica no `Shared`:
+
+| Classe (`App\Modules\Shared\...`) | O que faz |
+| --- | --- |
+| `Messaging\DomainEvent` | O contrato de todo evento de módulo: `eventName()`, `eventVersion()`, `toPayload()` e `fromPayload()` |
+| `Messaging\EventOutbox` | Onde o caso de uso grava o evento (`record()`). Implementado pelo `Repositories\OutboxMessageRepository`, que recusa a gravação sem transação aberta (`LogicException`) e um valor do payload que não seja escalar nem nulo (`InvalidArgumentException`) |
+| `Messaging\EventEnvelope` | A mensagem como ela viaja: `id`, `name`, `version`, `payload`, `occurredAt` e `requestId`, as mesmas chaves das colunas de `outbox_messages` |
+| `Messaging\EventTransport` | A porta por onde o relay publica: retornar é aceitar, lançar exceção é recusar. Hoje a única implementação é o `Messaging\QueueEventTransport`; a HEL-13 acrescenta outra atrás de uma feature flag |
+| `Messaging\EventSubscriptions` | As inscrições, por nome de evento. Recusa (`LogicException`) um consumidor que não implementa `EventConsumer` ou cujo `handle()` não recebe a classe inscrita, e duas classes de evento com o mesmo nome |
+| `Messaging\EventConsumer` | A interface dos consumidores, que ficam em `<Módulo>/Consumers` |
+| `Messaging\DeliverEvent` | O job de uma entrega (mensagem, consumidor), com `$tries = 3` |
+| `Messaging\OutboxRelay`, `Console\RelayOutboxCommand` | O ciclo do relay e o processo `outbox:relay [--once]` |
+| `Models\OutboxMessage` | Uma linha de `outbox_messages` |
+
+- **O evento é gravado na transação da mudança, e gravar fora de uma é erro.** Antes, cada evento saía depois do commit, numa chamada separada à fila, e uma falha dela travava o pedido para sempre: em `placed` (sem o `OrderPlaced`), em `awaiting_payment` com o cliente já cobrado (sem o `PaymentApproved`) ou, no caso do `OrderPaid`, com a transição já gravada e o retry sem conseguir repeti-la. Agora a mensagem fica pendente até o transporte aceitar, e uma falha da fila só atrasa o pedido. No pagamento, a tentativa aprovada e o `PaymentApproved` entram juntos. Na marcação de pago, a transição e o `OrderPaid` entram juntos, e uma transição que não acontece não grava nada. O agendamento da entrega e a entrega, que não têm estado próprio, abrem uma transação só para a mensagem, e o `DeliverOrder` entra na fila depois do commit da `DeliveryScheduled`.
+- **Ninguém dispara evento pelo dispatcher do Laravel.** Nenhum evento de módulo tem listener do Laravel (o `bootstrap/app.php` não registra eventos), e o `DomainEventsTest` exige que toda classe de `Events` implemente `DomainEvent` e recusa, em `App\Modules`, o despacho de eventos do Laravel: o trait `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event` e o helper `event()`.
+- **O formato publicado não depende da classe PHP.** O nome é `<módulo>.<evento em snake_case>`, a versão é um inteiro a partir de 1 e o payload tem só escalares, em chaves snake_case: `order_id` em todos; `delivery_business_days` (inteiro) no `OrderPaid`; `estimated_delivery_on` (o dia de `America/Sao_Paulo`, em `Y-m-d`) no `DeliveryScheduled`. Mudar um payload é subir a versão. O `DeliverEvent` recusa uma versão que a classe inscrita não declara (`UnexpectedValueException`, com o nome e a versão) sem chamar o consumidor, e a entrega vai para o `failed_jobs`.
+- **Cada módulo inscreve os próprios consumidores** no `boot()` do seu service provider, e o produtor nunca lista quem o consome: o `OrderingServiceProvider` inscreve os 4 do Ordering e o `FulfillmentServiceProvider`, o `ScheduleOrderDelivery`.
+- **Uma entrega por consumidor.** Se um consumidor falha, só a entrega dele é repetida (até 3 tentativas) e depois vai para o `failed_jobs`; os outros consumidores da mesma mensagem rodam uma vez. O `make queue-failed` lista a entrega como `<nome do evento> -> <consumidor>`. Como a entrega carrega o envelope inteiro, um `make queue-retry` funciona mesmo depois que a mensagem foi apagada.
+- **A entrega acontece ao menos uma vez, e os consumidores são idempotentes.** Se o relay cair entre o transporte aceitar e a mensagem ser marcada, ela sai de novo. Não há inbox: as guardas dos consumidores bastam (a transição condicional de `orders.status` e a primeira gravação de `orders.estimated_delivery_on`). A ordem de entrega é só a melhor possível, e nenhum consumidor depende dela.
+- **O relay**: sem mensagem pendente, espera 500 ms; na primeira falha do transporte, para o ciclo, deixa aquela mensagem e as seguintes pendentes, registra um `warning` no log (com o `message_id`, o `name` e o erro), imprime uma linha de aviso na própria saída (`make logs-relay`) e tenta de novo depois de 5 s. Com `--once`, roda um ciclo e sai com `0`, ou `1` se o transporte recusou uma mensagem. Ele termina com `0`, depois do ciclo em andamento, quando o `php artisan queue:restart` roda (o mesmo sinal no cache que os workers usam), e o container o sobe de novo. Com o Redis fora, o cache também está, e o relay segue tentando publicar até ele voltar.
+- **Retenção**: as mensagens publicadas ficam 7 dias e são apagadas pelo relay ao iniciar e no máximo uma vez por hora. As pendentes nunca são apagadas. A tabela não é histórico e não serve para replay.
+- **O `request_id` atravessa o relay**: o `EventOutbox` grava o `request_id` do `Context` na mensagem, e o `DeliverEvent` o devolve ao `Context` antes do consumidor (ou o limpa, se a mensagem não tem um). Assim os logs do consumidor e os eventos que ele grava levam o `request_id` da requisição original, por toda a cadeia.
 - **A entrega escuta `OrderPaid`, não `PaymentApproved`.** Se escutasse direto o pagamento, o job de entrega correria em paralelo com a marcação de pago. Num retry ou atraso da fila, ele poderia rodar antes e o pedido ficaria preso em `payment_approved`.
-- Pagamento e entrega **nunca** alteram o pedido: quem escreve em `orders` são os listeners da parte de pedidos (o status e a data prevista).
+- Pagamento e entrega **nunca** alteram o pedido: quem escreve em `orders` são os consumidores da parte de pedidos (o status e a data prevista).
 - **Os eventos e o job carregam dados, nunca o model**: `OrderPlaced`, `PaymentApproved`, `OrderDelivered` e `DeliverOrder` levam o `orderId`; o `OrderPaid` leva o `orderId` e os `deliveryBusinessDays` prometidos no checkout; o `DeliveryScheduled` leva o `orderId` e a data prevista. Os casos de uso do Ordering carregam o pedido pelo id (`OrderRepository::findOrFail`), e o Fulfillment agenda a entrega sem ler o pedido. Um teste de reflexão (`OrderEventPayloadTest`) falha se um deles voltar a ter um model.
 - **A data prevista** conta os dias úteis prometidos no pedido (`delivery_business_days`, que chegam ao Fulfillment pelo `OrderPaid`) a partir do momento em que o Fulfillment trata o `OrderPaid`, em segunda a sexta e no fuso `America/Sao_Paulo` (uma compra às 23h30 de quarta, que já é quinta em UTC, conta a partir de quarta; sábado e domingo contam a partir de segunda). Feriados não são considerados. A primeira gravação vale: um retry ou um `DeliveryScheduled` repetido não muda a data, e um pedido que já foi entregue ainda recebe a sua data.
-- O `DeliverOrder` continua entregando depois do delay (`ORDER_DELIVERY_DELAY_SECONDS`), mesmo antes da data prevista: a entrega é simulada.
-- Os listeners são registrados automaticamente (event discovery do Laravel), procurando em `app/Modules/*/Listeners` (configurado em `bootstrap/app.php`).
-- Listeners e job são adaptadores finos: só delegam para o caso de uso correspondente.
-- Todas as transições usam `OrderRepository::transitionStatus($order, $from, $to)`, um `UPDATE ... WHERE status = :from`: se um job for executado duas vezes ou fora de ordem, ele simplesmente não faz nada (**idempotência**). Por isso um `PaymentApproved` duplicado gera um único `OrderPaid`, e um retry do `DeliverOrder` (que anuncia a entrega de novo) é ignorado.
+- O `DeliverOrder` continua entregando depois do delay (`ORDER_DELIVERY_DELAY_SECONDS`), mesmo antes da data prevista: a entrega é simulada. Ele é um comando interno do Fulfillment, e não um evento, então continua um job do Laravel, fora do outbox.
+- Consumidores e job são adaptadores finos: só delegam para o caso de uso correspondente.
+- Todas as transições usam `OrderRepository::transitionStatus($order, $from, $to)`, um `UPDATE ... WHERE status = :from`: se uma entrega for executada duas vezes ou fora de ordem, ela simplesmente não faz nada (**idempotência**). Por isso um `PaymentApproved` duplicado gera um único `OrderPaid`, e um retry do `DeliverOrder` (que anuncia a entrega de novo) é ignorado.
 - O endpoint de pagamento responde **`202 Accepted`** na aprovação, com a tentativa de pagamento, pois a mudança de status acontece de forma assíncrona. O frontend faz *polling* da página do pedido para mostrar a timeline sendo atualizada.
 - O administrador **não altera o status manualmente**: ele é controlado exclusivamente pelos eventos e jobs.
 
-Acompanhando a fila:
+Acompanhando a fila e o outbox:
 
 ```bash
 make logs-worker     # logs do container queue-worker
+make logs-relay      # logs do container outbox-relay
 make queue           # worker extra em primeiro plano
-make queue-failed    # jobs que falharam
+make queue-failed    # entregas e jobs que falharam
 make queue-retry     # reprocessar falhas
 ```
 
-> Depois de alterar código de listeners/jobs, rode `make queue-restart` — o worker mantém o código carregado em memória.
+> Depois de alterar código de consumidores, jobs ou do relay, rode `make queue-restart` — o worker e o relay mantêm o código carregado em memória.
 
-**Deploy que muda o formato de um evento ou job** (como a HEL-7, que trocou o model `Order` pelo `orderId`, e a HEL-11, que trocou o `orderId` de inteiro para UUID em texto): o `queue-restart` só troca o código do worker. Os jobs que já estão na fila, inclusive os `DeliverOrder` com delay, continuam no formato antigo e falham no código novo (na HEL-7, com `Typed property ...::$orderId must not be accessed before initialization`; na HEL-11, com um erro de tipo no `orderId`); o retry repete o erro e o pedido fica parado. Antes de subir o código, esvazie a fila com o código antigo:
+**Deploy que muda o formato de um evento ou job** (como a HEL-7, que trocou o model `Order` pelo `orderId`, a HEL-11, que trocou o `orderId` de inteiro para UUID em texto, e a HEL-9, que trocou os listeners pelos consumidores e as entregas `DeliverEvent`): o `queue-restart` só troca o código do worker e do relay. Os jobs que já estão na fila, inclusive os `DeliverOrder` com delay, continuam no formato antigo e falham no código novo (na HEL-7, com `Typed property ...::$orderId must not be accessed before initialization`; na HEL-11, com um erro de tipo no `orderId`; na HEL-9, porque a classe do listener mudou de lugar); o retry repete o erro e o pedido fica parado. Antes de subir o código, esvazie a fila e o outbox com o código antigo:
 
 ```bash
 make artisan CMD="down"
@@ -513,7 +552,11 @@ docker compose exec queue-worker php artisan queue:work redis --force --tries=3 
 make artisan CMD="queue:monitor redis:default"
 ```
 
-O `down` faz a API responder `503`, então nada novo entra na fila. O worker do container não processa jobs em manutenção, por isso o segundo comando usa `--force` e para sozinho depois de 30 segundos (mais que o `ORDER_DELIVERY_DELAY_SECONDS` padrão). Repita-o até o `queue:monitor` mostrar `[0]`: no Redis, essa contagem inclui os jobs com delay e os reservados. Depois suba o código, rode `make queue-restart` e `make artisan CMD="up"`.
+```bash
+make db-shell
+```
+
+O `down` faz a API responder `503`, então nenhum pedido novo grava mensagem. O relay continua publicando as pendentes durante a manutenção, e o worker do container não processa jobs em manutenção, por isso o segundo comando usa `--force` e para sozinho depois de 30 segundos (mais que o `ORDER_DELIVERY_DELAY_SECONDS` padrão). Repita-o até o `queue:monitor` mostrar `[0]` (no Redis, essa contagem inclui os jobs com delay e os reservados) e, no `psql` do `make db-shell`, `select count(*) from outbox_messages where published_at is null;` responder `0`. Depois suba o código, rode `make queue-restart` e `make artisan CMD="up"`. Mudar o payload de um evento com mensagens em trânsito pede uma versão nova e a leitura das duas versões, que ainda não existe (só a versão atual de cada evento é aceita). No ambiente local, `make fresh` e `make queue-restart` bastam.
 
 ---
 
@@ -650,7 +693,7 @@ make test-frontend                     # testes do frontend (Vitest)
 
 O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento com cartão de teste (`composables/usePayment`), o caderno de endereços (`composables/useAddressBook`), o checkout com endereço e frete (`composables/useCheckout`), o texto de entrega, a data só-dia, o CEP, as UFs e o menu da conta (`utils/delivery`, `utils/date`, `utils/postalCode`, `utils/states`, `utils/accountMenu`), os erros tratados globalmente (`services/api`: `401` por área, `403`, `419`, `429` e `5xx`; os demais ficam com cada página), a decisão do guard do router (inclusive a rota do caderno) e o menu do admin (`router/guards`, `utils/adminMenu`) e as permissões por papel (`stores/staff`, `stores/auth`). A lógica é testada sem DOM; o arranjo visual das telas é conferido no navegador. O CI roda só o backend; `make test-frontend` roda localmente.
 
-Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes.
+Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes, e nenhum relay roda sozinho: um evento gravado fica pendente até o teste rodar `outbox:relay --once` (`relayOnce()` e `relayUntilIdle()` em `tests/Pest.php`). Com a fila `sync`, os consumidores rodam dentro do ciclo do relay.
 
 ### Em que nível testar
 
@@ -659,6 +702,7 @@ O nível de um teste depende do formato do código, não do nome da camada. Cód
 | Código | Provas exigidas | Cobertura esperada |
 | --- | --- | --- |
 | Decide e é alcançado pelo HTTP (services, use cases, adaptadores) | uma na borda (teste de feature) **e** uma na própria camada | na borda: o contrato de cada status; na camada: um caso afirmado por linha da tabela de decisão |
+| Decide e é alcançado só por um comando ou pela fila (o relay do outbox, o `DeliverEvent`, o transporte de fila, as inscrições) | uma na borda: o comando pelo `Artisan`, a entrega pela fila `sync` ou `database`, a inscrição pelo service provider no boot | um caso afirmado por linha da tabela de decisão, sem teste separado da classe interna |
 | Decide no frontend (composables, stores, utils) | uma na própria camada, com Vitest e os services simulados | um caso por resposta tratada e por estado relevante |
 | Garantia do banco (índice único, `CHECK`) | uma direto no banco | um caso por restrição, aceito e recusado |
 | Regra de fronteira entre módulos | uma expectativa de arquitetura por namespace, gerada das pastas que existem, vista falhando com uma violação de propósito | toda regra nova |
@@ -691,7 +735,13 @@ O frontend ainda não é verificado no CI.
 | `CheckoutShippingTest` | pedido com a cópia do endereço e o frete da UF, colunas gravadas, valor cobrado com frete, `422` sem endereço / com endereço de outro cliente, frete e total do cliente ignorados, cópia intacta depois de editar ou excluir o endereço, `429`, `404` de pedido desconhecido |
 | `UseCases/Order/PlaceOrderUseCaseTest` | o caso de uso com o orçamento e o endereço simulados; endereço desconhecido recusado antes de tocar no estoque |
 | `Models/OrderDeliveryTest` | `CHECK`/`NOT NULL` da cópia do endereço, do frete, do prazo e do total direto no banco |
-| `OrderStatusFlowTest` | listeners de cada evento, transições, entrega agendada só após `OrderPaid`, job com delay, `DeliveryScheduled` com a data prevista, log sem o endereço, registro da data (primeira vale, status inalterado, pedido já entregue), idempotência, ciclo completo |
+| `OrderStatusFlowTest` | as 5 inscrições de consumidores, `OrderPlaced` entregue pela fila (`DeliverEvent`), transições, entrega agendada só após `OrderPaid`, job com delay, `DeliveryScheduled` com a data prevista, log sem o endereço, registro da data (primeira vale, status inalterado, pedido já entregue), idempotência, ciclo completo pelo relay com o `request_id` do pagamento em todas as mensagens seguintes |
+| `Outbox/EventOutboxTest` | a forma de `outbox_messages` no catálogo (colunas, índices, nenhuma chave estrangeira), a gravação dentro da transação (uma mensagem pendente, id v7), o rollback, a recusa fora de transação, os valores aceitos e recusados no payload (um `resource` também é recusado) e o `request_id` do `Context` e da requisição |
+| `Outbox/EventDeliveryTest` | uma entrega por consumidor com o envelope inteiro e um nome sem consumidor, pelo relay; o evento reconstruído, o `request_id` restaurado ou limpo, a versão recusada, a falha isolada com 3 tentativas, o `failed_jobs` e o que o `queue:failed` lista (o evento e o consumidor), pelo `queue:work` com a conexão `database`; as recusas da inscrição, pelo `boot()` de um service provider; a entrega depois da limpeza e nenhum listener do Laravel nos eventos |
+| `Outbox/OutboxRelayTest` | o relay pelo comando: ordem, marcação, o envelope montado de cada coluna da linha, parada na primeira falha com o `warning`, saídas `0` e `1`, `FOR UPDATE SKIP LOCKED` com a reserva, a publicação e a marca numa transação só, a mensagem entregue de novo quando o relay para antes do commit, esperas de 500 ms e 5 s, retenção de 7 dias e limpeza por hora, sinal de reinício e o cache fora do ar |
+| `Outbox/OrderEventsOutboxTest` | a gravação desfeita junto com a mudança (pagamento `500` sem aprovação nem mensagem, pedido ainda em `awaiting_payment`, nenhum `DeliverOrder`) e as janelas 1 e 2 com o transporte fora e de volta |
+| `Unit/Architecture/DomainEventsTest` | toda classe de `Events` implementa `DomainEvent`, e nenhum módulo usa o `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event` ou o helper `event()`. Vistos falhando com uma violação de propósito por regra |
+| `Unit/Architecture/OrderEventPayloadTest` | nenhum model nos 5 eventos e no `DeliverOrder`; o nome, a versão e o payload de cada evento (chaves exatas, o inteiro do `OrderPaid`, o dia de São Paulo do `DeliveryScheduled`) e a volta pelo `fromPayload` |
 | `DeliveryEstimateTest` | a data prevista chega à API depois do pagamento aprovado; admin e loja veem o mesmo bloco `delivery` |
 | `Unit/Services/DeliveryCalendarTest` | dias úteis em horário de São Paulo: meio de semana, sexta, sábado, 23h30 de Brasília e 10 dias |
 | `Account/CustomerAddressTest` | caderno: listagem, cadastro, normalização da UF e do complemento, CEP, campos obrigatórios e tamanhos, limite de 10 (`409`), edição, exclusão, endereço de outro cliente (`404`), `404`, `401` |
@@ -701,7 +751,7 @@ O frontend ainda não é verificado no CI.
 | `Account/CustomerRecordRoutesTest` | as 4 rotas do cliente com registro (pedido, pagamento e endereço): o dono recebe `200`/`202`/`204`, o registro de outro cliente responde como um id desconhecido (mesmo corpo, nada alterado, nenhuma cobrança), `404` antes do status, `404` do pagamento desconhecido sem cobrança, `422` antes do dono, `DELETE` do endereço sem leitura prévia e a contagem de queries do dono |
 | `Admin/StaffRecordRoutesTest` | as 15 rotas da equipe e da vitrine com registro: o id chega como `string`, id desconhecido é `404` sem mudar nenhuma das 9 tabelas, corpo inválido é `422` para id existente e desconhecido, e a contagem de queries (estoque com 3 queries e um só `FOR UPDATE`, `DELETE` de produto, categoria e membro sem leitura prévia, cliente lido uma vez no `PUT`, as demais leituras e edições com a contagem de antes) |
 | `Unit/Services/ShippingRateTableTest` e `ShippingQuoteTest` | as 27 linhas da tabela de frete, a rota pública, `422`, `429` e o contrato `ShippingQuoter` igual à rota |
-| `PaymentTest` | `202` + tentativa gravada + evento, `402` para cada cartão recusado, nova tentativa após recusa, `422` do `card_token`, `409` fora de `awaiting_payment` ou com aprovado, corrida perdida, valor sempre do pedido, pedido de outro cliente (`404`, antes do status), garantias do banco, log sem o token, `429` |
+| `PaymentTest` | `202` + tentativa gravada + mensagem `payment.payment_approved` no outbox, `402` para cada cartão recusado, nova tentativa após recusa, `422` do `card_token`, `409` fora de `awaiting_payment` ou com aprovado, corrida perdida, valor sempre do pedido, pedido de outro cliente (`404`, antes do status), garantias do banco, log sem o token, `429` |
 | `Unit/Gateways/FakePaymentGatewayTest` | resultado de cada cartão de teste, valor ignorado, id de transação novo |
 | `Admin/*` | categorias (slug), produtos, estoque, clientes (`CustomerTest`), equipe (`StaffTest`), papéis (`StaffRoleTest`: todo `DELETE` do admin só para `admin`, percorrendo a tabela de rotas; `404` dos ids desconhecidos), pedidos e dashboard |
 | `Account/AccountTest` | resumo e edição de perfil/senha |
@@ -732,12 +782,13 @@ O frontend ainda não é verificado no CI.
 | --- | --- | --- |
 | `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api` e `/sanctum` para o PHP-FPM e o resto para o Vite (inclui WebSocket do HMR) |
 | `api` | `docker/php/Dockerfile` (PHP 8.5-FPM) | Laravel. Instala as dependências do Composer na primeira execução |
-| `queue-worker` | mesma imagem da `api` | `php artisan queue:work redis` — processa listeners e jobs |
+| `queue-worker` | mesma imagem da `api` | `php artisan queue:work redis` — processa as entregas aos consumidores (`DeliverEvent`) e os jobs |
+| `outbox-relay` | mesma imagem da `api` | `php artisan outbox:relay` — publica as mensagens pendentes de `outbox_messages` na fila, em até 1 s, e apaga as publicadas há mais de 7 dias |
 | `frontend` | `docker/node/Dockerfile` (Node 24) | Servidor de desenvolvimento do Vite |
 | `db` | `postgres:18-alpine` | Banco principal (`ecommerce`) e de testes (`ecommerce_testing`) |
 | `redis` | `redis:8-alpine` | Fila, sessões e cache |
 
-O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O worker precisa de `make queue-restart` após mudanças em jobs/listeners.
+O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O worker e o relay precisam de `make queue-restart` após mudanças em jobs, consumidores ou no relay.
 
 ---
 
@@ -750,12 +801,12 @@ O código do backend e do frontend é montado como volume: alterações aparecem
 5. Saia e **crie uma conta** de cliente em `/register` (ou use `cliente@example.com`).
 6. Adicione produtos ao carrinho e vá para o **checkout**: o backend valida o estoque e o endereço de entrega já vem escolhido (`cliente@example.com` tem um endereço em SP; uma conta nova abre o formulário no próprio checkout). O frete da UF aparece junto com o total e o prazo.
 7. **Confirme a compra**: a transação bloqueia e reduz o estoque e cria o pedido, com a cópia do endereço e o frete. Em **Minha conta → Endereços** dá para cadastrar outros endereços, editar e excluir; os pedidos já feitos não mudam.
-8. Na página de pagamento, o status passa de *Pedido efetuado* para *Aguardando pagamento* (listener na fila).
+8. Na página de pagamento, o status passa de *Pedido efetuado* para *Aguardando pagamento* (o relay publica o `OrderPlaced` e o consumidor roda na fila).
 9. Escolha **Recusado: saldo insuficiente** e clique em **Pagar**: a recusa aparece na página e o pedido continua aguardando pagamento. Escolha **Cartão aprovado** e clique em **Pagar**: o pedido vai para *Pagamento aprovado* e, após ~10 s, para *Pedido entregue* (job com delay). A timeline atualiza sozinha, e o pedido mostra "Entrega prevista: dd/mm/aaaa" (ou "Pedido entregue" no fim).
 10. Veja o histórico em **Minha conta → Meus pedidos**.
 11. Entre novamente em `/admin/login` como admin: o pedido aparece em **Pedidos** e as métricas do dashboard foram atualizadas.
 
-Dica: deixe `make logs-worker` aberto em outro terminal para ver os jobs sendo processados.
+Dica: deixe `make logs-worker` aberto em outro terminal para ver as entregas e os jobs sendo processados (`ordering.order_placed -> ...MarkOrderAsAwaitingPayment`). Para ver o outbox segurando um evento, pare o Redis (`docker compose stop redis`) antes de confirmar a compra: o pedido fica em *Pedido efetuado*, a mensagem continua pendente e o `make logs-relay` avisa a cada 5 s; depois de `docker compose start redis`, o pedido segue para *Aguardando pagamento*.
 
 ---
 
@@ -785,7 +836,7 @@ Decisões relevantes:
 
   ```
   Modules/Ordering/
-    DTOs/  Enums/  Events/  Exceptions/  Listeners/  Models/
+    Consumers/  DTOs/  Enums/  Events/  Exceptions/  Models/
     Repositories/  Services/  UseCases/  ValueObjects/
     Http/Controllers/(Admin/)  Http/Requests/(Admin/)  Http/Resources/
   ```
@@ -822,5 +873,12 @@ Decisões relevantes:
 - **Vocabulário público dos módulos** (HEL-10, design em [.design/module-vocabulary.md](.design/module-vocabulary.md)):
   - **Público é o que uma assinatura expõe**, não a pasta. O `ModuleBoundariesTest` lê por reflexão os métodos públicos das interfaces de `Contracts` e das classes de `Events` de cada módulo e segue os tipos nativos (parâmetros, retornos, propriedades públicas) em cada classe alcançada. Hoje são 22 tipos públicos (por exemplo `CatalogProducts`, `StockQuantities`, `Email` e `Password` pelo `CreateUserDTO`, `OrderStatus` pelo `OrderForPayment`, `DeclineReason` e `PaymentStatus` pelo `ChargeResult`) e 23 privados (por exemplo `ValidatedCart`, `OrderLines`, `ProductQuantities`, `LoginCredentialsDTO`, `UserRole`). Um tipo novo numa assinatura fica público e uma classe nova que nenhuma assinatura alcança fica privada, sem editar o teste.
   - **O `Http` de cada módulo é privado, sem exceção.** O Customers tem o seu `EmailRule`, `PasswordRule`, `NormalizesEmailInput`, `NormalizesStateInput` e `CustomerProfileResource`, e o Fulfillment o seu `NormalizesStateInput`. Eles só traduzem para o Laravel o que `Email`, `Password` e `BrazilianState` decidem (o `HttpAdaptersTest` cobra), e o `CustomerProfileResourceTest` mantém a conta no mesmo formato no Identity e no Customers. Expor as peças do Identity e do Ordering como exceção foi descartado: poria código de framework na superfície pública.
+- **Outbox transacional** (HEL-9, design em [.design/transactional-outbox.md](.design/transactional-outbox.md)):
+  - **O evento é gravado na transação da mudança que ele anuncia**, e gravar sem transação aberta é erro de programação. A recusa confere as transações que contam para os callbacks de commit (`app('db.transactions')->callbackApplicableTransactions()`), e não o `DB::transactionLevel()`: dentro do `RefreshDatabase` o nível nunca é zero, e a recusa não poderia ser provada. Despachar em `DB::afterCommit` foi descartado: é a mesma janela de antes, porque o envio falha depois do commit. O driver de fila `database` também funcionaria como outbox, mas prende os eventos aos jobs do Laravel, que é o que a HEL-13 quer deixar.
+  - **Um relay por polling, num container próprio** (`outbox-relay`), em vez de uma tarefa do scheduler por minuto (até 1 min de espera), de um job de relay despachado depois do commit (que esperaria o próximo evento se o envio falhasse) ou de `LISTEN/NOTIFY` do PostgreSQL (mais uma conexão para gerenciar).
+  - **O envelope tem formato próprio**: o nome `<módulo>.<evento>` e a versão, não a classe PHP (a HEL-12 vai mudar os namespaces), e o payload escrito por cada evento (`toPayload`), não derivado das propriedades por reflexão, para que renomear uma propriedade não mude o formato publicado sem ninguém perceber.
+  - **O transporte é uma porta** (`EventTransport`) e cada consumidor se inscreve no módulo que consome. A forma mais leve, republicar as mensagens no dispatcher do Laravel com os listeners `ShouldQueue` de antes, perdeu porque a HEL-13 pede consumidores fora dos jobs do Laravel. A inscrição explícita venceu a descoberta pelo tipo do `handle()`: com 5 consumidores, a lista no service provider é mais fácil de ler.
+  - **Uma tabela só**, sem chave estrangeira, com a migration junto das demais até a HEL-12. Sem inbox por consumidor, sem histórico nem replay, e sem garantia de ordem entre mensagens.
+  - **Sem migração de dados**: a tabela é nova. Quem tem banco local roda `make fresh` (ou `make migrate`) e `make queue-restart`, e o `make up` sobe o container novo.
 - **Pagamento recusado** não cria status no pedido: a recusa (`402`) é gravada em `payments` e o pedido continua em `awaiting_payment`, mantendo os quatro status de negócio da especificação.
 - **Gateway de pagamento atrás de uma porta:** o `PayOrderUseCase` só conhece a interface `PaymentGateway`, ligada ao `FakePaymentGateway` no `PaymentServiceProvider`. Trocar de gateway é uma classe nova e uma ligação. O fake decide pelo cartão de teste (`fake_card_approved`, `fake_card_insufficient_funds`, `fake_card_declined`; qualquer outro é cartão inválido). A cobrança é síncrona: um gateway que confirme depois (Pix, webhook) exigiria um estado pendente. Ver [.design/fake-payment-gateway.md](.design/fake-payment-gateway.md).

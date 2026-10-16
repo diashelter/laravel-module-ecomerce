@@ -14,10 +14,6 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    // Listeners live inside each module (app/Modules/<Module>/Listeners).
-    ->withEvents(discover: [
-        __DIR__.'/../app/Modules/*/Listeners',
-    ])
     ->withMiddleware(function (Middleware $middleware): void {
         // First global middleware: every response (errors included) gets an X-Request-ID.
         $middleware->prepend(AssignRequestId::class);
