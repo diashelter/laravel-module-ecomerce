@@ -60,7 +60,7 @@ Atualize a documentação sempre que a mudança:
 - **Camadas dentro de cada módulo** (ver o README): controllers finos, casos de uso em `UseCases/`, regras puras em `Services/` (sem banco, transação ou eventos) e acesso a dados só em `Repositories/`, que não usam os services do módulo (o `ModuleBoundariesTest` cobra).
 - **Ligações explícitas:** um model novo declara a sua factory com `#[UseFactory]` (e a factory declara `protected $model`). As convenções de namespace do Laravel (`App\Models`) não valem para os módulos.
 - **Fronteiras entre contextos** (ver a [análise de domínio](docs/domain-analysis.md)):
-  - **A facade de um módulo é o seu `Contracts/` mais os seus `Events/`.** Um módulo só usa outro por eles; as demais pastas (`Models`, `Repositories`, `Services`, `UseCases`, `Jobs`, `Listeners`, `Http`, uma pasta nova...) e o service provider são privados.
+  - **A facade de um módulo é o seu `Contracts/` mais os seus `Events/`.** Um módulo só usa outro por eles; as demais pastas (`Models`, `Repositories`, `Services`, `UseCases`, `Jobs`, `Consumers`, `Http`, uma pasta nova...) e o service provider são privados.
   - **De `DTOs`, `ValueObjects` e `Enums`, só o vocabulário é público:** as classes que os tipos nativos das assinaturas de `Contracts` e `Events` do próprio módulo alcançam (parâmetros, retornos e propriedades públicas, o construtor incluído), de forma transitiva. O `ModuleBoundariesTest` calcula isso a cada execução: para tornar um tipo público, ele precisa aparecer numa assinatura real de contrato ou evento do módulo dono (nunca crie um método só para isso), e um tipo citado só em docblock continua privado.
   - **O `Http` de cada módulo é privado.** Um módulo que precisa de uma regra de validação, de um trait de normalização ou de um resource de outro tem o seu adaptador no próprio `Http`, que só traduz o que o value object ou o enum decide, sem escrever limite, expressão regular ou lista de valores (o `HttpAdaptersTest` cobra os do Customers e do Fulfillment).
   - Contratos e eventos falam em **dados** (ids, value objects, enums), nunca em models ou coleções do Eloquent. Um contrato só existe para uma travessia real e leva o nome do papel de que o chamador precisa. É implementado por um repositório do módulo dono e ligado no service provider dele. Quando o fornecedor já depende do consumidor, o consumidor define o contrato.
@@ -73,6 +73,13 @@ Atualize a documentação sempre que a mudança:
   - As exceções que existem (o dashboard, inclusive o enum `ProductStatus` do Catalog, a vitrine e a lista de estoque do admin, até a HEL-6) ficam declaradas no `ModuleBoundariesTest`. Não crie exceção nova para fazer o teste passar.
   - Fora do próprio estoque, use os contratos de `App\Modules\Inventory\Contracts` (`StockInitializer`, `StockLevels`, `StockReservation`), nunca o `StockRepository`.
   - Só a parte de pedidos altera o status do pedido. Pagamento e entrega apenas publicam eventos (`PaymentApproved`, `OrderDelivered`).
+- **Eventos pelo outbox transacional** (HEL-9, ver o README e o [design](.design/transactional-outbox.md)):
+  - **Todo evento é gravado pelo `EventOutbox` (`Shared\Messaging`), dentro da transação da mudança que ele anuncia.** Nunca dispare um evento pelo dispatcher do Laravel (o trait `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event`, o helper `event()`) nem "atualize e depois dispare": gravar sem transação aberta lança `LogicException`, e o `DomainEventsTest` recusa o despacho direto em `App\Modules`. Um caso de uso sem estado próprio abre uma transação só para a mensagem, e um job que depende do evento entra na fila depois do commit dele.
+  - **A tabela é `outbox_messages`**: `id` (UUID v7 da aplicação, também o id da mensagem), `name`, `version`, `payload` (`jsonb`), `request_id`, `occurred_at` e `published_at` (nulo enquanto pendente), sem chave estrangeira. As publicadas ficam 7 dias; as pendentes nunca são apagadas.
+  - **Todo evento de módulo implementa `DomainEvent`**: o nome estável `<módulo>.<evento em snake_case>` (nunca a classe PHP), a versão (um inteiro a partir de 1), `toPayload()` com só escalares ou nulo em chaves snake_case (ids em texto, datas em `Y-m-d`) e `fromPayload()`. Mudar um payload é subir a versão; o `DeliverEvent` recusa uma versão que a classe não declara.
+  - **O relay publica pela porta `EventTransport`** (`publish(EventEnvelope)`: retornar é aceitar, lançar exceção é recusar). Casos de uso, eventos e consumidores não sabem qual é o transporte; um transporte novo é uma implementação nova, ligada no `AppServiceProvider`.
+  - **O consumidor fica em `<Módulo>/Consumers`**, implementa `EventConsumer` e tem um único `handle()` que recebe a classe do evento. O módulo que consome o inscreve no `boot()` do seu service provider (`$subscriptions->subscribe(OrderPaid::class, ScheduleOrderDelivery::class)`), e o produtor nunca lista os consumidores. Cada consumidor recebe a sua entrega (`DeliverEvent`, 3 tentativas), ao menos uma vez: ele precisa ser idempotente.
+  - O `request_id` da requisição vai na mensagem e volta ao `Context` do consumidor; não o passe à mão.
   - O `User` é identidade e não conhece pedidos. O lado de pedidos usa o `Customer`, que é somente leitura.
   - O Catalog não usa models nem repositories do Ordering. Quando precisar de algo dos pedidos, use o contrato que ele mesmo define (`ProductOrderHistory`), implementado pelo Ordering.
   - O módulo `Shared` é só infraestrutura e não depende de nenhum módulo de negócio.
@@ -93,7 +100,7 @@ make test
 docker compose exec -T api ./vendor/bin/pint --test
 ```
 
-Depois de alterar listeners ou jobs, reinicie o worker:
+Depois de alterar consumidores, jobs ou o relay do outbox, reinicie o worker e o relay:
 
 ```bash
 make queue-restart

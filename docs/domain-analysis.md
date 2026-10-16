@@ -1,7 +1,7 @@
 # Análise de Domínio: Contextos Delimitados do Backend
 
 > Análise estratégica (DDD) do código em [`backend/`](../backend), feita em 06/10/2026.
-> Última atualização: 15/10/2026 (ids UUID v7 e nenhuma rota resolvendo registro, HEL-11: toda chave de negócio é um UUID v7 em texto, o pedido ganha o código de 8 símbolos, o controller carrega o id até o use case ou o repositório, o dono entra na busca das rotas do cliente e as três policies de dono saem; antes, em 09/10/2026, vocabulário público dos módulos, HEL-10: de `DTOs`, `ValueObjects` e `Enums` só é público o que as assinaturas de `Contracts` e `Events` expõem, calculado pelo `ModuleBoundariesTest`, e o `Http` de cada módulo é privado, com o Customers e o Fulfillment usando os próprios adaptadores; antes, no mesmo dia, ajustes da revisão do PR #12: repository sem service, um só resource para a conta de cliente e a nota de deploy sobre payloads na fila; antes, em 08/10/2026: facades dos módulos: cada módulo é usado de fora só pelos seus contratos e eventos, que falam em dados, e o `ModuleBoundariesTest` virou uma lista do que é permitido; em 07/10/2026: endereços de entrega e frete: Customers com o caderno de endereços, Fulfillment com a tabela de frete e a data prevista, e o pedido com a cópia do endereço; equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
+> Última atualização: 15/10/2026 (outbox transacional, HEL-9: todo evento é gravado em `outbox_messages` na transação da mudança que ele anuncia, com nome e versão próprios, o relay do container `outbox-relay` o publica pela porta `EventTransport` e cada consumidor inscrito recebe a sua entrega, com o `request_id` de origem; antes, no mesmo dia, ids UUID v7 e nenhuma rota resolvendo registro, HEL-11: toda chave de negócio é um UUID v7 em texto, o pedido ganha o código de 8 símbolos, o controller carrega o id até o use case ou o repositório, o dono entra na busca das rotas do cliente e as três policies de dono saem; antes, em 09/10/2026, vocabulário público dos módulos, HEL-10: de `DTOs`, `ValueObjects` e `Enums` só é público o que as assinaturas de `Contracts` e `Events` expõem, calculado pelo `ModuleBoundariesTest`, e o `Http` de cada módulo é privado, com o Customers e o Fulfillment usando os próprios adaptadores; antes, no mesmo dia, ajustes da revisão do PR #12: repository sem service, um só resource para a conta de cliente e a nota de deploy sobre payloads na fila; antes, em 08/10/2026: facades dos módulos: cada módulo é usado de fora só pelos seus contratos e eventos, que falam em dados, e o `ModuleBoundariesTest` virou uma lista do que é permitido; em 07/10/2026: endereços de entrega e frete: Customers com o caderno de endereços, Fulfillment com a tabela de frete e a data prevista, e o pedido com a cópia do endereço; equipe e clientes em contas separadas, com papéis `admin` e `suporte`; todos os 5 passos do plano de evolução concluídos; listas de domínio tipadas; Payment com modelo próprio e gateway fake atrás de uma porta).
 > O objetivo é identificar subdomínios (Core, Supporting, Generic), mapear os contextos delimitados (bounded contexts) e apontar problemas de coesão e acoplamento.
 
 ## Sumário
@@ -79,6 +79,9 @@ Score = (
 
  Payment e Fulfillment não se conhecem: só o Ordering muda o status do pedido.
 
+ Todo evento atravessa pelo outbox transacional do Shared: gravado na transação da
+ mudança, publicado pelo relay e entregue a cada consumidor inscrito pelo módulo que consome.
+
  Ordering define os contratos DeliveryAddressBook (implementado pelo Customers) e
  ShippingQuoter (implementado pelo Fulfillment): o Ordering não conhece nenhum dos dois módulos.
 
@@ -100,10 +103,11 @@ Score = (
 | Ordering | Payment | Customer/Supplier: o Payment lê o pedido pelo contrato `PayableOrders` (`OrderForPayment`: cliente, total e status) e decide se ele pode ser pago |
 | Ordering | Customers | Open Host Service: contrato `CustomerOrderHistory` (contagens e `OrderSummaries`) para as telas da conta e de clientes |
 | Identity | Customers | Open Host Service: contrato `CustomerAccounts` (`CustomerProfile`); as regras da conta ficam no Identity |
-| Payment | Ordering | Evento de domínio `PaymentApproved` (com o `orderId`): o Ordering marca o pedido como pago |
-| Ordering | Fulfillment | Evento de domínio `OrderPaid` (com o `orderId` e os dias úteis prometidos): o Fulfillment agenda a entrega sem ler o pedido |
-| Fulfillment | Ordering | Evento de domínio `OrderDelivered`: o Ordering encerra o pedido |
-| Fulfillment | Ordering | Evento de domínio `DeliveryScheduled`: o Ordering grava a data prevista, sem mudar o status |
+| Payment | Ordering | Evento de domínio `PaymentApproved` (`payment.payment_approved`, com o `order_id`), gravado no outbox na transação da tentativa aprovada: o Ordering marca o pedido como pago |
+| Ordering | Fulfillment | Evento de domínio `OrderPaid` (`ordering.order_paid`, com o `order_id` e os dias úteis prometidos), gravado na transação da transição: o Fulfillment agenda a entrega sem ler o pedido |
+| Fulfillment | Ordering | Evento de domínio `OrderDelivered` (`fulfillment.order_delivered`), pelo outbox: o Ordering encerra o pedido |
+| Fulfillment | Ordering | Evento de domínio `DeliveryScheduled` (`fulfillment.delivery_scheduled`, com o dia em `Y-m-d`), pelo outbox: o Ordering grava a data prevista, sem mudar o status |
+| Shared | todos os que publicam ou consomem | Published Language: o envelope do outbox (nome `<módulo>.<evento>`, versão e payload de escalares). O produtor grava pelo `EventOutbox`, e o módulo que consome inscreve os seus consumidores no `EventSubscriptions`; ninguém conhece o transporte |
 | Customers | Ordering | Inversão de dependência: o contrato `DeliveryAddressBook` é definido pelo Ordering e implementado pelo Customers; o Ordering recebe a cópia de um endereço do cliente |
 | Fulfillment | Ordering | Inversão de dependência: o contrato `ShippingQuoter` é definido pelo Ordering e implementado pelo Fulfillment; o Ordering recebe o preço e o prazo para uma UF |
 | Identity | todos | Conformist: os outros contextos referenciam apenas o id da conta (um UUID em texto); o cliente autenticado entra neles só como id, e o dono é conferido na busca do registro |
@@ -134,10 +138,11 @@ Score = (
 - `PurchaseAvailabilityService` (Service): fonte única da regra "pode ser comprado" (produto ativo **e** com estoque).
 - `Customer` (Read model): o comprador visto pelo pedido, uma projeção somente leitura de `customers` (`id`, `name`, `email`). O pedido guarda `orders.customer_id`.
 - `PlaceOrderUseCase` (Use Case): checkout atômico. Resolve o endereço e o frete antes da transação (um endereço que não é do cliente responde `422` sem tocar no estoque) e grava o pedido com a cópia, o frete e o total.
-- `RecordEstimatedDeliveryUseCase` (Use Case) e o listener `RecordEstimatedDelivery`: gravam a data prevista que o Fulfillment anunciou, só se o pedido ainda não tem uma.
+- `RecordEstimatedDeliveryUseCase` (Use Case) e o consumidor `RecordEstimatedDelivery`: gravam a data prevista que o Fulfillment anunciou, só se o pedido ainda não tem uma.
 - `ValidateCartUseCase` (Use Case): validação do carrinho, só leitura.
 - `MarkOrderAsAwaitingPaymentUseCase` (Use Case): primeira transição de status.
-- `OrderPlaced` (Domain Event), `InsufficientStockException`.
+- `OrderPlaced` e `OrderPaid` (Domain Events, `ordering.order_placed` e `ordering.order_paid`), `InsufficientStockException`.
+- Consumidores em [`Consumers/`](../backend/app/Modules/Ordering/Consumers/) (`MarkOrderAsAwaitingPayment`, `MarkOrderAsPaid`, `RecordEstimatedDelivery`, `MarkOrderAsDelivered`), inscritos pelo `OrderingServiceProvider`.
 - `OrderCodeGenerator` (Service): sorteia o código de 8 símbolos que as pessoas leem no lugar do id (`orders.code`, único). O `PlaceOrderUseCase` sorteia de novo numa colisão, até 3 vezes, num savepoint.
 
 **Por que é o Core Domain:** concentra a lógica mais sofisticada e mais crítica do sistema:
@@ -146,7 +151,7 @@ Score = (
 - O preço sempre vem do banco, nunca do cliente.
 - Os itens guardam um snapshot histórico de nome e preço.
 - As transições de status são idempotentes (`OrderRepository::transitionStatus`), o que torna seguros os retries das filas.
-- O evento só é disparado depois do commit (`ShouldDispatchAfterCommit`).
+- O evento é gravado no outbox na mesma transação da mudança que ele anuncia (o pedido e o `OrderPlaced`; a transição para `payment_approved` e o `OrderPaid`): um commit nunca fica sem o seu evento, e uma falha da fila só atrasa o pedido.
 - O pedido nasce com a cópia do endereço e o frete calculado no servidor: editar ou excluir o endereço, ou mudar a tabela de frete, nunca altera um pedido feito.
 
 **Dependências:**
@@ -240,8 +245,8 @@ Score = (
 
 - [`ShippingRateTable`](../backend/app/Modules/Fulfillment/Services/ShippingRateTable.php) (Service): a tabela de preço e prazo por UF, lida de `config('shop.shipping_rates')`. Implementa o contrato `ShippingQuoter` do Ordering, ligado no [`FulfillmentServiceProvider`](../backend/app/Modules/Fulfillment/FulfillmentServiceProvider.php), e responde `GET /api/shipping/quote` (público).
 - [`DeliveryCalendar`](../backend/app/Modules/Fulfillment/Services/DeliveryCalendar.php) (Service): a contagem de dias úteis (segunda a sexta, sem feriados) no fuso `America/Sao_Paulo`.
-- Listener `ScheduleOrderDelivery` (consome `OrderPaid`) e [`ScheduleDeliveryUseCase`](../backend/app/Modules/Fulfillment/UseCases/ScheduleDeliveryUseCase.php): calcula a data prevista a partir dos dias úteis que o `OrderPaid` carrega, sem ler o pedido, registra no log (só ids e data, nunca o endereço), publica `DeliveryScheduled` e agenda o `DeliverOrder`, todos com o `orderId`.
-- Job `DeliverOrder` e `DeliverOrderUseCase` (transportadora fake).
+- Consumidor `ScheduleOrderDelivery` (consome `OrderPaid`, inscrito pelo `FulfillmentServiceProvider`) e [`ScheduleDeliveryUseCase`](../backend/app/Modules/Fulfillment/UseCases/ScheduleDeliveryUseCase.php): calcula a data prevista a partir dos dias úteis que o `OrderPaid` carrega, sem ler o pedido, registra no log (só ids e data, nunca o endereço), grava `DeliveryScheduled` no outbox numa transação só dele e, depois do commit, agenda o `DeliverOrder`, todos com o `orderId`.
+- Job `DeliverOrder` e `DeliverOrderUseCase` (transportadora fake), que grava `OrderDelivered` no outbox numa transação só dele. O `DeliverOrder` é um comando interno, e não um evento: continua um job do Laravel, fora do outbox.
 - `DeliveryScheduled` e `OrderDelivered` (Domain Events), publicados pelo Fulfillment e consumidos pelo Ordering.
 - `ShippingQuoteController` e `ShippingQuoteRequest` (a UF é normalizada antes de validar pelo [`NormalizesStateInput`](../backend/app/Modules/Fulfillment/Http/Requests/Concerns/NormalizesStateInput.php) do próprio Fulfillment, que chama `BrazilianState::normalize`).
 - `config('shop.delivery_delay_seconds')`.
@@ -310,7 +315,7 @@ Score = (
 
 ### Shared Kernel (infraestrutura, não é domínio)
 
-`ApiErrorCode`, `ApiErrorResponse`, `ApiExceptionRenderer`, `BusinessRuleException`, `ApiFormRequest`, `BaseRepository`, middleware `AssignRequestId`.
+`ApiErrorCode`, `ApiErrorResponse`, `ApiExceptionRenderer`, `BusinessRuleException`, `ApiFormRequest`, `BaseRepository`, middleware `AssignRequestId` e a camada de eventos (HEL-9, problema 14): [`Messaging/`](../backend/app/Modules/Shared/Messaging/) (`DomainEvent`, `EventOutbox`, `EventEnvelope`, `EventTransport` e `QueueEventTransport`, `EventSubscriptions`, `EventConsumer`, `DeliverEvent`, `OutboxRelay`), o model `OutboxMessage` e o `OutboxMessageRepository`, e o comando `outbox:relay`. Ela não conhece nenhum evento de negócio: cada módulo declara os seus e inscreve os seus consumidores.
 
 ---
 
@@ -321,7 +326,7 @@ Score = (
 | Catalog | Inventory | Baixo | ✅ O estoque é criado pelo contrato `StockInitializer`, por id; restam as leituras por `Product::stock()` na vitrine, declaradas como exceção até a HEL-6 | Resolver as leituras na HEL-6 (CQRS) |
 | Ordering | Inventory | Alto (necessário) | ✅ O checkout usa só o contrato `StockReservation` e o carrinho o `StockLevels`, por id e com `StockQuantities`, na mesma transação | Manter: a consistência sob concorrência exige a transação única |
 | Ordering | Catalog | Baixo | ✅ O snapshot de nome e preço está correto, e o Ordering lê os produtos pelo contrato `ProductCatalog`, sem o model `Product` nem o `ProductRepository` | Customer/Supplier: o Catalog publica preço e status |
-| Ordering | Payment | Baixo | ✅ O Payment lê o pedido pelo contrato `PayableOrders` e só publica `PaymentApproved` (com o id); o Ordering muda o status. O Payment tem modelo próprio (`Payment`) e cobra pela porta `PaymentGateway` | Manter a integração por contrato e eventos |
+| Ordering | Payment | Baixo | ✅ O Payment lê o pedido pelo contrato `PayableOrders` e só grava `PaymentApproved` (com o id) no outbox, na transação da tentativa aprovada; o Ordering muda o status. O Payment tem modelo próprio (`Payment`) e cobra pela porta `PaymentGateway` | Manter a integração por contrato e eventos |
 | Payment | Fulfillment | Nenhum | ✅ Não se conhecem: o Fulfillment reage a `OrderPaid`, publicado pelo Ordering | Manter a integração por eventos |
 | Identity | Ordering | Baixo | ✅ O Ordering referencia o cliente só por id (`orders.customer_id`) e lê nome e e-mail pelo `Customer`. O `User` da equipe é proibido no Ordering, no Payment e no Fulfillment (`ModuleBoundariesTest`), e o cliente autenticado entra no Ordering só como id, com o dono conferido na busca | Conformist: manter o `Customer` somente leitura |
 | Catalog | Ordering | Baixo | ✅ A exclusão pergunta pelo contrato `ProductOrderHistory`, definido pelo Catalog e implementado pelo Ordering | Manter a inversão de dependência |
@@ -330,6 +335,7 @@ Score = (
 | Fulfillment | Customers | Nenhum | ✅ O Fulfillment não conhece o caderno de endereços: o pedido carrega a cópia de que ele precisa (`ModuleBoundariesTest`) | Manter |
 | Customers | Identity | Baixo | ✅ O Customers cria, edita, busca e lista as contas pelo contrato `CustomerAccounts`, que devolve `CustomerProfile`, e usa do Identity só esse contrato e o vocabulário que ele expõe (`CustomerProfile`, `CreateUserDTO`, `UpdateUserProfileDTO`, `Email`, `Password`). As regras de e-mail e senha e o resource da conta são adaptadores do próprio Customers (problema 12) | Manter o contrato |
 | Customers | Ordering | Baixo | ✅ A contagem e os pedidos recentes vêm pelo contrato `CustomerOrderHistory`, como `OrderSummaries` | Manter o contrato |
+| Shared | todos os módulos com eventos | Baixo | ✅ A camada de eventos é infraestrutura: o Shared não depende de nenhum módulo de negócio, o produtor só grava pelo `EventOutbox` e o consumidor só implementa `EventConsumer` e é inscrito pelo próprio módulo. Nenhum dos dois conhece o transporte (`EventTransport`) | Manter: a HEL-13 acrescenta o segundo transporte atrás da mesma porta |
 
 ---
 
@@ -397,7 +403,7 @@ Score = (
   Ordering           MarkOrderAsDelivered: payment_approved → delivered
   ```
 
-  - Ordering: [`MarkOrderAsPaidUseCase`](../backend/app/Modules/Ordering/UseCases/MarkOrderAsPaidUseCase.php) e [`MarkOrderAsDeliveredUseCase`](../backend/app/Modules/Ordering/UseCases/MarkOrderAsDeliveredUseCase.php), com os eventos [`OrderPaid`](../backend/app/Modules/Ordering/Events/OrderPaid.php) e os listeners `MarkOrderAsPaid` / `MarkOrderAsDelivered`.
+  - Ordering: [`MarkOrderAsPaidUseCase`](../backend/app/Modules/Ordering/UseCases/MarkOrderAsPaidUseCase.php) e [`MarkOrderAsDeliveredUseCase`](../backend/app/Modules/Ordering/UseCases/MarkOrderAsDeliveredUseCase.php), com os eventos [`OrderPaid`](../backend/app/Modules/Ordering/Events/OrderPaid.php) e os listeners `MarkOrderAsPaid` / `MarkOrderAsDelivered` (hoje consumidores em `Consumers/`, problema 14).
   - Payment: [`PayOrderUseCase`](../backend/app/Modules/Payment/UseCases/PayOrderUseCase.php).
   - Fulfillment: [`ScheduleDeliveryUseCase`](../backend/app/Modules/Fulfillment/UseCases/ScheduleDeliveryUseCase.php), [`DeliverOrderUseCase`](../backend/app/Modules/Fulfillment/UseCases/DeliverOrderUseCase.php), o job [`DeliverOrder`](../backend/app/Modules/Fulfillment/Jobs/DeliverOrder.php) e o evento [`OrderDelivered`](../backend/app/Modules/Fulfillment/Events/OrderDelivered.php).
 - **Desvio da recomendação original:** a matriz sugeria que o Fulfillment escutasse `PaymentApproved`. Assim, a entrega e a marcação de pago correriam em paralelo; num retry ou atraso da fila, a entrega poderia rodar antes e o pedido ficaria preso em `payment_approved`. Por isso o Ordering publica `OrderPaid` **só depois** da transição, e o Fulfillment escuta esse evento.
@@ -465,7 +471,7 @@ Score = (
   - a regra "a senha só muda quando uma nova é enviada" saiu do `UserService`, que foi apagado, para o [`UpdateUserProfileDTO::toArray()`](../backend/app/Modules/Identity/DTOs/UpdateUserProfileDTO.php), ao lado do `CreateUserDTO::toArray()`. O `CustomerAccountRepository` deixou de depender de um service, e o `ModuleBoundariesTest` ganhou a regra `repositories do not use the module services` (uma expectativa por módulo com as duas pastas; uma violação de propósito no Ordering fez o teste falhar);
   - a conta de cliente tem um único formato na API, o [`CustomerProfileResource`](../backend/app/Modules/Identity/Http/Resources/CustomerProfileResource.php) do Identity, alimentado pelo `CustomerAccount::toProfile()`. O `CustomerAccountResource` e a cópia do resource no Customers saíram (na HEL-10, o Customers voltou a ter o seu, porque o `Http` de um módulo ficou privado, e um teste mantém os dois no mesmo formato: ver o problema 12);
   - o `ProductRepository::findManyKeyedById` foi inlinado no `findMany` do `ProductCatalog`, seu único chamador, e o parâmetro `$withStock`, que ninguém passava, saiu;
-  - um deploy que muda o formato de um evento ou job precisa esvaziar a fila antes, porque o `queue-restart` não converte os payloads que já estão nela (ver o [README](../README.md#eventos-listeners-jobs-e-filas)).
+  - um deploy que muda o formato de um evento ou job precisa esvaziar a fila antes, porque o `queue-restart` não converte os payloads que já estão nela (ver o [README](../README.md#eventos-outbox-consumidores-e-filas)).
 
 #### 12. ✅ Resolvido: um módulo usava o `Http`, os DTOs, os value objects e os enums internos de outro
 
@@ -495,6 +501,21 @@ Score = (
 - **Custo aceito:** os 48 bits mais significativos do UUID v7 são o instante de criação em milissegundos, então o id revela quando o registro nasceu. O produto, o endereço, o cliente, a equipe e o pedido já mostravam `created_at`; só a categoria, o estoque e o pagamento passam a revelar o instante. Um UUID também não é credencial: por isso o dono continua sendo conferido, agora na busca.
 - **Testes:** `Database/UuidKeysTest`, `UuidIdsTest`, `Models/OrderCodeTest`, `Unit/Services/OrderCodeGeneratorTest`, `Unit/Architecture/IdTypesTest`, `Unit/Architecture/OrderCodeBoundariesTest`, `Unit/Architecture/RouteBindingTest`, `Admin/StaffRecordRoutesTest`, `Account/CustomerRecordRoutesTest`, `Repositories/OrderRepositoryTest`, `Repositories/CustomerAddressRepositoryTest` e os testes de use case de exclusão, edição e pagamento por id.
 
+#### 14. ✅ Resolvido: um evento perdido na fila travava o pedido para sempre
+
+- **Onde estava:** os 5 eventos (`OrderPlaced`, `PaymentApproved`, `OrderPaid`, `DeliveryScheduled` e `OrderDelivered`) usavam `Dispatchable` e o despacho depois do commit, e os 5 listeners `ShouldQueue` os recebiam pela fila do Redis, registrados pela descoberta de eventos do Laravel. O evento só existia depois do commit, numa chamada separada à fila, e ninguém ficava sabendo se ela falhasse.
+- **Problema** (pela leitura do código, sem tráfego para medir): três pontos em que uma falha da fila travava o pedido para sempre. Sem o `OrderPlaced`, o pedido ficava em `placed`, com o estoque baixado, e o pagamento respondia `409`. Sem o `PaymentApproved`, que o `PayOrderUseCase` disparava fora de qualquer transação, o cliente era cobrado e o pedido ficava em `awaiting_payment`, com uma nova tentativa respondendo `409`. Sem o `OrderPaid`, a transição para `payment_approved` já estava gravada, e o retry do listener não conseguia repeti-la: o retry tornava a falha permanente. E a HEL-13, que vai pôr um segundo transporte atrás de uma feature flag, teria de mexer nos 5 casos de uso e nos 5 listeners.
+- **Solução aplicada** (HEL-9, [design](../.design/transactional-outbox.md)):
+  - **O evento é gravado na transação da mudança que ele anuncia**, pelo [`EventOutbox`](../backend/app/Modules/Shared/Messaging/EventOutbox.php), numa linha de `outbox_messages` ([migration](../backend/database/migrations/2026_10_15_000001_create_outbox_messages_table.php)). O [`OutboxMessageRepository`](../backend/app/Modules/Shared/Repositories/OutboxMessageRepository.php) recusa a gravação sem transação aberta (`LogicException`) e um valor do payload que não seja escalar nem nulo (`InvalidArgumentException`). No pagamento, a tentativa aprovada e o `PaymentApproved` entram juntos; na marcação de pago, a transição e o `OrderPaid`. O agendamento da entrega e a entrega abrem uma transação só para a mensagem, e o `DeliverOrder` entra na fila depois do commit da `DeliveryScheduled`.
+  - **Cada evento declara o próprio formato** ([`DomainEvent`](../backend/app/Modules/Shared/Messaging/DomainEvent.php)): o nome `<módulo>.<evento>` (`ordering.order_placed`, `payment.payment_approved`, `ordering.order_paid`, `fulfillment.delivery_scheduled` e `fulfillment.order_delivered`), a versão 1 e um payload só com escalares em snake_case, lido de volta pelo `fromPayload()`. O nome não é a classe PHP, porque a HEL-12 vai mudar os namespaces.
+  - **Um relay num container próprio** ([`OutboxRelay`](../backend/app/Modules/Shared/Messaging/OutboxRelay.php) e o comando [`outbox:relay`](../backend/app/Modules/Shared/Console/RelayOutboxCommand.php), serviço `outbox-relay`): reserva as pendentes com `FOR UPDATE SKIP LOCKED`, das mais antigas para as mais novas, entrega cada uma ao [`EventTransport`](../backend/app/Modules/Shared/Messaging/EventTransport.php) e só então a marca como publicada. Na primeira falha, para o ciclo, deixa o resto pendente e registra um `warning`. Espera 500 ms sem pendentes e 5 s depois de uma falha, apaga as publicadas há mais de 7 dias (nunca as pendentes) e para com o sinal do `queue:restart`.
+  - **O transporte é uma porta**, e hoje a única implementação, o [`QueueEventTransport`](../backend/app/Modules/Shared/Messaging/QueueEventTransport.php), põe na fila um [`DeliverEvent`](../backend/app/Modules/Shared/Messaging/DeliverEvent.php) por consumidor inscrito, com o envelope inteiro. Uma falha repete só a entrega daquele consumidor (3 tentativas, depois o `failed_jobs`), e o `request_id` de origem volta ao `Context` antes do consumidor.
+  - **Os listeners viraram consumidores** (`Consumers/` no Ordering e no Fulfillment, com a interface [`EventConsumer`](../backend/app/Modules/Shared/Messaging/EventConsumer.php), sem `ShouldQueue` nem `$tries`), inscritos pelo módulo que consome no `boot()` do service provider ([`EventSubscriptions`](../backend/app/Modules/Shared/Messaging/EventSubscriptions.php)). O `withEvents(discover: ...)` saiu do `bootstrap/app.php`.
+- **Fronteira verificada:** o [`DomainEventsTest`](../backend/tests/Unit/Architecture/DomainEventsTest.php) exige `DomainEvent` em toda pasta `Events` e recusa, em `App\Modules`, o `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event` e o helper `event()`, uma expectativa por alvo. Cada uma das 5 violações de propósito fez a regra dela falhar, sem editar o teste. O `ModuleBoundariesTest` passou a esperar `Consumers` entre as pastas privadas, no lugar de `Listeners`: a pasta já nasce privada, porque as regras são geradas das pastas que existem.
+- **Desvios do plano:** o texto do plano para o `CheckoutTest` dizia que a décima query seria o `insert into "outbox_messages"`; ela é a nona em posição, porque o `load('items')` da resposta lê os itens depois do commit. A contagem foi de 9 para 10, como previsto, e o teste confere a posição real. Na execução manual com o Redis parado, o relay caía ao ler o sinal de reinício (o cache também é o Redis) e o container entrava em laço de reinício: agora ele segue publicando enquanto o cache não responde, adota o sinal quando o cache volta e imprime uma linha de aviso por falha, que aparece no `make logs-relay`.
+- **Ficou de fora** (ver o design): Horizon, RabbitMQ e a feature flag (HEL-13), migrations por módulo (HEL-12), métricas da fila e do outbox (HEL-8), inbox por consumidor, histórico e replay, ordem garantida entre mensagens e a leitura de versões antigas de um payload.
+- **Testes:** `Outbox/EventOutboxTest`, `Outbox/EventDeliveryTest`, `Outbox/OutboxRelayTest`, `Outbox/OrderEventsOutboxTest`, `Unit/Architecture/DomainEventsTest`, `Unit/Architecture/OrderEventPayloadTest` e os testes de checkout, pagamento e do fluxo do pedido conferindo as linhas de `outbox_messages`.
+
 ### Prioridade baixa
 
 #### 7. ✅ Resolvido: Catalog conhecia pedidos para bloquear a exclusão
@@ -513,7 +534,7 @@ Score = (
 - **Problema:** contrariava a diretriz de organização modular por domínio (`app/Modules/<Domain>`) do `AGENTS.md`. Além disso, as fronteiras dos passos 2 a 4 só existiam por convenção.
 - **Solução aplicada:** as 118 classes foram para 9 módulos em `backend/app/Modules`, **um módulo por vez** (Inventory primeiro, Shared por último), com a suíte rodando entre os módulos. Para Ordering, Payment, Fulfillment e Identity, a checagem só foi confirmada ao final desse lote. Fora dos módulos ficou só o `AppServiceProvider`, com as configurações globais. Ver a [estrutura modular adotada](#estrutura-modular-adotada).
 - **Como foi feito:**
-  - **Preparação, sem mudar comportamento:** models e factories passaram a se declarar por `#[UseFactory]` / `protected $model`, e as policies por `#[UsePolicy]`. A descoberta de listeners passou a olhar `app/Modules/*/Listeners`, e as rotas passaram a importar cada controller pelo nome completo. Tudo isso dependia antes da convenção `App\Models` / `App\Listeners`.
+  - **Preparação, sem mudar comportamento:** models e factories passaram a se declarar por `#[UseFactory]` / `protected $model`, e as policies por `#[UsePolicy]`. A descoberta de listeners passou a olhar a pasta de listeners de cada módulo (ela saiu na HEL-9, problema 14, quando os listeners viraram consumidores inscritos pelo módulo), e as rotas passaram a importar cada controller pelo nome completo. Tudo isso dependia antes da convenção `App\Models` / `App\Listeners`.
   - **Movimentação por script:** o script move os arquivos e reescreve todas as referências. Ele cria os `use` que passam a ser necessários quando duas classes que dividiam um namespace vão para módulos diferentes, e a análise usa o tokenizer do PHP para não confundir nomes de classe com texto de comentário.
 - **Fronteiras verificadas:** o [`ModuleBoundariesTest`](../backend/tests/Unit/Architecture/ModuleBoundariesTest.php) transforma as fronteiras dos passos anteriores em regras:
   - estoque acessado só pelos contratos;
@@ -538,10 +559,10 @@ backend/app/Modules/
   Customers/     Account, Profile, admin customer management, CustomerAddress (address book)
   Identity/      User (staff), CustomerAccount, UserRole, Auth, Email, Password, EnsureUserIsAdmin, CustomerAccounts
   Backoffice/    Dashboard (read model)
-  Shared/        ApiErrorCode, BusinessRuleException, BaseRepository...
+  Shared/        ApiErrorCode, BusinessRuleException, BaseRepository, outbox (EventOutbox, OutboxRelay, EventSubscriptions)...
 ```
 
-A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`: as outras pastas são privadas, e o `ModuleBoundariesTest` gera as regras a partir das pastas que existem. De `DTOs/`, `ValueObjects/` e `Enums/`, só é público o vocabulário que as assinaturas de `Contracts/` e `Events/` expõem, e o `Http/` é privado: cada módulo tem os próprios adaptadores (problema 12). Cada módulo usa só as pastas de que precisa: `Contracts/`, `DTOs/`, `Enums/`, `Events/`, `Exceptions/`, `Http/` (`Controllers/`, `Requests/`, `Resources/`, `Middleware/`, com `Admin/` para a área administrativa), `Jobs/`, `Listeners/`, `Models/`, `Repositories/`, `Services/` e `UseCases/`.
+A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`: as outras pastas são privadas, e o `ModuleBoundariesTest` gera as regras a partir das pastas que existem. De `DTOs/`, `ValueObjects/` e `Enums/`, só é público o vocabulário que as assinaturas de `Contracts/` e `Events/` expõem, e o `Http/` é privado: cada módulo tem os próprios adaptadores (problema 12). Cada módulo usa só as pastas de que precisa: `Contracts/`, `DTOs/`, `Enums/`, `Events/`, `Exceptions/`, `Http/` (`Controllers/`, `Requests/`, `Resources/`, `Middleware/`, com `Admin/` para a área administrativa), `Jobs/`, `Consumers/`, `Models/`, `Repositories/`, `Services/` e `UseCases/`.
 
 **Desvios em relação ao `AGENTS.md` do diretório pai:**
 
@@ -574,6 +595,11 @@ A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`: as outras
 | Perfil do cliente (`CustomerProfile`) | Identity (lido pelo Customers) | Os dados de uma conta de cliente sem credenciais: id, nome, e-mail e data de criação |
 | Cliente (`Customer`) | Ordering | Quem fez o pedido: identificado pelo id da conta (`customer_id`), conhecido só por nome e e-mail |
 | Resumo do cliente (`CustomerSummaryDTO`) | Customers | A conta junto com o histórico de pedidos, na tela "Clientes" do admin |
+| Evento (`DomainEvent`) | o módulo que publica | Um fato de um módulo, com nome `<módulo>.<evento>` e versão próprios, gravado no outbox na transação da mudança que ele anuncia |
+| Mensagem do outbox (`outbox_messages`) | Shared | Um evento gravado e ainda não publicado (pendente) ou já entregue ao transporte (publicado, apagado depois de 7 dias) |
+| Envelope (`EventEnvelope`) | Shared | A mensagem como viaja: id, nome, versão, payload, instante e `request_id` |
+| Consumidor (`EventConsumer`) | o módulo que consome | A classe que reage a um evento, inscrita pelo próprio módulo; recebe cada mensagem ao menos uma vez, então é idempotente |
+| Entrega (`DeliverEvent`) | Shared | Uma mensagem para um consumidor: repetida sozinha quando o consumidor falha |
 
 ---
 
@@ -590,6 +616,7 @@ A ordem abaixo prioriza o que reduz mais risco com o menor esforço:
 
 Depois do plano:
 
+- ✅ **Outbox transacional** (problema 14, HEL-9). Concluído em 15/10/2026: `outbox_messages`, os 5 eventos com nome e versão gravados na transação da mudança, o relay no container `outbox-relay`, o transporte de fila atrás da porta `EventTransport`, os consumidores inscritos pelo módulo que consome e o `DomainEventsTest`. Ver o [design](../.design/transactional-outbox.md).
 - ✅ **Ids UUID v7 e nenhuma rota resolvendo registro** (problema 13, HEL-11). Concluído em 15/10/2026: as 9 tabelas de negócio com chave `uuid`, ids `string` em toda assinatura, o código do pedido, o dono na busca das rotas do cliente sem as três policies, seis rotas com uma query a menos e o `RouteBindingTest` recusando qualquer binding. Ver o [design](../.design/uuid-record-ids.md).
 - ✅ **Vocabulário público dos módulos** (problema 12, HEL-10). Concluído em 09/10/2026: o vocabulário calculado das assinaturas de `Contracts` e `Events`, o `Http` privado e os adaptadores próprios do Customers e do Fulfillment, com a exceção do `ProductStatus` declarada até a HEL-6. Ver o [design](../.design/module-vocabulary.md).
 - ✅ **Facades dos módulos** (problema 11, HEL-7). Concluído em 08/10/2026: cinco contratos novos, os contratos do Inventory e os eventos falando em dados, e o `ModuleBoundariesTest` como lista do que é permitido, com as exceções da HEL-6 declaradas. Ver o [design](../.design/module-facades.md).
@@ -606,7 +633,7 @@ Os 5 passos organizaram o código e tornaram as fronteiras explícitas e verific
 | Estoque excluído por `cascadeOnDelete` | FK `stocks.product_id` | É a regra 1:1 garantida pelo banco |
 | Catalog e Inventory usam uma regra do Ordering na vitrine e na lista de estoque (achado ao resolver o problema 7) | `ProductResource`, `ProductController` e `StockResource` usam o `PurchaseAvailabilityService` | Gera dependência do Catalog para o Ordering, que por sua vez depende do Catalog. A regra de disponibilidade foi para o Ordering no passo 1 e agora recebe dados. Exceção declarada até a HEL-6, que decide onde a regra mora numa leitura que junta Catalog e Inventory |
 | Tentativas de pagamento presas ao pedido por `restrictOnDelete` | FK `payments.order_id` | O Payment grava na própria tabela, mas referencia `orders`; pedidos nunca são apagados, então a FK só protege o histórico |
-| ✅ Resolvida: eventos carregavam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered`, `DeliveryScheduled`, `DeliverOrder` | Resolvida no problema 11: carregam o `orderId` e os valores de que o consumidor precisa. O envelope e o outbox ficam para a HEL-9 |
+| ✅ Resolvida: eventos carregavam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered`, `DeliveryScheduled`, `DeliverOrder` | Resolvida no problema 11: carregam o `orderId` e os valores de que o consumidor precisa. O envelope e o outbox vieram na HEL-9 (problema 14) |
 | Dashboard lê os repositories de vários módulos | `GetAdminDashboardUseCase` e o `DashboardService` (que usa o enum `ProductStatus` do Catalog, fora do vocabulário) | É um read model; a dependência é só de leitura. Exceções declaradas no `ModuleBoundariesTest` até a HEL-6 |
 | ✅ Resolvida: um módulo usa `Http`, `ValueObjects`, `Enums` e `DTOs` de outro | O Customers usava as regras de e-mail e senha e o resource da conta do Identity, e o Customers e o Fulfillment, o trait de UF do Ordering | Resolvida no problema 12 (HEL-10): só o vocabulário que as assinaturas de `Contracts` e `Events` expõem é público, o `Http` é privado e cada módulo tem os próprios adaptadores |
 

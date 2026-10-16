@@ -250,5 +250,5 @@ Alternatives considered: o Fulfillment consumir o próprio `DeliveryScheduled` p
 - [HEL-13](https://linear.app/helter/issue/HEL-13/planejar-como-utilizar-o-feature-flags-para-implementar-utilizacao-de): o transporte com feature flag e consumidores fora dos jobs do Laravel, a condição que dá a vitória à forma escolhida.
 - [HEL-12](https://linear.app/helter/issue/HEL-12/implementar-um-padrao-de-modularidade-melhor-ao-sistema): a mudança de namespaces e de migrations por módulo, motivo do nome estável no envelope.
 - [.design/module-facades.md](module-facades.md) e [.design/uuid-record-ids.md](uuid-record-ids.md): os payloads com dados e o id em texto que este outbox grava.
-- [README, Eventos, listeners, jobs e filas](../README.md#eventos-listeners-jobs-e-filas): o fluxo atual, a idempotência dos listeners e o procedimento para esvaziar a fila no deploy.
+- [README, Eventos, listeners, jobs e filas](../README.md#eventos-outbox-consumidores-e-filas): o fluxo atual, a idempotência dos listeners e o procedimento para esvaziar a fila no deploy.
 - [Transactional outbox, microservices.io](https://microservices.io/patterns/data/transactional-outbox.html): o polling publisher, a entrega repetida e o esquecimento de publicar como falhas relatadas.
