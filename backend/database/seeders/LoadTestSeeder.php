@@ -231,6 +231,8 @@ class LoadTestSeeder extends Seeder
                 ? now()->subDays(fake()->numberBetween(0, 29))
                 : now()->subMonths(fake()->numberBetween(1, 11))->subDays(fake()->numberBetween(0, 27));
             $createdAt = $createdAt->setTime(fake()->numberBetween(8, 22), fake()->numberBetween(0, 59));
+            // An order drawn for today at an hour still to come would be in the future.
+            $createdAt = $createdAt->min(now());
             $status = $isRecent ? $statuses[intdiv($i, 2) % count($statuses)] : OrderStatus::Delivered;
             $customerNumber = $i === 0 ? 0 : fake()->numberBetween(0, self::CUSTOMERS - 1);
             $address = $addresses[$customerNumber];

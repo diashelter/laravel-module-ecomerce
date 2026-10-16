@@ -56,6 +56,7 @@ case "$CASE" in
         reseed
         expect_eq "10.000 pedidos" "$(psql_load 'select count(*) from orders')" 10000
         expect_eq "todos nos últimos 12 meses" "$(psql_load "select count(*) from orders where created_at < now() - interval '12 months'")" 0
+        expect_eq "nenhum no futuro" "$(psql_load "select count(*) from orders where created_at > now()")" 0
         expect_eq "de 1 a 4 itens" "$(psql_load 'select count(*) from (select o.id, count(i.id) n from orders o left join order_items i on i.order_id = o.id group by o.id) t where n < 1 or n > 4')" 0
         expect_eq "a cópia de um endereço do cliente" "$(psql_load 'select count(*) from orders o where not exists (select 1 from customer_addresses a where a.customer_id = o.customer_id and a.recipient_name = o.delivery_recipient_name and a.postal_code = o.delivery_postal_code and a.street = o.delivery_street and a.number = o.delivery_number and a.district = o.delivery_district and a.city = o.delivery_city and a.state = o.delivery_state)')" 0
         WRONG_SHIPPING=$($LOAD exec -T api php artisan tinker --execute="echo DB::table('orders')->select('delivery_state', 'shipping_cents', 'delivery_business_days')->distinct()->get()->filter(fn (\$o) => config('shop.shipping_rates.'.\$o->delivery_state) !== ['price_cents' => (int) \$o->shipping_cents, 'business_days' => (int) \$o->delivery_business_days])->count();" | tr -d '[:space:]')
