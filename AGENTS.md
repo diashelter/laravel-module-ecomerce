@@ -86,7 +86,7 @@ Atualize a documentação sempre que a mudança:
   - O Catalog não usa models nem repositories do Ordering. Quando precisar de algo dos pedidos, use o contrato que ele mesmo define (`ProductOrderHistory`), implementado pelo Ordering.
   - O módulo `Shared` é só infraestrutura e não depende de nenhum módulo de negócio.
   - O teste de arquitetura `ModuleBoundariesTest` cobra essas regras: a privacidade das pastas é gerada a partir das pastas que existem, a do vocabulário a partir das classes que existem e das assinaturas, e as regras de direção são escritas uma a uma. Ao criar uma regra nova, use **um namespace por expectativa**: com uma lista de namespaces, o `not->toUse` do Pest nunca falha. Confirme também que a regra falha com uma violação de propósito.
-- **Limites de requisição:** todo `throttle` de rota nomeia o seu contador no terceiro parâmetro (`throttle:10,1,customer-login`), com um nome que nenhuma outra rota usa. Sem o nome, a chave é só o cliente, e as rotas com limite dividiriam um contador (o `RateLimitTest` cobra).
+- **Limites de requisição:** todo `throttle` de rota nomeia o seu contador no terceiro parâmetro (`throttle:10,1,customer-login`), com um nome que nenhuma outra rota usa. Sem o nome, a chave é só o cliente, e as rotas com limite dividiriam um contador (o `RateLimitTest` cobra). O alias `throttle` é o `AtomicThrottleRequests` (Shared), que conta a requisição antes de decidir, sobre o `AtomicRateLimiter`, que incrementa num só comando do Redis. Não volte ao `ThrottleRequests` do framework nem use o `throttleWithRedis()`: os dois conferem antes de contar, e uma rajada simultânea passa do limite (o `RateLimitBurstTest` cobra).
 - **Commits** em inglês, no formato `feat:`, `fix:`, `refactor:`, `test:`, `docs:`.
 
 ---
