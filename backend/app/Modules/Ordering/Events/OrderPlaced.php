@@ -4,16 +4,33 @@ declare(strict_types=1);
 
 namespace App\Modules\Ordering\Events;
 
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
-use Illuminate\Foundation\Events\Dispatchable;
+use App\Modules\Shared\Messaging\DomainEvent;
 
 /**
- * Fired after an order has been created. ShouldDispatchAfterCommit guarantees the
- * event is only dispatched once the checkout transaction is committed.
+ * Ordering: an order was placed. Recorded in the checkout transaction, so it exists only if the
+ * order does.
  */
-class OrderPlaced implements ShouldDispatchAfterCommit
+class OrderPlaced implements DomainEvent
 {
-    use Dispatchable;
-
     public function __construct(public string $orderId) {}
+
+    public static function eventName(): string
+    {
+        return 'ordering.order_placed';
+    }
+
+    public static function eventVersion(): int
+    {
+        return 1;
+    }
+
+    public function toPayload(): array
+    {
+        return ['order_id' => $this->orderId];
+    }
+
+    public static function fromPayload(array $payload): static
+    {
+        return new static($payload['order_id']);
+    }
 }

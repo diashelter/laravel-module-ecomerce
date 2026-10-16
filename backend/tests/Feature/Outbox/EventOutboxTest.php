@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Shared\Messaging\EventOutbox;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Context;
@@ -37,6 +38,23 @@ it('creates the outbox table in the shape of door 1', function () {
     $foreignKeys = DB::selectOne("select count(*) as total from pg_constraint where conrelid = 'outbox_messages'::regclass and contype = 'f'");
 
     expect($foreignKeys->total)->toBe(0);
+});
+
+it('records an event as one pending message inside a transaction', function () {
+    $now = CarbonImmutable::parse('2026-10-15 12:00:00');
+    $this->travelTo($now);
+    $orderId = unknownId();
+
+    recordInTransaction(new OrderPlaced($orderId));
+
+    $message = DB::table('outbox_messages')->sole();
+
+    expect($message->name)->toBe('ordering.order_placed')
+        ->and($message->version)->toBe(1)
+        ->and(json_decode($message->payload, true))->toBe(['order_id' => $orderId])
+        ->and($message->id)->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/')
+        ->and(CarbonImmutable::parse($message->occurred_at)->equalTo($now))->toBeTrue()
+        ->and($message->published_at)->toBeNull();
 });
 
 it('leaves no message when the recording transaction rolls back', function () {
@@ -93,6 +111,18 @@ it('records the context request id on the message', function () {
     recordInTransaction(new SampleEvent);
 
     expect(DB::table('outbox_messages')->sole()->request_id)->toBe('trace-outbox-0001');
+});
+
+it('records the request id of the checkout request', function () {
+    $account = customer();
+    $product = productWithStock(3);
+
+    $this->actingAs($account)
+        ->withHeader('X-Request-ID', 'trace-checkout-0001')
+        ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]], 'address_id' => addressOf($account)->id])
+        ->assertCreated();
+
+    expect(outboxMessages('ordering.order_placed')->sole()->request_id)->toBe('trace-checkout-0001');
 });
 
 it('records a null request id without a context request id', function () {

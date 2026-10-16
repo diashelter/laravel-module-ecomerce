@@ -6,15 +6,11 @@ use App\Modules\Ordering\Models\Order;
 use App\Modules\Payment\DTOs\ChargeRequest;
 use App\Modules\Payment\DTOs\ChargeResult;
 use App\Modules\Payment\Enums\PaymentStatus;
-use App\Modules\Payment\Events\PaymentApproved;
 use App\Modules\Payment\Models\Payment;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
-
-beforeEach(fn () => Event::fake([PaymentApproved::class]));
 
 function orderAwaitingPayment(CustomerAccount $customer, int $totalCents = 12345): Order
 {
@@ -84,8 +80,9 @@ it('records the approved payment and announces it once', function () {
         ->and($rows[0]->gateway)->toBe('fake')
         ->and($rows[0]->gateway_transaction_id)->toStartWith('fake_');
 
-    Event::assertDispatchedTimes(PaymentApproved::class, 1);
-    Event::assertDispatched(PaymentApproved::class, fn (PaymentApproved $event) => $event->orderId === $order->id);
+    $messages = outboxMessages('payment.payment_approved');
+    expect($messages)->toHaveCount(1)
+        ->and($messages[0]->payload)->toBe(['order_id' => $order->id]);
 });
 
 it('declines the payment and keeps the order awaiting payment', function (string $cardToken, string $reason, string $message) {
@@ -101,9 +98,8 @@ it('declines the payment and keeps the order awaiting payment', function (string
     expect($rows)->toHaveCount(1)
         ->and($rows[0]->status)->toBe('declined')
         ->and($rows[0]->decline_reason)->toBe($reason)
-        ->and($order->fresh()->status)->toBe(OrderStatus::AwaitingPayment);
-
-    Event::assertNotDispatched(PaymentApproved::class);
+        ->and($order->fresh()->status)->toBe(OrderStatus::AwaitingPayment)
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
 })->with([
     'insufficient funds' => ['fake_card_insufficient_funds', 'insufficient_funds', 'Pagamento recusado: saldo insuficiente.'],
     'declined by the issuer' => ['fake_card_declined', 'card_declined', 'Pagamento recusado pelo emissor do cartão.'],
@@ -163,8 +159,8 @@ it('rejects payment for orders that are not awaiting payment', function (OrderSt
         ->assertJsonPath('message', 'Este pedido não está aguardando pagamento.');
 
     expect(paymentRows($order))->toBeEmpty()
-        ->and($gateway->charges)->toBeEmpty();
-    Event::assertNotDispatched(PaymentApproved::class);
+        ->and($gateway->charges)->toBeEmpty()
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
 })->with([OrderStatus::Placed, OrderStatus::PaymentApproved, OrderStatus::Delivered]);
 
 it('rejects a second payment while the queue has not moved the order', function () {
@@ -198,8 +194,8 @@ it('loses the race to a concurrent approval with 409', function () {
         ->assertConflict()
         ->assertJsonPath('message', 'Este pedido não está aguardando pagamento.');
 
-    expect(collect(paymentRows($order))->where('status', 'approved'))->toHaveCount(1);
-    Event::assertNotDispatched(PaymentApproved::class);
+    expect(collect(paymentRows($order))->where('status', 'approved'))->toHaveCount(1)
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
 });
 
 it('charges the order total and ignores amounts in the request', function () {
@@ -228,8 +224,8 @@ it('forbids paying an order of another customer', function () {
 
     expect(paymentRows($order))->toBeEmpty()
         ->and(paymentRows($placed))->toBeEmpty()
-        ->and($gateway->charges)->toBeEmpty();
-    Event::assertNotDispatched(PaymentApproved::class);
+        ->and($gateway->charges)->toBeEmpty()
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
 });
 
 it('validates the payment body before checking the order owner', function () {

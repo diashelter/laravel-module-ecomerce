@@ -2,14 +2,10 @@
 
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
-
-beforeEach(fn () => Event::fake([OrderPlaced::class]));
 
 function checkout(array $items)
 {
@@ -56,18 +52,20 @@ it('places an order with every value in cents, decrements stock and stores a sna
         ->unit_price_cents->toBe(25000)
         ->subtotal_cents->toBe(75000);
 
-    Event::assertDispatched(OrderPlaced::class, fn (OrderPlaced $event) => $event->orderId === $order->id);
+    expect(outboxMessages('ordering.order_placed')->sole()->payload)->toBe(['order_id' => $order->id]);
 });
 
 it('announces the placed order by id', function () {
-    Event::fake([OrderPlaced::class]);
     $product = productWithStock(5);
     $this->actingAs(customer());
 
     $orderId = checkout([['product_id' => $product->id, 'quantity' => 1]])->assertCreated()->json('data.id');
 
-    Event::assertDispatchedTimes(OrderPlaced::class, 1);
-    Event::assertDispatched(OrderPlaced::class, fn (OrderPlaced $event) => $event->orderId === $orderId);
+    $messages = outboxMessages('ordering.order_placed');
+    expect($messages)->toHaveCount(1)
+        ->and($messages[0]->payload)->toBe(['order_id' => $orderId])
+        ->and($messages[0]->version)->toBe(1)
+        ->and($messages[0]->published_at)->toBeNull();
 });
 
 it('keeps the historical snapshot when the product changes later', function () {
@@ -131,8 +129,8 @@ it('returns 409 and changes nothing when stock is insufficient', function () {
     // The whole transaction was rolled back: no order and no stock change.
     expect(Order::query()->count())->toBe(0)
         ->and($ok->stock->fresh()->quantity)->toBe(10)
-        ->and($low->stock->fresh()->quantity)->toBe(2);
-    Event::assertNotDispatched(OrderPlaced::class);
+        ->and($low->stock->fresh()->quantity)->toBe(2)
+        ->and(outboxMessages('ordering.order_placed'))->toBeEmpty();
 });
 
 it('rejects inactive and out of stock products', function () {
@@ -267,8 +265,8 @@ it('draws the order code again after a collision', function (int $collisions) {
         ->and($generator->draws)->toBe($collisions + 1)
         ->and($first->stock->fresh()->quantity)->toBe(3)
         ->and($second->stock->fresh()->quantity)->toBe(4)
-        ->and(Order::query()->where('customer_id', $account->id)->sole()->code)->toBe('CCCCCCCC');
-    Event::assertDispatchedTimes(OrderPlaced::class, 1);
+        ->and(Order::query()->where('customer_id', $account->id)->sole()->code)->toBe('CCCCCCCC')
+        ->and(outboxMessages('ordering.order_placed'))->toHaveCount(1);
 })->with([1, 2]);
 
 it('fails the whole order after three code collisions', function () {
@@ -286,8 +284,8 @@ it('fails the whole order after three code collisions', function () {
         ->and(Order::query()->count())->toBe($ordersBefore)
         ->and(OrderItem::query()->count())->toBe(0)
         ->and($first->stock->fresh()->quantity)->toBe(5)
-        ->and($second->stock->fresh()->quantity)->toBe(7);
-    Event::assertNotDispatched(OrderPlaced::class);
+        ->and($second->stock->fresh()->quantity)->toBe(7)
+        ->and(outboxMessages('ordering.order_placed'))->toBeEmpty();
 });
 
 it('keeps the query count of the checkout', function () {
@@ -303,5 +301,12 @@ it('keeps the query count of the checkout', function () {
 
     $this->postJson('/api/orders', $body)->assertCreated();
 
-    expect(DB::getQueryLog())->toHaveCount(9);
+    $queries = array_column(DB::getQueryLog(), 'query');
+
+    // The one query the outbox adds: OrderPlaced, the last write of the checkout transaction, before
+    // the items are read back for the response.
+    expect($queries)->toHaveCount(10)
+        ->and(array_values(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'insert into "outbox_messages"'))))->toHaveCount(1)
+        ->and($queries[8])->toStartWith('insert into "outbox_messages"')
+        ->and($queries[9])->toStartWith('select * from "order_items"');
 });

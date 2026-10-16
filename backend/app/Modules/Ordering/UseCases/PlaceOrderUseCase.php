@@ -19,14 +19,16 @@ use App\Modules\Ordering\Services\OrderCodeGenerator;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\OrderLines;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
+use App\Modules\Shared\Messaging\EventOutbox;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Customer: places an order atomically. Stock check, stock decrement and order creation
- * happen inside a single database transaction with the stock rows locked. The order keeps a copy
- * of the chosen delivery address and the shipping quoted for its state.
+ * happen inside a single database transaction with the stock rows locked, and OrderPlaced is
+ * recorded in that same transaction. The order keeps a copy of the chosen delivery address and the
+ * shipping quoted for its state.
  */
 final class PlaceOrderUseCase
 {
@@ -41,6 +43,7 @@ final class PlaceOrderUseCase
         private readonly OrderCodeGenerator $codes,
         private readonly DeliveryAddressBook $addressBook,
         private readonly ShippingQuoter $shippingQuoter,
+        private readonly EventOutbox $outbox,
     ) {}
 
     /**
@@ -82,11 +85,14 @@ final class PlaceOrderUseCase
 
             // 5. Create the order and its items (snapshot of name and price), with the address copy and
             //    the shipping, so the total is the items plus the shipping.
-            return $this->createWithUniqueCode($customerId, $lines, $address, $shipping);
-        });
+            $order = $this->createWithUniqueCode($customerId, $lines, $address, $shipping);
 
-        // 6. Only after COMMIT: the queued listener moves the order to "awaiting_payment".
-        OrderPlaced::dispatch($order->id);
+            // 6. Recorded in the same transaction: the order and its OrderPlaced commit together.
+            //    The consumer moves the order to "awaiting_payment" once the relay publishes it.
+            $this->outbox->record(new OrderPlaced($order->id));
+
+            return $order;
+        });
 
         return $order->load('items');
     }

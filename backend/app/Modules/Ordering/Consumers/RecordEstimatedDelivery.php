@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Ordering\Listeners;
+namespace App\Modules\Ordering\Consumers;
 
 use App\Modules\Fulfillment\Events\DeliveryScheduled;
 use App\Modules\Ordering\UseCases\RecordEstimatedDeliveryUseCase;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Modules\Shared\Messaging\EventConsumer;
 
 /**
- * Queued listener (ordering): delivery scheduled -> estimated delivery day recorded on the order.
+ * Consumer (ordering): delivery scheduled -> estimated delivery day recorded on the order.
  */
-class RecordEstimatedDelivery implements ShouldQueue
+class RecordEstimatedDelivery implements EventConsumer
 {
-    public int $tries = 3;
-
     public function handle(DeliveryScheduled $event): void
     {
         app(RecordEstimatedDeliveryUseCase::class)->execute($event->orderId, $event->estimatedDeliveryOn);

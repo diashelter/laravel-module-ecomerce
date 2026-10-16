@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Tests\Feature\Outbox\Fixtures\FailingConsumer;
 use Tests\Feature\Outbox\Fixtures\SampleEvent;
@@ -166,7 +167,7 @@ it('refuses two event classes under the same name', function () {
 
     expect(fn () => $subscriptions->subscribe(SampleEventTwin::class, TwinConsumer::class))->toThrow(LogicException::class);
 
-    expect($subscriptions->all())->toBe(['testing.sample_event' => [SpyConsumer::class]])
+    expect($subscriptions->consumersOf('testing.sample_event'))->toBe([SpyConsumer::class])
         ->and($subscriptions->eventOf('testing.sample_event'))->toBe(SampleEvent::class);
 });
 
@@ -185,4 +186,18 @@ it('delivers an envelope whose message was already pruned', function () {
     expect(DB::table('outbox_messages')->count())->toBe(0)
         ->and($spy->calls)->toHaveCount(1)
         ->and($spy->calls[0]['event']->payload)->toBe($event->payload);
+});
+
+it('registers no laravel listener for the module events', function () {
+    $events = array_map(
+        fn (string $file) => 'App\\Modules\\'.basename(dirname($file, 2)).'\\Events\\'.basename($file, '.php'),
+        glob(app_path('Modules/*/Events/*.php')),
+    );
+
+    expect($events)->toHaveCount(5);
+
+    foreach ($events as $event) {
+        expect(class_exists($event))->toBeTrue()
+            ->and(Event::hasListeners($event))->toBeFalse("{$event} has a Laravel listener");
+    }
 });

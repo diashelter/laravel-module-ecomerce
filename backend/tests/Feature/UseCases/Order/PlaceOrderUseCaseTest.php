@@ -5,17 +5,13 @@ use App\Modules\Ordering\Contracts\ShippingQuoter;
 use App\Modules\Ordering\DTOs\CartDTO;
 use App\Modules\Ordering\DTOs\CartItemDTO;
 use App\Modules\Ordering\Enums\BrazilianState;
-use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\UseCases\PlaceOrderUseCase;
 use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
-
-beforeEach(fn () => Event::fake([OrderPlaced::class]));
 
 /** An address book that answers the given address (or none), whoever asks. */
 function fixedAddressBook(?DeliveryAddress $address): DeliveryAddressBook
@@ -102,7 +98,8 @@ it('draws the order code up to three times', function (int $collisions, bool $pl
         expect($place()->code)->toBe('EEEEEEEE')
             ->and($generator->draws)->toBe($collisions + 1)
             ->and(Order::query()->count())->toBe($ordersBefore + 1)
-            ->and($product->stock->fresh()->quantity)->toBe(3);
+            ->and($product->stock->fresh()->quantity)->toBe(3)
+            ->and(outboxMessages('ordering.order_placed'))->toHaveCount(1);
 
         return;
     }
@@ -111,8 +108,8 @@ it('draws the order code up to three times', function (int $collisions, bool $pl
     expect($generator->draws)->toBe(3)
         ->and(Order::query()->count())->toBe($ordersBefore)
         ->and(DB::table('order_items')->count())->toBe(0)
-        ->and($product->stock->fresh()->quantity)->toBe(5);
-    Event::assertNotDispatched(OrderPlaced::class);
+        ->and($product->stock->fresh()->quantity)->toBe(5)
+        ->and(outboxMessages('ordering.order_placed'))->toBeEmpty();
 })->with([
     'no collision' => [0, true],
     'one collision' => [1, true],

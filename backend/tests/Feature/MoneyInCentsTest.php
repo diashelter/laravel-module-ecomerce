@@ -2,13 +2,10 @@
 
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Events\OrderPlaced;
 use App\Modules\Ordering\Models\Order;
 use App\Modules\Ordering\Models\OrderItem;
-use App\Modules\Payment\Events\PaymentApproved;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 
 dataset('money columns', [
     'products.price_cents' => ['products', 'price_cents'],
@@ -187,7 +184,6 @@ describe('cart validation', function () {
 });
 
 it('ignores money fields sent by the client on checkout', function (string $field) {
-    Event::fake([OrderPlaced::class]);
     $product = productWithStock(10, ['price_cents' => 1990]);
 
     $account = customer();
@@ -206,7 +202,6 @@ it('ignores money fields sent by the client on checkout', function (string $fiel
 })->with(['price', 'unit_price', 'total', 'unit_price_cents', 'total_cents']);
 
 it('exposes order money in cents on every order route', function () {
-    Event::fake([OrderPlaced::class, PaymentApproved::class]);
     $user = customer();
     $order = Order::factory()->for($user, 'customer')->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 94980]);
     OrderItem::factory()->for($order)->create(['unit_price_cents' => 9990, 'quantity' => 2, 'subtotal_cents' => 19980]);
