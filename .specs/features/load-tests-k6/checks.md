@@ -469,6 +469,16 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
   - O `breakpoint` mantém as pausas de 1 a 3 s, com no máximo 1.000 VUs.
   - As duas rodadas do `breakpoint` aceitas para a linha ficaram em commits diferentes com o mesmo código medido; o `load-tests/README.md` registra isso.
   - A rajada de 30 logins simultâneos deixou passar 11, um além do limite: o limitador confere e depois conta. O plano manda registrar sem reprovar (AC 58), e o achado vira uma issue própria.
+  - O door 6 chama `rate_limit_overshoot` de contador, mas ele é uma linha derivada no fim da rodada (`rate_limit_burst_passed − 10`, nunca negativa): uma rodada do k6 não consegue gravar uma métrica depois de terminar. O contador de verdade é o `rate_limit_burst_passed` (C63, C91).
+- **Rodada 1 da verificação (FAIL, 4 mutantes vivos):** o Verifier achou as lacunas abaixo, corrigidas em `52bebb6` e `301a7f8`.
+  - O teste da tag olhava o `requestName`, não o que o `send()` manda ao k6: o pedido agora sai de um `buildRequest` puro, testado (C74).
+  - A contagem do erro da desistência estava só no fluxo: ela foi para o `countGiveUp`, testado (C42).
+  - Os logs da `api` impressos na falha do seed não eram conferidos: a prova agora exige linhas do `docker compose logs` depois do aviso (C14).
+  - O C77 conferia só o `load`: agora confere também o `stress` e o `soak`.
+  - Ganharam caso próprio os limites do `contention` (C89), a taxa na parada do `breakpoint` (C90), o excesso da rajada (C91) e a fração dos casos de erro (C92). Os valores do door 3 que faltavam ganharam o C88.
+  - 42 pedidos do seed caíam no futuro: o seeder limita a data a agora, e o `dataset.sh` confere (C4).
+  - O valor da `order_payable_wait` passou a ser conferido (C41). O C26 compara com `origin/main...HEAD`, e não com a `main` local desatualizada. As provas do README e do aceite de 20% ficaram mais justas (C82, C85).
+  - As linhas da linha de base tinham sido medidas antes do merge `d851b01`. Elas foram medidas de novo em `09760e2`, com as duas rodadas de cada perfil no mesmo commit. Os números registrados foram para `lib/baseline.js`, fora do código medido, e o C76 passou a exigir que o código medido não mude entre o commit da linha e `HEAD`.
 - **Abandoned:**
   - Guardar o `X-Request-ID` enviado na resposta do k6: a resposta é um objeto do host e não aceita propriedade nova. Ficou uma variável do módulo.
   - Medir o primeiro `breakpoint` sem a taxa na parada: a taxa passou a ser calculada no `handleSummary` a partir do fim do `setup()`.
