@@ -641,6 +641,8 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. **Todo id d
 
 Códigos HTTP usados: `200`, `201`, `202`, `204`, `401`, `402`, `403`, `404`, `405`, `409`, `422`, `429`, `500`. O `403` existe só para o suporte nos `DELETE` e em `/api/admin/users*`.
 
+**Limites de requisição**: cada limite é literal na rota, em `routes/api.php`: `throttle:10,1` no cadastro e nos dois logins, `throttle:20,1` no checkout e no pagamento, e `throttle:60,1` na validação do carrinho e na cotação de frete. Acima dele, a resposta é `429` com `TOO_MANY_REQUESTS`. O contador é do cliente autenticado (pelo id) ou, sem sessão, do **IP da conexão**: o `REMOTE_ADDR` que o Nginx entrega ao PHP-FPM. O Laravel não confia em nenhum proxy, então um `X-Forwarded-For` enviado pelo cliente (e também `X-Forwarded-Host`, `-Proto`, `-Port` e `-Prefix`) é ignorado e não troca a chave do limite (ver [Containers](#containers)). A chave também não inclui a rota: as rotas com `throttle` dividem um só contador por cliente, e cada uma compara esse total com o próprio limite. Por exemplo, 10 cotações de frete no mesmo minuto deixam o login do mesmo IP em `429` até a janela acabar.
+
 **Registros nas rotas** (HEL-11): nenhuma rota resolve registro. O controller recebe o id como `string` e o entrega ao use case (escrita) ou ao repositório ou à consulta (leitura), então:
 
 - o **corpo é validado antes da existência**: corpo inválido é `422` para qualquer id (do dono, de outro cliente ou desconhecido), e corpo válido com id desconhecido é `404` com `NOT_FOUND` e 'Recurso não encontrado.';
@@ -726,7 +728,7 @@ O frontend ainda não é verificado no CI.
 
 | Arquivo | Cobertura |
 | --- | --- |
-| `Auth/AuthTest` | cadastro em `customers` (sem `users`, ignorando `role`), e-mail igual ao da equipe, login só do cliente com as 4 chaves, credenciais da equipe recusadas, logout, `429` do cadastro e dos dois logins |
+| `Auth/AuthTest` | cadastro em `customers` (sem `users`, ignorando `role`), e-mail igual ao da equipe, login só do cliente com as 4 chaves, credenciais da equipe recusadas, logout, `429` do cadastro e dos dois logins, também com um `X-Forwarded-For` forjado diferente a cada tentativa |
 | `Auth/StaffAuthTest` | login da equipe (`admin` e `support`, sessão lida de novo na próxima requisição), credenciais de cliente e senha errada recusadas, logout, `CHECK` do `role` direto no banco |
 | `AuthorizationTest` | `401` a visitante e a sessão de cliente em todas as 27 rotas `/api/admin/*` (percorrendo a tabela de rotas), `401` a sessão de equipe nas 11 rotas da loja (inclui as 4 do caderno), pedido de outro cliente (`404`, como um id desconhecido), nenhuma rota com `auth:sanctum` |
 | `ProductCatalogTest` | listagem com inativos, filtro, ordenações, paginação, detalhe indisponível, a mesma contagem de queries com 1 e com 12 produtos, a única leitura de `stocks` (um `where in` pelos ids da página, sem `join`) e o produto sem linha de estoque (`stock` nulo, indisponível) |
@@ -783,7 +785,7 @@ O frontend ainda não é verificado no CI.
 
 | Container | Imagem | Função |
 | --- | --- | --- |
-| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api` e `/sanctum` para o PHP-FPM e o resto para o Vite (inclui WebSocket do HMR) |
+| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api` e `/sanctum` para o PHP-FPM, com o IP da conexão em `REMOTE_ADDR`, e o resto para o Vite (inclui WebSocket do HMR) |
 | `api` | `docker/php/Dockerfile` (PHP 8.5-FPM) | Laravel. Instala as dependências do Composer na primeira execução |
 | `queue-worker` | mesma imagem da `api` | `php artisan queue:work redis` — processa as entregas aos consumidores (`DeliverEvent`) e os jobs |
 | `outbox-relay` | mesma imagem da `api` | `php artisan outbox:relay` — publica as mensagens pendentes de `outbox_messages` na fila, em até 1 s, e apaga as publicadas há mais de 7 dias |
@@ -792,6 +794,8 @@ O frontend ainda não é verificado no CI.
 | `redis` | `redis:8-alpine` | Fila, sessões e cache |
 
 O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O worker e o relay precisam de `make queue-restart` após mudanças em jobs, consumidores ou no relay.
+
+**IP do cliente:** o Nginx fala FastCGI com o PHP-FPM, e não HTTP, então para o Laravel ele não é um proxy. O `fastcgi_params` já entrega o endereço da conexão (`REMOTE_ADDR`, o `$remote_addr` do Nginx) e o esquema (`HTTPS` e `REQUEST_SCHEME`). Por isso o `bootstrap/app.php` não chama `trustProxies()`, e o `docker/nginx/default.conf` não repassa nenhum `X-Forwarded-*` próprio ao PHP. No Docker local, quem chega pela porta publicada aparece com o gateway da rede do Compose (por exemplo, `172.20.0.1`), então todo o tráfego do host divide o mesmo limite por IP. Se um balanceador ou uma CDN entrar na frente do Nginx, o IP real deve ser restaurado no próprio Nginx (`set_real_ip_from` com o endereço do balanceador e `real_ip_header X-Forwarded-For`), nunca com `trustProxies(at: '*')`.
 
 ---
 
@@ -894,3 +898,8 @@ Decisões relevantes:
   - **Sem migração de dados**: a tabela é nova. Quem tem banco local roda `make fresh` (ou `make migrate`) e `make queue-restart`, e o `make up` sobe o container novo.
 - **Pagamento recusado** não cria status no pedido: a recusa (`402`) é gravada em `payments` e o pedido continua em `awaiting_payment`, mantendo os quatro status de negócio da especificação.
 - **Gateway de pagamento atrás de uma porta:** o `PayOrderUseCase` só conhece a interface `PaymentGateway`, ligada ao `FakePaymentGateway` no `PaymentServiceProvider`. Trocar de gateway é uma classe nova e uma ligação. O fake decide pelo cartão de teste (`fake_card_approved`, `fake_card_insufficient_funds`, `fake_card_declined`; qualquer outro é cartão inválido). A cobrança é síncrona: um gateway que confirme depois (Pix, webhook) exigiria um estado pendente. Ver [.design/fake-payment-gateway.md](.design/fake-payment-gateway.md).
+- **Nenhum proxy confiável** (o IP forjado, achado na discovery da HEL-14): o `trustProxies(at: '*')` saiu do `bootstrap/app.php`. Com ele, o Laravel aceitava o `X-Forwarded-For` de qualquer conexão, e um cliente trocava o próprio IP, e com ele a chave do limite, a cada requisição, anulando o `throttle:10,1` do login e do cadastro contra força bruta. Agora o IP é o `REMOTE_ADDR` que o Nginx entrega por FastCGI (ver [Containers](#containers)). Duas alternativas foram descartadas:
+  - **Confiar só na rede do Compose** não fecha a falha: o `REMOTE_ADDR` não é o Nginx, e sim quem se conectou a ele, que para o tráfego do host é o gateway da própria rede. Confiar na rede seria confiar em todo o tráfego do host.
+  - **Manter o `*` e fazer o Nginx sobrescrever o `X-Forwarded-For`** exigiria sobrescrever também o `X-Forwarded-Host`, `-Proto`, `-Port` e `-Prefix`, que o `*` também aceitava do cliente, e a correção só existiria no Nginx, onde um teste Pest não a alcança.
+
+  O `fastcgi_param HTTP_X_FORWARDED_PROTO` do Nginx saiu junto, porque o Laravel não o lia mais: o esquema vem do `HTTPS` do `fastcgi_params`. O `AuthTest` prova a correção: a 11ª tentativa de cadastro ou de login, com um `X-Forwarded-For` forjado diferente em cada uma, ainda recebe `429`.
