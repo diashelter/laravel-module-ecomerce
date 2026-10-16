@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 14,
+  "next_id": 19,
   "lessons": [
     {
       "id": "L-001",
@@ -238,6 +238,96 @@
       ],
       "created": "2026-10-16T01:17:32Z",
       "last_seen": "2026-10-16T01:17:32Z"
+    },
+    {
+      "id": "L-014",
+      "key": "ac_gap::when a check claims an http result the proof must call the route not the query or use case behind it",
+      "text": "When a check claims an HTTP result, the proof must call the route, not the query or use case behind it",
+      "signal": "ac_gap",
+      "scope": "tests",
+      "status": "candidate",
+      "features": [
+        "cqrs-read-side"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C40 round 1 (tests)"
+      ],
+      "created": "2026-10-16T14:02:09Z",
+      "last_seen": "2026-10-16T14:02:09Z"
+    },
+    {
+      "id": "L-015",
+      "key": "ac_gap::run each cited test filter against a deliberate violation to confirm it matches the generated test names",
+      "text": "Run each cited test filter against a deliberate violation to confirm it matches the generated test names",
+      "signal": "ac_gap",
+      "scope": "tests",
+      "status": "candidate",
+      "features": [
+        "cqrs-read-side"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C7 round 1 (tests)"
+      ],
+      "created": "2026-10-16T14:02:09Z",
+      "last_seen": "2026-10-16T14:02:09Z"
+    },
+    {
+      "id": "L-016",
+      "key": "ac_gap::assert page size and tie break ordering with more rows than one page and equal sort keys",
+      "text": "Assert page size and tie break ordering with more rows than one page and equal sort keys",
+      "signal": "ac_gap",
+      "scope": "tests",
+      "status": "candidate",
+      "features": [
+        "cqrs-read-side"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C34 round 1 (tests)"
+      ],
+      "created": "2026-10-16T14:02:09Z",
+      "last_seen": "2026-10-16T14:02:09Z"
+    },
+    {
+      "id": "L-017",
+      "key": "surviving_mutant::pin an inclusive date bound with a row created exactly at the boundary",
+      "text": "Pin an inclusive date bound with a row created exactly at the boundary",
+      "signal": "surviving_mutant",
+      "scope": "tests",
+      "status": "candidate",
+      "features": [
+        "cqrs-read-side"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "F5 round 1: OrderMetricsQuery >= to > (tests)"
+      ],
+      "created": "2026-10-16T14:02:09Z",
+      "last_seen": "2026-10-16T14:02:09Z"
+    },
+    {
+      "id": "L-018",
+      "key": "surviving_mutant::give each counted table a different row count in the fixture so counting the wrong table fails",
+      "text": "Give each counted table a different row count in the fixture so counting the wrong table fails",
+      "signal": "surviving_mutant",
+      "scope": "tests",
+      "status": "candidate",
+      "features": [
+        "cqrs-read-side"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "F4 round 1: CustomerMetricsQuery counted users (tests)"
+      ],
+      "created": "2026-10-16T14:02:09Z",
+      "last_seen": "2026-10-16T14:02:09Z"
     }
   ]
 }
