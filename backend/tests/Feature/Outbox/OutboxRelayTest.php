@@ -1,14 +1,19 @@
 <?php
 
 use App\Modules\Shared\Models\OutboxMessage;
+use App\Modules\Shared\Repositories\OutboxMessageRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Tests\Feature\Outbox\Fixtures\StoppingOutboxRepository;
 
 const RESTART_SIGNAL = 'illuminate:queue:restart';
 
@@ -85,6 +90,80 @@ it('claims the pending messages with for update skip locked', function () {
         ->and($claims[0])->toContain('order by "occurred_at" asc, "id" asc')
         ->and($claims[0])->toContain('limit 100')
         ->and($claims[0])->toContain('for update skip locked');
+});
+
+it('hands the transport an envelope built from every column of the row', function () {
+    $now = CarbonImmutable::parse('2026-10-15 12:00:00');
+    $this->travelTo($now);
+    $orderId = Str::uuid7()->toString();
+    $message = pendingMessage([
+        'name' => 'testing.relayed_event',
+        'version' => 2,
+        'payload' => ['order_id' => $orderId, 'quantity' => 3],
+        'request_id' => 'trace-relay-0001',
+        'occurred_at' => $now->subMinutes(42),
+    ]);
+    $transport = spyTransport();
+
+    expect(relayOnce())->toBe(0)
+        ->and($transport->received)->toHaveCount(1);
+
+    $envelope = $transport->received[0];
+
+    expect($envelope->id)->toBe($message->id)
+        ->and($envelope->name)->toBe('testing.relayed_event')
+        ->and($envelope->version)->toBe(2)
+        ->and($envelope->payload)->toBe(['order_id' => $orderId, 'quantity' => 3])
+        ->and($envelope->occurredAt->equalTo($now->subMinutes(42)))->toBeTrue()
+        ->and($envelope->requestId)->toBe('trace-relay-0001');
+});
+
+it('claims publishes and marks the messages in one transaction', function () {
+    pendingMessage(['occurred_at' => now()->subMinutes(2)]);
+    pendingMessage(['occurred_at' => now()->subMinute()]);
+    $outerLevel = DB::transactionLevel();
+    $publishLevels = [];
+    spyTransport(onPublish: function () use (&$publishLevels) {
+        $publishLevels[] = DB::transactionLevel();
+    });
+    $began = 0;
+    Event::listen(TransactionBeginning::class, function () use (&$began) {
+        $began++;
+    });
+    $queryLevels = [];
+    DB::listen(function (QueryExecuted $query) use (&$queryLevels) {
+        $queryLevels[] = [$query->sql, $query->connection->transactionLevel()];
+    });
+
+    expect(relayOnce())->toBe(0);
+
+    $levelsOf = fn (string $prefix) => array_column(
+        array_filter($queryLevels, fn (array $query) => str_starts_with($query[0], $prefix)),
+        1,
+    );
+
+    expect($began)->toBe(1)
+        ->and($levelsOf('select * from "outbox_messages"'))->toBe([$outerLevel + 1])
+        ->and($publishLevels)->toBe([$outerLevel + 1, $outerLevel + 1])
+        ->and($levelsOf('update "outbox_messages" set "published_at"'))->toBe([$outerLevel + 1]);
+});
+
+it('hands a message again when the relay stops before the commit', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-10-15 12:00:00'));
+    $message = pendingMessage();
+    $transport = spyTransport();
+    app()->instance(OutboxMessageRepository::class, new StoppingOutboxRepository);
+
+    expect(fn () => relayOnce())->toThrow(RuntimeException::class, 'relay stopped before the commit');
+
+    expect($message->fresh()->published_at)->toBeNull()
+        ->and(array_map(fn ($envelope) => $envelope->id, $transport->accepted))->toBe([$message->id]);
+
+    app()->forgetInstance(OutboxMessageRepository::class);
+
+    expect(relayOnce())->toBe(0)
+        ->and(array_map(fn ($envelope) => $envelope->id, $transport->accepted))->toBe([$message->id, $message->id])
+        ->and($message->fresh()->published_at->equalTo(now()))->toBeTrue();
 });
 
 it('waits 500 ms after a cycle with no pending message', function () {

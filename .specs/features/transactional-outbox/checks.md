@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/transactional-outbox/plan.md`
 
-50 checks em 4 slices, a documentação e o fechamento · 7 one-way doors · 0 open
+56 checks em 4 slices, a documentação, o fechamento e a rodada 2 · 7 one-way doors · 0 open
 
 Comandos: o backend roda via `docker compose exec -T api ./vendor/bin/pest --filter="<nome do teste>"`, no mesmo container do `make test` que o CI executa. O Pint roda via `docker compose exec -T api ./vendor/bin/pint --test`, como no CI. As provas do Compose e do Makefile rodam na raiz do repositório, no host. O frontend não muda. Os nomes de teste novos não usam parênteses, colchetes nem barras, porque o `--filter` do Pest é uma expressão regular.
 
@@ -233,20 +233,45 @@ Proof: `grep -q -e 'EventOutbox' AGENTS.md`
 Proof: `make test`
 Proof: `docker compose exec -T api ./vendor/bin/pint --test`
 
+### Rodada 2 - lacunas da verificação · 7 arquivos · 272 KB · ~68k
+
+A verificação da rodada 1 (FAIL, `e80151e`) e a revisão do PR #15 acharam provas que faltavam, nenhum comportamento errado. Os checks abaixo acrescentam essas provas; nenhum check anterior muda de texto. As provas de C8 e C9 mantêm os nomes e passam a cruzar o relay (`outbox:relay --once` sobre uma linha pendente), e as de C15 e C16 passam pelo `boot()` de um service provider registrado na aplicação, a borda que a linha 1 do `Test policy` pede (lacuna 4).
+
+**C51** - Com o relógio congelado e o transporte espião: 1 pendente com `name` `testing.relayed_event`, `version` 2, `payload` `{"order_id": "<v7>", "quantity": 3}`, `request_id` `trace-relay-0001` e `occurred_at` 42 minutos antes do instante congelado. `php artisan outbox:relay --once` sai com 0 e entrega 1 envelope com o `id` da linha, `name` `testing.relayed_event`, `version` 2, o mesmo `payload`, `occurredAt` igual ao `occurred_at` da linha e `requestId` `trace-relay-0001` (door 2, Key decision 2; lacuna 1 e mutante F5 da rodada 1)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="hands the transport an envelope built from every column of the row"`
+
+**C52** - Com 2 pendentes e o transporte espião, um `php artisan outbox:relay --once` abre exatamente 1 transação (um `TransactionBeginning`), e a seleção das pendentes, as 2 chamadas ao transporte e o `update` que grava `published_at` rodam todos um nível de transação acima do nível do teste. Assim a reserva com `skip locked` vale até a marca (door 6, "Cada ciclo, numa transação"; AC 22; lacuna 3)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="claims publishes and marks the messages in one transaction"`
+
+**C53** - Com um repositório do outbox que marca as mensagens e então lança `RuntimeException('relay stopped before the commit')`, o `php artisan outbox:relay --once` lança essa exceção depois de o transporte aceitar a mensagem, e ela continua pendente. Um segundo `--once`, com o repositório real, entrega a mesma mensagem de novo, sai com 0 e grava `published_at` (design, estado do OutboxRelay "O relay cai depois de o transporte aceitar e antes de marcar"; lacuna 3)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="hands a message again when the relay stops before the commit"`
+
+**C54** - Depois da falha isolada do C14, `php artisan queue:failed --json` lista exatamente 1 entrega, com `class` igual a `testing.sample_event -> <classe do consumidor que falha>` (design, estado do EventConsumer "O consumidor falha"; lacuna 2)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="retries only the failing consumer three times and fails it alone"`
+
+**C55** - Gravar o evento de teste com um `resource` (`fopen('php://memory', 'r')`) no payload lança `InvalidArgumentException`, e nenhuma mensagem é gravada (AC 5; lacuna 5)
+Proof: `docker compose exec -T api ./vendor/bin/pest --filter="refuses a resource in the payload"`
+
+**C56** - A análise de domínio não aponta mais para a pasta `Listeners` (achado F5 da revisão do PR #15)
+Proof: `! grep -n -e 'Listeners/' docs/domain-analysis.md`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
 | colunas de `outbox_messages` (7) | C1, table-driven sobre as 7: `id` · `name` · `version` · `payload` · `request_id` · `occurred_at` · `published_at` | - |
 | índices e restrições de `outbox_messages` (3) | `outbox_messages_pending_index` C1, C22 · índice de `published_at` C1 · nenhuma chave estrangeira C1 | - |
-| doors do `Landing` (7) | 1 tabela C1 · 2 envelope e contrato C29, C30, C8 · 3 gravação só em transação C4, C31, C38, C40 · 4 porta do transporte C19, C45 · 5 inscrição, consumidor e entrega C8, C14, C15, C32 · 6 relay C19 a C27 · 7 `request_id` C6, C11, C12, C47 | - |
+| doors do `Landing` (7) | 1 tabela C1 · 2 envelope e contrato C29, C30, C8, C51 · 3 gravação só em transação C4, C31, C38, C40 · 4 porta do transporte C19, C45 · 5 inscrição, consumidor e entrega C8, C14, C15, C32 · 6 relay C19 a C27, C52, C53 · 7 `request_id` C6, C11, C12, C47 | - |
 | entidades do `Relations` (1) | `outbox_messages` isolada, sem chave estrangeira C1 · pendente nunca apagada C25 | - |
 | nomes e versões dos eventos (5) | `ordering.order_placed` C29 · `payment.payment_approved` C29 · `ordering.order_paid` C29 · `fulfillment.delivery_scheduled` C29 · `fulfillment.order_delivered` C29 | - |
 | chaves do payload (7) | `order_id` em `OrderPlaced` C30 · `order_id` em `PaymentApproved` C30 · `order_id` em `OrderPaid` C30 · `delivery_business_days` C30 · `order_id` em `DeliveryScheduled` C30 · `estimated_delivery_on` C30 · `order_id` em `OrderDelivered` C30 | - |
-| valores do payload (8) | aceitos: string C5 · int C5 · float C5 · bool C5 · null C5; recusados: array associativo C5 · lista C5 · objeto C5 | - |
+| valores do payload (9) | aceitos: string C5 · int C5 · float C5 · bool C5 · null C5; recusados: array associativo C5 · lista C5 · objeto C5 · `resource` C55 | - |
+| campos do envelope montado pelo relay a partir da linha (6) | `id` C51 · `name` C51 · `version` C51 · `payload` C51 · `occurredAt` C51 · `requestId` C51 | - |
 | `request_id` na gravação e na entrega (5) | gravado do `Context` C6 · nulo sem `Context` C7 · restaurado na entrega C11 · limpo quando nulo C12 · levado pela cadeia C47 | - |
 | inscrições (5) | `OrderPlaced` → `MarkOrderAsAwaitingPayment` C32 · `PaymentApproved` → `MarkOrderAsPaid` C32 · `DeliveryScheduled` → `RecordEstimatedDelivery` C32 · `OrderDelivered` → `MarkOrderAsDelivered` C32 · `OrderPaid` → `ScheduleOrderDelivery` C32 | - |
 | recusas da inscrição (3) | `handle()` de outro evento C15 · sem `EventConsumer` C15 · nome repetido C16 | - |
+| estados do EventConsumer no design (8) | dois consumidores C8 · nenhum consumidor C9 · falha isolada com 3 tentativas C14 · o que o `queue:failed` lista C54 · entrega repetida C41 · versão desconhecida C13 · `queue-retry` depois da limpeza C17 · consumidor que grava o próximo evento com o mesmo `request_id` C47 | - |
+| estados do OutboxRelay no design (8) | pendente com o transporte no ar C19, C23 · transporte fora C20, C24, C45 · relay que cai entre o aceite e a marca C53 · dois relays C22, C52 · container parado com pendentes C45 · publicada há mais de 7 dias C25 · pendente há mais de 7 dias C25 · código do relay mudou C26 | - |
 | decisões da entrega (5) | N consumidores C8 · nenhum consumidor C9 · versão diferente C13 · falha isolada e 3 tentativas C14 · linha já apagada C17 | - |
 | decisões do relay (13) | ordem C19 · marca depois do aceite C19 · já publicada fica de fora C19 · parada na falha C20 · `warning` C20 · saída 0 C19 · saída 1 C21 · `skip locked` C22 · 500 ms C23 · 5 s C24 · retenção nos dois lados do limite C25 · limpeza por hora C25 · sinal de reinício C26 | - |
 | casos de uso que gravam (5) | `PlaceOrderUseCase` C33 · `PayOrderUseCase` C35 · `MarkOrderAsPaidUseCase` C39 · `ScheduleDeliveryUseCase` C42 · `DeliverOrderUseCase` C44 | - |
@@ -258,7 +283,7 @@ Proof: `docker compose exec -T api ./vendor/bin/pint --test`
 | ambiente (3) | serviço `outbox-relay` C27 · `make logs` C28 · `make logs-relay` C28 | - |
 | startup config: inscrições e ligação do `EventTransport` e do `EventOutbox` (3 montagens) | `queue-worker` C14, pelo `queue:work` com o mesmo boot · `outbox-relay` C19, pelo comando com o mesmo boot · harness de teste C18, C32. As três sobem a mesma lista de `bootstrap/providers.php` e o mesmo `bootstrap/app.php`, uma montagem compartilhada | - |
 
-- Os checks que citam um status, uma rota ou a forma de uma resposta (C6, C33 a C38, C45 a C48) têm uma prova que cruza a borda HTTP. Os do relay (C19 a C26) cruzam a borda do comando pelo `Artisan`, e os da entrega (C11, C12 e C14) passam pela fila.
+- Os checks que citam um status, uma rota ou a forma de uma resposta (C6, C33 a C38, C45 a C48) têm uma prova que cruza a borda HTTP. Os do relay (C19 a C26 e C51 a C53) cruzam a borda do comando pelo `Artisan`, e os do transporte de fila (C8 e C9) também, pelo relay. Os da entrega (C11, C12, C14 e C54) passam pela fila, e as recusas da inscrição (C15 e C16) passam pelo `boot()` de um service provider.
 - Nenhum outro check afirma mais do que o caso que a sua prova exercita.
 
 ## Test policy
@@ -286,15 +311,15 @@ Cost: 26 provas na borda do comando e da fila (C8 a C26) em 2 arquivos de teste 
 
 ## Swept
 
-- validation: C5, porque o payload aceita só escalares e nulo; C13, porque uma versão desconhecida é recusada; e C15 e C16, porque a inscrição confere o tipo e o nome
+- validation: C5 e C55, porque o payload aceita só escalares e nulo; C13, porque uma versão desconhecida é recusada; e C15 e C16, porque a inscrição confere o tipo e o nome
 - failure modes: C3, C34, C37, C38, C40 e C43, porque a mensagem e a mudança de estado são desfeitas juntas; e C20, porque a falha do transporte para o ciclo e deixa o resto pendente
 - idempotency: C41, porque um `PaymentApproved` repetido não gera um segundo `OrderPaid`. A entrega repetida pelo relay (Key decision 3) cai nas guardas que já existem, provadas por "keeps the first delivery estimate" e "ignores out of order or duplicated executions" (C41)
 - authorization: existing - os guards, o throttle e a busca com o dono das duas rotas não mudam (C48). O relay e a entrega não têm superfície pública
-- concurrency: C22, porque dois relays não pegam a mesma mensagem ao mesmo tempo (`skip locked`); e C37, porque a corrida da aprovação não deixa mensagem
+- concurrency: C22 e C52, porque dois relays não pegam a mesma mensagem ao mesmo tempo (`skip locked`, mantido pela transação do ciclo até a marca); C53, porque um relay que para antes do commit entrega a mensagem de novo; e C37, porque a corrida da aprovação não deixa mensagem
 - data lifecycle: C25, porque as publicadas saem depois de 7 dias e as pendentes nunca saem; e C17, porque um `queue-retry` depois da limpeza ainda entrega
 - dependency failure: C20, C21, C24, C45 e C46, porque o transporte fora deixa as mensagens pendentes e o pedido avança quando ele volta
 - state transitions: C39, C40, C41, C45, C46 e C47, porque cada transição do pedido continua acontecendo uma vez, pelo consumidor do Ordering
-- observability: C6, C11, C12 e C47, porque o `request_id` atravessa o relay até os logs do consumidor; e C20, porque a falha do transporte deixa um `warning` com o `id` e o `name`
+- observability: C6, C11, C12 e C47, porque o `request_id` atravessa o relay até os logs do consumidor; e C20, porque a falha do transporte deixa um `warning` com o `id` e o `name`; e C54, porque o `queue:failed` mostra o evento e o consumidor de uma entrega que falhou
 
 ## Handoff
 
@@ -317,3 +342,4 @@ Cost: 26 provas na borda do comando e da fila (C8 a C26) em 2 arquivos de teste 
   - **Execução manual com o Redis parado** (o Independent test da S3): o relay caía ao ler o sinal de reinício, porque o cache é o Redis, e o container entrava em laço de reinício, sem o `warning` e sem tentar o transporte. Corrigido em `c0fbfb9`: enquanto o cache não responde, o relay segue publicando e adota o sinal quando o cache volta; e cada ciclo com falha imprime uma linha de aviso na saída do processo, que é o que o `make logs-relay` mostra (o `warning` do AC 20, com o id, o nome e o erro, vai para o log da aplicação). Dois testes a mais cobrem os dois casos. Depois disso, com o Redis parado, o pedido ficou em `placed` com a mensagem pendente e o aviso a cada 5 s; com o Redis de volta, foi para `awaiting_payment`
   - **Helpers de teste** em `tests/Pest.php`: `outboxMessages($name)`, `relayOnce()`, `relayUntilIdle()` e `spyTransport()`. As classes de teste ficam em `tests/Feature/Outbox/Fixtures`
 - Abandoned: nada
+- Rodada 2 (2026-10-16): a verificação da rodada 1 deu FAIL por 5 lacunas de prova, e a revisão do PR #15 (the-judge) as confirmou, com um link quebrado a mais. Correção num builder só (272 KB em 7 arquivos por `wc -c`, ~68k, abaixo do budget de 150k; o README e a análise de domínio são 196 KB disso): C51 a C56 acrescentados, as provas de C8, C9, C15 e C16 levadas à borda da linha 1 do `Test policy` sem mudar nomes nem afrouxar asserções, o README (tabela de testes) e a análise de domínio (link e "Última atualização") atualizados. Nenhum código de produção mudou

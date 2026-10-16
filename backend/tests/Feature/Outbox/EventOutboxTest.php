@@ -105,6 +105,16 @@ it('refuses a payload value that is not a scalar or null', function (mixed $valu
     'object' => [CarbonImmutable::parse('2026-10-15 12:00:00')],
 ]);
 
+it('refuses a resource in the payload', function () {
+    $resource = fopen('php://memory', 'r');
+
+    expect(fn () => recordInTransaction(new SampleEvent(['value' => $resource])))->toThrow(InvalidArgumentException::class);
+
+    fclose($resource);
+
+    expect(DB::table('outbox_messages')->count())->toBe(0);
+});
+
 it('records the context request id on the message', function () {
     Context::add('request_id', 'trace-outbox-0001');
 

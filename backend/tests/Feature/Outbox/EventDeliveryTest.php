@@ -5,6 +5,7 @@ use App\Modules\Shared\Messaging\EventEnvelope;
 use App\Modules\Shared\Messaging\EventOutbox;
 use App\Modules\Shared\Messaging\EventSubscriptions;
 use App\Modules\Shared\Messaging\QueueEventTransport;
+use App\Modules\Shared\Models\OutboxMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\ServiceProvider;
 use Tests\Feature\Outbox\Fixtures\FailingConsumer;
 use Tests\Feature\Outbox\Fixtures\SampleEvent;
 use Tests\Feature\Outbox\Fixtures\SampleEventTwin;
@@ -36,6 +38,29 @@ function sampleEnvelope(array $overrides = []): EventEnvelope
     return new EventEnvelope(...$values);
 }
 
+/**
+ * Subscribes the consumer in the boot() of a service provider registered on the booted application,
+ * the way a module subscribes its consumers.
+ */
+function subscribeInProviderBoot(string $event, string $consumer): void
+{
+    $provider = new class(app()) extends ServiceProvider
+    {
+        public string $event;
+
+        public string $consumer;
+
+        public function boot(EventSubscriptions $subscriptions): void
+        {
+            $subscriptions->subscribe($this->event, $this->consumer);
+        }
+    };
+    $provider->event = $event;
+    $provider->consumer = $consumer;
+
+    app()->register($provider, force: true);
+}
+
 /** Binds a spy instance of the consumer class, so the delivery resolves that same instance. */
 function spyOn(string $consumer): SpyConsumer
 {
@@ -46,12 +71,18 @@ function spyOn(string $consumer): SpyConsumer
 }
 
 it('pushes one delivery per subscribed consumer with the whole envelope', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-10-15 12:00:00'));
     Queue::fake()->serializeAndRestore();
     app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
     app(EventSubscriptions::class)->subscribe(SampleEvent::class, SecondSpyConsumer::class);
-    $envelope = sampleEnvelope();
+    $payload = ['order_id' => unknownId(), 'quantity' => 3];
+    $message = OutboxMessage::factory()->create([
+        'payload' => $payload,
+        'request_id' => 'trace-envelope-0001',
+        'occurred_at' => now()->subMinutes(5),
+    ]);
 
-    app(QueueEventTransport::class)->publish($envelope);
+    expect(relayOnce())->toBe(0);
 
     Queue::assertPushed(DeliverEvent::class, 2);
     $jobs = Queue::pushed(DeliverEvent::class);
@@ -59,11 +90,11 @@ it('pushes one delivery per subscribed consumer with the whole envelope', functi
     expect($jobs->pluck('consumer')->sort()->values()->all())->toBe([SecondSpyConsumer::class, SpyConsumer::class]);
 
     foreach ($jobs as $job) {
-        expect($job->envelope->id)->toBe($envelope->id)
+        expect($job->envelope->id)->toBe($message->id)
             ->and($job->envelope->name)->toBe('testing.sample_event')
             ->and($job->envelope->version)->toBe(1)
-            ->and($job->envelope->payload)->toBe($envelope->payload)
-            ->and($job->envelope->occurredAt->equalTo($envelope->occurredAt))->toBeTrue()
+            ->and($job->envelope->payload)->toBe($payload)
+            ->and($job->envelope->occurredAt->equalTo(now()->subMinutes(5)))->toBeTrue()
             ->and($job->envelope->requestId)->toBe('trace-envelope-0001')
             ->and($job->connection)->toBeNull();
     }
@@ -72,10 +103,12 @@ it('pushes one delivery per subscribed consumer with the whole envelope', functi
 it('publishes an envelope with no subscribed consumer without pushing a job', function () {
     Queue::fake();
     app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    $message = OutboxMessage::factory()->create(['name' => 'testing.unheard_event']);
 
-    app(QueueEventTransport::class)->publish(sampleEnvelope(['name' => 'testing.unheard_event']));
+    expect(relayOnce())->toBe(0);
 
     Queue::assertNothingPushed();
+    expect($message->fresh()->published_at)->not->toBeNull();
 });
 
 it('rebuilds the event and calls the consumer once', function () {
@@ -141,34 +174,35 @@ it('retries only the failing consumer three times and fails it alone', function 
     $failed = DB::table('failed_jobs')->get();
     $failedJob = unserialize(json_decode($failed->sole()->payload, true)['data']['command']);
 
+    Artisan::call('queue:failed', ['--json' => true]);
+    $listed = json_decode(Artisan::output(), true);
+
     expect((new DeliverEvent(sampleEnvelope(), SpyConsumer::class))->tries)->toBe(3)
         ->and($failing->attempts)->toBe(3)
         ->and($counting->calls)->toHaveCount(1)
         ->and($failed)->toHaveCount(1)
         ->and($failedJob)->toBeInstanceOf(DeliverEvent::class)
         ->and($failedJob->consumer)->toBe(FailingConsumer::class)
-        ->and(DB::table('jobs')->count())->toBe(0);
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and(array_column($listed, 'class'))->toBe(['testing.sample_event -> '.FailingConsumer::class]);
 });
 
 it('refuses a consumer that does not match the subscribed event', function (string $consumer) {
-    $subscriptions = app(EventSubscriptions::class);
+    expect(fn () => subscribeInProviderBoot(SampleEvent::class, $consumer))->toThrow(LogicException::class);
 
-    expect(fn () => $subscriptions->subscribe(SampleEvent::class, $consumer))->toThrow(LogicException::class);
-
-    expect($subscriptions->consumersOf('testing.sample_event'))->toBe([]);
+    expect(app(EventSubscriptions::class)->consumersOf('testing.sample_event'))->toBe([]);
 })->with([
     'handle() typed by another event' => [WrongEventConsumer::class],
     'not an EventConsumer' => [UnmarkedConsumer::class],
 ]);
 
 it('refuses two event classes under the same name', function () {
-    $subscriptions = app(EventSubscriptions::class);
-    $subscriptions->subscribe(SampleEvent::class, SpyConsumer::class);
+    subscribeInProviderBoot(SampleEvent::class, SpyConsumer::class);
 
-    expect(fn () => $subscriptions->subscribe(SampleEventTwin::class, TwinConsumer::class))->toThrow(LogicException::class);
+    expect(fn () => subscribeInProviderBoot(SampleEventTwin::class, TwinConsumer::class))->toThrow(LogicException::class);
 
-    expect($subscriptions->consumersOf('testing.sample_event'))->toBe([SpyConsumer::class])
-        ->and($subscriptions->eventOf('testing.sample_event'))->toBe(SampleEvent::class);
+    expect(app(EventSubscriptions::class)->consumersOf('testing.sample_event'))->toBe([SpyConsumer::class])
+        ->and(app(EventSubscriptions::class)->eventOf('testing.sample_event'))->toBe(SampleEvent::class);
 });
 
 it('delivers an envelope whose message was already pruned', function () {
