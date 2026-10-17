@@ -74,7 +74,7 @@ Os perfis de volume dividem os VUs entre três fluxos:
 | Perfil | Forma da carga | Limites de requisição | Limites de aprovação |
 |---|---|---|---|
 | `smoke` | 1 VU por fluxo, uma iteração, passando por todos os casos de erro | reais | nenhum erro inesperado e 100% dos checks |
-| `load` | 0 a 50 VUs em 1 min, 5 min em 50, 1 min descendo | inertes | erro inesperado < 1%; p95 da vitrine, de `POST /api/orders` e de `order_payable_wait` abaixo dos limites da linha de base (hoje 50 ms, 70 ms e 2.460 ms) |
+| `load` | 0 a 50 VUs em 1 min, 5 min em 50, 1 min descendo | inertes | erro inesperado < 1%; p95 da vitrine, de `POST /api/orders` e de `order_payable_wait` abaixo dos limites da linha de base (hoje 40 ms, 70 ms e 2.450 ms) |
 | `stress` | 0 a 150 VUs em 2 min, 5 min em 150, 2 min descendo | inertes | os mesmos do `load` |
 | `spike` | 50 VUs por 1 min, salto para 300 em 10 s, 1 min em 300, volta a 50 em 10 s e 2 min em 50 | inertes | erro inesperado < 5% |
 | `breakpoint` | taxa de chegada de 5 a 500 iterações/s em 15 min (`ramping-arrival-rate`) | inertes | aborta com erro inesperado > 5% ou p95 > 2 s, avaliado depois de 30 s |
@@ -105,7 +105,7 @@ Quando um limite cai, o `make load-test` sai com código diferente de zero, e os
 - **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 2 segundos, como o frontend faz, então a resolução da métrica é de 2 segundos. Ela mede o relay do outbox e o worker sob carga.
 - **`rate_limit_overshoot`:** quantos logins da rajada simultânea do `limits` passaram além do limite de 10. A métrica é só registrada, sem limite de aprovação.
 
-Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine, 1 s em `POST /api/orders` e 10 s em `order_payable_wait`. Agora eles são o p95 da linha do `load` vezes 1,2, arredondado para cima até a dezena de ms seguinte: 50 ms, 70 ms e 2.460 ms (`BASELINE` em `lib/baseline.js`, que muda junto com a linha). O `stress` e o `soak` usam os mesmos limites, então eles costumam reprovar: o relatório mostra quanto a API degradou.
+Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine, 1 s em `POST /api/orders` e 10 s em `order_payable_wait`. Agora eles são o p95 da linha do `load` vezes 1,2, arredondado para cima até a dezena de ms seguinte: 40 ms, 70 ms e 2.450 ms (`BASELINE` em `lib/baseline.js`, que muda junto com a linha). O `stress` e o `soak` usam os mesmos limites, então eles costumam reprovar: o relatório mostra quanto a API degradou.
 
 ## Os relatórios
 
@@ -119,7 +119,7 @@ As métricas de tempo são agrupadas por template de rota, na tag `name` (por ex
 
 ## Linha de base
 
-Uma linha só entra na tabela quando duas rodadas seguidas do mesmo perfil, no mesmo commit, têm o p95 a menos de 20% uma da outra. Acima disso, a diferença é ruído da máquina, e a linha não serve para comparar.
+Uma linha só entra na tabela quando duas rodadas seguidas do mesmo perfil, no mesmo commit, têm o p95 a menos de 20% uma da outra. A diferença é medida sobre o menor dos dois p95, e feche os outros aplicativos pesados antes de medir. Acima disso, a diferença é ruído da máquina, e a linha não serve para comparar.
 
 Mudar a máquina, a configuração da pilha, o `LoadTestSeeder`, o pool do FPM ou a versão do k6 abre uma série nova. A coluna "Mudou desde a série anterior" diz o que mudou.
 
@@ -127,15 +127,15 @@ O k6 roda na mesma VM do Docker que a API e disputa CPU com ela. Por isso, os n�
 
 | Data | Commit | Máquina | Perfil | VUs ou taxa | req/s | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Erro inesperado | Ponto de ruptura | Mudou desde a série anterior |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-16 | 09760e2 | Apple M1, VM do Docker com 8 CPUs e 4 GB | load | 50 VUs | 47.2 | 34.0 | 51.8 | 2045 | 0% | - | primeira série |
-| 2026-10-16 | 09760e2 | Apple M1, VM do Docker com 8 CPUs e 4 GB | breakpoint | 5 a 500 it/s | 116.4 | - | - | 4076 | 0% | 46.1 it/s (p95 acima de 2 s aos 76 s) | primeira série |
+| 2026-10-16 | f58ff69 | Apple M1, VM do Docker com 8 CPUs e 4 GB | load | 50 VUs | 47.3 | 30.0 | 55.4 | 2035 | 0% | - | primeira série |
+| 2026-10-16 | f58ff69 | Apple M1, VM do Docker com 8 CPUs e 4 GB | breakpoint | 5 a 500 it/s | 127.3 | - | - | 3978 | 0% | 49.4 it/s (p95 acima de 2 s aos 82 s) | primeira série |
 
 Como as linhas foram aceitas:
 
-- **`load`:** a rodada anterior, no mesmo commit, teve p95 de 29,1 ms na vitrine, 46,7 ms em `POST /api/orders` e 2.041 ms em `order_payable_wait`. Todos ficaram a menos de 20% da linha registrada. A espera até pagar fica perto de 2 segundos porque é a resolução da consulta: o pedido já está pagável na primeira leitura.
-- **`breakpoint`:** a rodada anterior, no mesmo commit, parou em 48,6 it/s, a menos de 20% de 46,1. A ruptura vem da fila do PHP-FPM: com 16 workers e as pausas de 1 a 3 s de cada passo, a taxa de chegada acumula centenas de VUs antes do aborto.
-- Depois de `09760e2`, a rodada 2 da verificação mudou o código medido sem mudar as requisições: o `send()` passou a ser montado sobre um cliente HTTP, a espera passou a receber a métrica, e a rajada passou a contar por uma decisão testada. Por isso as linhas acima precisam ser medidas de novo.
-- **Rodadas não aceitas.** Em `d563093`, cinco rodadas seguidas do `load` deram p95 de vitrine e de `POST /api/orders` de 42,2 e 71,7 ms, 36,5 e 58,9 ms, 44,9 e 74,8 ms, 39,4 e 63,9 ms e 30,7 e 47,9 ms. Nenhum par seguido ficou a menos de 20%, medido sobre o menor p95. A carga média da máquina estava entre 3 e 6, com outros aplicativos abertos. O `breakpoint` parou em 39,5 e 36,1 it/s. Nenhuma linha nova entrou.
+- **`load`:** a rodada anterior, no mesmo commit, teve p95 de 30,3 ms na vitrine, 50,5 ms em `POST /api/orders` e 2.034 ms em `order_payable_wait`. Todos ficaram a menos de 20% da linha registrada, medido sobre o menor p95. A espera até pagar fica perto de 2 segundos porque é a resolução da consulta: o pedido já está pagável na primeira leitura.
+- **`breakpoint`:** a rodada anterior, no mesmo commit, parou em 54,8 it/s, a menos de 20% de 49,4. A ruptura vem da fila do PHP-FPM: com 16 workers e as pausas de 1 a 3 s de cada passo, a taxa de chegada acumula centenas de VUs antes do aborto.
+- As quatro rodadas foram feitas com a máquina sem outros aplicativos pesados abertos (carga média perto de 3 no início de cada uma). O código medido (`backend/`, `docker/`, o `Makefile` e o Compose e o JavaScript desta pasta) não mudou entre `f58ff69` e o fim da HEL-14; depois da medição mudaram só esta tabela e `lib/baseline.js`.
+- **Rodadas não aceitas, antes desta medição.** Com a máquina ocupada (carga média de 3 a 6), cinco rodadas seguidas do `load` em `d563093`, o mesmo código medido, variaram até 33% entre pares seguidos. O p95 de `POST /api/orders` foi de 47,9 a 74,8 ms, e nenhuma linha entrou. É a razão da regra dos 20%: numa máquina ocupada, a diferença entre duas rodadas é maior que a de uma mudança no código.
 
 ## As provas dos scripts
 
