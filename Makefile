@@ -5,20 +5,29 @@ DC        = docker compose
 EXEC_API  = $(DC) exec api
 ARTISAN   = $(EXEC_API) php artisan
 EXEC_DB   = $(DC) exec db
-EXEC_NODE = $(DC) exec frontend
 
 -include .env
 APP_PORT    ?= 8080
 DB_DATABASE ?= ecommerce
 DB_USERNAME ?= ecommerce
 
+# Every checkout of the repository shares the dev containers, whose bind mounts point at the main checkout.
+# In a linked git worktree (its git dir is <repository>/.git/worktrees/<name>), the targets that read the
+# checkout's code (test, test-filter, pint, shell, artisan, test-frontend, frontend-shell) run in a one-off
+# container of the same service, which mounts the worktree's own backend/ or frontend/. The main checkout
+# (and CI) execs into the dev containers. The other targets act on the dev environment and stay there.
+WORKTREE      := $(shell git rev-parse --git-dir 2>/dev/null | sed -n 's|.*/worktrees/\([^/]*\)$$|\1|p')
+MAIN_CHECKOUT := $(if $(WORKTREE),$(patsubst %/.git,%,$(shell git rev-parse --path-format=absolute --git-common-dir)))
+CHECKOUT_RUN   = $(DC) $(if $(WORKTREE),run --rm --no-deps,exec)
+CHECKOUT_API   = $(CHECKOUT_RUN) api
+
 .DEFAULT_GOAL := help
 
 .PHONY: help up down build rebuild ps logs logs-api logs-worker logs-relay \
-	shell artisan migrate migrate-fresh seed fresh optimize clear \
+	shell artisan worktree-env migrate migrate-fresh seed fresh optimize clear \
 	db-shell db-reset db-dump db-restore \
 	queue queue-restart queue-failed queue-retry \
-	test test-filter test-prepare test-db-drop test-frontend npm-install frontend-shell setup env-files wait-api \
+	test test-filter test-prepare test-db-drop pint test-frontend npm-install frontend-shell setup env-files wait-api \
 	load-test load-down
 
 help: ## Lista os comandos disponíveis
@@ -55,11 +64,17 @@ logs-relay: ## Mostra os logs do relay do outbox
 
 ## ---------- Laravel ----------
 
-shell: ## Abre um shell no container da API
-	$(EXEC_API) sh
+shell: worktree-env ## Abre um shell no container da API, com o backend/ deste checkout
+	$(CHECKOUT_API) sh
 
-artisan: ## Executa um comando Artisan: make artisan CMD="route:list"
-	$(ARTISAN) $(CMD)
+artisan: worktree-env ## Executa um comando Artisan no backend/ deste checkout: make artisan CMD="route:list"
+	$(CHECKOUT_API) php artisan $(CMD)
+
+# A worktree has no backend/.env (it is not in git): it gets the main checkout's one, so it talks to the same
+# db and redis. vendor/ is installed by the api container's entrypoint.
+worktree-env:
+	@test -z "$(WORKTREE)" || test -f backend/.env \
+		|| { cp "$(MAIN_CHECKOUT)/backend/.env" backend/.env && echo "Copiado backend/.env de $(MAIN_CHECKOUT)"; }
 
 migrate: ## Executa as migrations
 	$(ARTISAN) migrate --force
@@ -113,14 +128,10 @@ queue-retry: ## Reprocessa jobs falhos: make queue-retry (todos) ou make queue-r
 ## ---------- Testes ----------
 
 # Each checkout tests on a database of its own, created on the first run: RefreshDatabase runs migrate:fresh,
-# so two suites on one database break each other. The main checkout, whose backend/ the dev api container
-# mounts, keeps ecommerce_testing and runs in that container. A linked git worktree (its git dir is
-# <repository>/.git/worktrees/<name>) runs its own backend/ in a one-off api container, on
+# so two suites on one database break each other. The main checkout keeps ecommerce_testing; a worktree uses
 # ecommerce_testing_<name>. Any checkout can pick another database: make test TEST_DB_DATABASE=<name>.
-WORKTREE         := $(shell git rev-parse --git-dir 2>/dev/null | sed -n 's|.*/worktrees/\([^/]*\)$$|\1|p')
-MAIN_CHECKOUT    := $(if $(WORKTREE),$(patsubst %/.git,%,$(shell git rev-parse --path-format=absolute --git-common-dir)))
 TEST_DB_DATABASE := $(or $(TEST_DB_DATABASE),ecommerce_testing$(if $(WORKTREE),_$(shell printf '%s' '$(WORKTREE)' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '_' | cut -c1-45)))
-TEST_API          = $(DC) $(if $(WORKTREE),run --rm --no-deps,exec) -e DB_DATABASE=$(TEST_DB_DATABASE) api
+TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) api
 PEST              = sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$$@"' pest
 # The name goes unquoted into SQL, and the suite would wipe the development database. The check reads it
 # from the environment, so no value can break its own quoting.
@@ -134,12 +145,9 @@ test: test-prepare ## Executa todos os testes (Pest) no banco de testes deste ch
 test-filter: test-prepare ## Executa testes filtrados: make test-filter FILTER=CheckoutTest
 	$(TEST_API) $(PEST) --filter="$(FILTER)"
 
-# Creates the database when it is missing; a worktree also gets the main checkout's backend/.env (vendor/ is
-# installed by the api container's entrypoint).
-test-prepare:
+# Creates the database when it is missing.
+test-prepare: worktree-env
 	@$(CHECK_TEST_DB)
-	@test -z "$(WORKTREE)" || test -f backend/.env \
-		|| { cp "$(MAIN_CHECKOUT)/backend/.env" backend/.env && echo "Copiado backend/.env de $(MAIN_CHECKOUT)"; }
 	@printf '%s\n' "SELECT 'CREATE DATABASE $(TEST_DB_DATABASE) OWNER $(DB_USERNAME)' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$(TEST_DB_DATABASE)')\gexec" \
 		| $(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -q -v ON_ERROR_STOP=1
 	@echo "Banco de testes: $(TEST_DB_DATABASE)"
@@ -148,16 +156,21 @@ test-db-drop: ## Apaga o banco de testes deste checkout (o próximo make test o 
 	@$(CHECK_TEST_DB)
 	$(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -c 'DROP DATABASE IF EXISTS $(TEST_DB_DATABASE) WITH (FORCE)'
 
+pint: worktree-env ## Verifica o estilo do backend/ deste checkout (Pint, sem corrigir)
+	$(CHECKOUT_API) ./vendor/bin/pint --test
+
 ## ---------- Frontend ----------
 
-test-frontend: ## Executa os testes do frontend (Vitest)
-	$(EXEC_NODE) npm test
+# In a worktree, the one-off container mounts the worktree's frontend/ with the dev node_modules volume, which
+# holds the dependencies of the last npm install (usually the main checkout's).
+test-frontend: ## Executa os testes do frontend/ deste checkout (Vitest)
+	$(CHECKOUT_RUN) frontend npm test
 
 npm-install: ## Instala as dependências do frontend
 	$(DC) run --rm --no-deps frontend npm install
 
-frontend-shell: ## Abre um shell no container do frontend
-	$(EXEC_NODE) sh
+frontend-shell: ## Abre um shell no container do frontend, com o frontend/ deste checkout
+	$(CHECKOUT_RUN) frontend sh
 
 ## ---------- Testes de carga (k6) ----------
 

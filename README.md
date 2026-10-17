@@ -209,6 +209,8 @@ Variáveis importantes do `backend/.env`:
 
 Execute `make` (ou `make help`) para listar todos os comandos.
 
+Num `git worktree`, os alvos que leem o código do checkout (`make test`, `make test-filter`, `make pint`, `make shell`, `make artisan`, `make test-frontend` e `make frontend-shell`) rodam num container avulso que monta o `backend/` ou o `frontend/` do próprio worktree; os demais continuam nos containers de dev. Ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout).
+
 ### Ambiente
 
 | Comando | Descrição |
@@ -228,8 +230,8 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 
 | Comando | Descrição |
 | --- | --- |
-| `make shell` | Abre um shell no container `api` |
-| `make artisan CMD="..."` | Executa um comando Artisan. Ex.: `make artisan CMD="route:list"` |
+| `make shell` | Abre um shell no container `api` (num worktree, num `api` avulso com o `backend/` dele) |
+| `make artisan CMD="..."` | Executa um comando Artisan no `backend/` deste checkout. Ex.: `make artisan CMD="route:list"` |
 | `make migrate` | Executa as migrations |
 | `make migrate-fresh` | `php artisan migrate:fresh` |
 | `make seed` | Executa os seeders |
@@ -262,7 +264,8 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 | `make test` | Executa todos os testes (Pest) no banco de testes deste checkout, criado se ainda não existir (ver [Testes](#testes)) |
 | `make test-filter FILTER="..."` | Executa testes filtrados. Ex.: `make test-filter FILTER=CheckoutTest` |
 | `make test-db-drop` | Apaga o banco de testes deste checkout (o próximo `make test` o recria). Rode antes de remover um worktree |
-| `make test-frontend` | Executa os testes do frontend (Vitest) no container `frontend` |
+| `make pint` | Verifica o estilo do backend com o Pint (`pint --test`, sem corrigir). É o mesmo passo do CI |
+| `make test-frontend` | Executa os testes do frontend (Vitest) no container `frontend` (num worktree, num `frontend` avulso com o `frontend/` dele) |
 
 ### Testes de carga
 
@@ -276,7 +279,7 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 | Comando | Descrição |
 | --- | --- |
 | `make npm-install` | Instala as dependências do frontend |
-| `make frontend-shell` | Abre um shell no container `frontend` |
+| `make frontend-shell` | Abre um shell no container `frontend` (num worktree, num `frontend` avulso com o `frontend/` dele) |
 
 ### Exemplos
 
@@ -284,6 +287,7 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 make setup                          # primeira execução
 make fresh                          # recriar o banco com dados de demonstração
 make test                           # rodar os testes
+make pint                           # conferir o estilo do backend
 make queue                          # acompanhar a fila em primeiro plano
 make db-shell                       # abrir o psql
 make logs                           # acompanhar os logs
@@ -701,6 +705,7 @@ Para listar as rotas: `make artisan CMD="route:list --path=api"`.
 ```bash
 make test                              # todos os testes
 make test-filter FILTER=CheckoutTest   # apenas um arquivo/teste
+make pint                              # estilo do backend (Pint, sem corrigir)
 make test-frontend                     # testes do frontend (Vitest)
 ```
 
@@ -721,7 +726,11 @@ Antes da suíte, o Makefile cria o banco se ele ainda não existir e o passa ao 
 
 Outro banco: `make test TEST_DB_DATABASE=<nome>`, ou a mesma variável no `.env` da raiz. O nome aceita só minúsculas, dígitos e `_`, sem começar por dígito (até 63 caracteres), e nunca pode ser o banco de desenvolvimento (`DB_DATABASE`), que a suíte apagaria. O `make test-db-drop` apaga o banco do checkout. Os bancos de worktrees já removidos ficam no `db` até alguém apagá-los: liste com `make db-shell` e `\l ecommerce_testing*`, e apague com `DROP DATABASE <nome> WITH (FORCE);`.
 
-O Pint segue a mesma regra: na pasta principal, `docker compose exec -T api ./vendor/bin/pint --test`; num worktree, `docker compose run --rm --no-deps -T api ./vendor/bin/pint --test`.
+Os outros alvos que leem o código do checkout seguem o mesmo critério. Num worktree, o `make pint` (o `pint --test`), o `make shell` e o `make artisan` rodam num `api` avulso com o `backend/` do worktree (copiando o `backend/.env` da pasta principal quando falta), e o `make test-frontend` e o `make frontend-shell` num `frontend` avulso com o `frontend/` dele. Na pasta principal e no CI, os cinco continuam no `docker compose exec` dos containers de dev, como antes. Cuidados no worktree:
+
+- O `make artisan` e o `make shell` usam o `backend/.env` da pasta principal, então falam com o banco e o Redis de dev. Um `make artisan CMD=migrate` ali aplica as migrations do worktree no banco que a pasta principal serve.
+- O `make test-frontend` usa o volume `node_modules` de dev, com as dependências do último `npm install` (em geral, as da pasta principal). Um worktree que muda as dependências do frontend testa com as de lá até rodar `make npm-install`, que instala as dele nesse mesmo volume, também lido pelo Vite de dev.
+- Os alvos que agem sobre o ambiente de dev (`migrate`, `migrate-fresh`, `seed`, `fresh`, `optimize`, `clear`, `queue*` e `setup`) continuam nos containers de dev em qualquer checkout.
 
 ### Em que nível testar
 
@@ -745,7 +754,7 @@ O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em todo p
 1. cria os `.env` a partir dos exemplos (`make env-files`);
 2. constrói a imagem PHP e sobe `db`, `redis` e `api`;
 3. instala as dependências do Composer (com cache por `composer.lock`) e gera a `APP_KEY`;
-4. verifica o estilo com o Pint (`pint --test`);
+4. verifica o estilo com o Pint (`make pint`, o `pint --test`);
 5. roda toda a suíte (`make test`), inclusive os testes de arquitetura que verificam as fronteiras entre módulos. O checkout do CI não é um worktree, então a suíte roda no container `api` e no banco `ecommerce_testing`, como na pasta principal.
 
 Se algum passo falhar, os logs dos containers `db` e `api` aparecem no próprio run. Um push novo na mesma branch cancela o run anterior que ainda estiver em andamento.
@@ -977,5 +986,6 @@ Decisões relevantes:
 - **Um banco de testes por checkout** (visto em 17/10/2026, com duas suítes rodando ao mesmo tempo em worktrees diferentes: `deadlock detected` e `relation "migrations" does not exist`): todos os checkouts dividem o projeto Compose `ecommerce`, e todos testavam no mesmo `ecommerce_testing`. Agora o Makefile dá a cada `git worktree` o banco `ecommerce_testing_<nome>` e um container `api` avulso com o próprio `backend/`; a pasta principal e o CI continuam no `ecommerce_testing` e no `api` de dev (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)).
   - **O worktree é reconhecido pelo git**, sem variável a definir: o `git rev-parse --git-dir` de um worktree termina em `.git/worktrees/<nome>`, e o git não repete um nome no mesmo repositório. Um segundo clone (que não é um worktree) se comporta como a pasta principal e roda no `api` de dev, que monta o `backend/` de quem subiu a pilha.
   - **Um projeto Compose por worktree** (o `name` vindo de uma variável) foi descartado: duplicaria `db`, `redis`, `nginx` e o frontend, as portas publicadas (`8080` e `5433`) colidiriam, e cada worktree precisaria do próprio `make setup`.
+  - **Os outros alvos que leem o código seguem o mesmo critério** (`make pint`, `make shell`, `make artisan`, `make test-frontend` e `make frontend-shell`): num worktree, o `exec` no container de dev abriria a pasta principal. O Pint ganhou o alvo `make pint`, que o CI e o AGENTS.md usam, no lugar do `docker compose exec -T api ./vendor/bin/pint --test` escrito à mão. Os alvos que agem sobre o ambiente de dev (`migrate`, `seed`, `fresh`, `optimize`, `clear`, `queue*`) ficaram no `api` de dev: as migrations de um worktree no banco de dev deixariam o esquema fora do código que a pasta principal serve. Quem quiser isso de propósito usa o `make artisan CMD=migrate` do worktree.
   - **O `--parallel` do Laravel não resolve**: ele separa os processos de uma suíte, e os bancos dele derivam do `DB_DATABASE` (`<banco>_test_<n>`). Duas suítes sobre o mesmo `ecommerce_testing` disputariam os mesmos bancos.
   - **A sonda do `RateLimitBurstTest` fica em `/api`** (achado numa rodada da suíte inteira num worktree novo, que deu `[204 => 10, 429 => 19, 500 => 1]`). Fora de `/api`, o `429` era a página HTML do framework (`errors::429`), e sem o view já compilado (um checkout novo, ou depois de um `view:clear`) os 20 filhos recusados compilavam o Blade ao mesmo tempo. O compilador grava num arquivo temporário e o renomeia por cima do compilado, o que é atômico num sistema de arquivos Linux, mas não no bind mount (`virtiofs`) do Docker Desktop no macOS: ali, o arquivo que outro filho está renomeando some por um instante, e o `require` (ou o `hash_file` que compara o conteúdo) falha com `No such file or directory`, o que vira um `500`. Com os views apagados antes de cada rodada, o teste passou em 1 de 10; com os views compilados no sistema de arquivos do próprio container, em 15 de 15; com a sonda em `/api`, cujo `429` é o JSON do `ApiExceptionRenderer`, em 30 de 30. A API não muda: as rotas com `throttle` já ficam em `/api` e respondem em JSON, e o CI, em Linux, não tem a corrida. O filho agora devolve, junto com o status, a exceção de um `5xx` (ou de uma requisição que lançou), e a falha do teste mostra o motivo.
