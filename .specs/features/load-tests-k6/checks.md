@@ -15,6 +15,8 @@ As provas usam cinco tipos de comando:
 - **Resultado de uma rodada:** `sh load-tests/tests/assert-check.sh <perfil> --name "<check>"` lê `load-tests/results/<perfil>-checks.txt`, que o `handleSummary` reescreve a cada rodada com uma linha `check <passes> <fails> <nome>` por check do k6 e uma linha `metric <nome> <contagem> <valor>` por métrica personalizada. A prova sai com 0 só quando o check existe, tem `passes` ≥ 1 e `fails` = 0. O `assert-metric.sh <perfil> --name <métrica> --equals <n>` (ou `--at-least <n>`) faz o mesmo com a contagem da métrica.
 - **Asserções da pilha:** `sh load-tests/tests/<script>.sh --only <caso>`. O `dataset.sh` consulta o Postgres de carga pelo `psql` do container `db` do projeto de carga. O `stack.sh` inspeciona os containers de carga, o `make.sh` roda o `make` e confere o que ficou, o `isolation.sh` compara o dev antes e depois de uma rodada, o `docs.sh` confere os documentos e o `ci.sh` confere o workflow.
 
+Todos esses scripts saem com 1 diante de uma opção sem valor (`FALHOU: <opção> sem valor`) ou de uma opção desconhecida (`FALHOU: opção desconhecida <opção>`), para que uma opção digitada errado nunca deixe a prova sem a asserção que ela pedia.
+
 Antes das provas de um perfil, rode `sh load-tests/tests/run.sh --only <perfil>`. As provas do `smoke` (S3 a S5) leem a última rodada do `smoke`. As do `contention` e do `limits` (S6) leem a última rodada de cada um. Os perfis longos (`load`, `stress`, `spike`, `breakpoint` e `soak`) são provados pela forma, com os testes unitários do k6. Só o `load` e o `breakpoint` rodam de verdade, para a linha de base (C76).
 
 Os nomes dos checks do k6 abaixo são literais: o script usa exatamente esses textos.
@@ -110,9 +112,9 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="leaves the rate l
 **C25** - O serviço `k6` usa a imagem `grafana/k6` com uma tag exata da linha 2.3, nunca `latest`. O `make load-test` liga `K6_WEB_DASHBOARD=true` com `K6_WEB_DASHBOARD_EXPORT` apontando para `results/` (door 5)
 Proof: `sh load-tests/tests/stack.sh --only k6-image`
 
-**C26** - Nenhum serviço do Compose de carga publica porta no host, e o Compose de dev (`docker-compose.yml`) não muda nesta feature (door 1)
+**C26** - Nenhum serviço do Compose de carga publica porta no host, e o Compose de dev (`docker-compose.yml` e `docker/`) não muda nesta feature, do primeiro pai do merge `746797a` do PR #19 (a `main` antes da HEL-14, `470d103`) até esse merge, que `HEAD` contém (door 1; a prova foi reescrita depois da rodada 5, ver o `Handoff`)
 Proof: `sh load-tests/tests/stack.sh --only no-host-ports`
-Proof: `git diff --quiet origin/main...HEAD -- docker-compose.yml docker/`
+Proof: `sh load-tests/tests/stack.sh --only dev-compose-unchanged`
 
 ### S3 - Storefront · 4 arquivos · 14 KB · ~4k
 
@@ -170,8 +172,11 @@ Proof: `sh load-tests/tests/k6.sh mix.test.js --only unavailable-order-rate`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: malformed address_id is 422"`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: address of another customer is 422"`
 
-**C41** - A espera lê o pedido a cada 2 segundos, com o primeiro intervalo também de 2 segundos, até o status `awaiting_payment`, e grava em `order_payable_wait` o tempo desde o `201`. No `smoke`, `checkout: order became awaiting_payment` passa e a métrica tem ao menos 1 amostra (AC 36, door 6)
+**C41** - A espera lê o pedido a cada 2 segundos, com o primeiro intervalo também de 2 segundos, até o status `awaiting_payment`, e grava em `order_payable_wait` o tempo desde o `201`: o relógio começa quando o `POST /api/orders` devolveu o pedido criado e para na leitura de `awaiting_payment`, pela função que o fluxo da compra chama, e o valor gravado é o que ela mediu. No `smoke`, `checkout: order became awaiting_payment` passa e a métrica tem ao menos 1 amostra (AC 36, door 6; a origem do tempo ganhou prova depois da rodada 5, ver o `Handoff`)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only polls-every-2s`
+Proof: `sh load-tests/tests/k6.sh payable.test.js --only times-from-the-201`
+Proof: `grep -nF "placeAndWaitUntilPayable(() => placeOrder(data), readOrderStatus, sleep, () => Date.now())" load-tests/flows/checkout.js`
+Proof: `grep -nF "orderPayableWait.add(waitedMs);" load-tests/flows/checkout.js`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: order became awaiting_payment"`
 Proof: `sh load-tests/tests/assert-metric.sh smoke --name order_payable_wait --at-least 1 --value-at-least 2000 --value-at-most 60000`
 
@@ -407,7 +412,7 @@ Proof: `make test`
 | estados da equipe (11) | login C51 · dashboard C52 · lista de pedidos C52 · detalhe do pedido C52 · lista de estoque C52 · lista de produtos C52 · ajuste de estoque C53 · exclusão pelo suporte C54 · produto sobrevive C54 · produto desconhecido C55 · sessões trocadas C56 | - |
 | frações da mistura (6) | cadastro 1% C36 · pedido sem unidades 5% C39 · cartão aprovado 90% C44 · cartão recusado 10% C45 · ajuste de estoque 2% C53 · casos de erro 10% C92 | - |
 | mapeamento de VU para conta (2) | cliente C37 · equipe C51 | - |
-| espera até pagar (3) | `placed` consulta de novo C41 · `awaiting_payment` paga C41, C43 · 60 s desiste C42 | - |
+| espera até pagar (4) | `placed` consulta de novo C41 · `awaiting_payment` paga C41, C43 · 60 s desiste C42 · o tempo gravado começa no `201` e para na leitura de `awaiting_payment` C41 | - |
 | o que conta como erro inesperado (4) | status fora de `expect` C93 · timeout (status `0`) C93 · check do corpo que falhou com status esperado C94 · pedido que não ficou pagável em 60 s C42 | - |
 | divisão dos VUs (4) | 50 VUs C71 · 150 VUs C71 · 300 VUs C71 · taxa de 500/s C71 | - |
 | limites de aprovação (6 grupos) | `smoke` C65 · `load`, `stress` e `soak` C72, C77 · `spike` C73 · `breakpoint` C69 · `contention` C89 · `limits` sem limite de rajada C63 | - |
@@ -440,7 +445,7 @@ Evidence:
 - os perfis do k6: 6 formas de carga, 4 grupos de limites e 1 regra de divisão, com 11 pontos
 - a mistura do k6: 2 mapeamentos de VU e 6 frações, com 8 pontos
 - o `handleSummary`: 2 linhas derivadas (o excesso da rajada e a taxa na parada), com 3 pontos
-- a espera até pagar: 3 saídas (consulta de novo, paga, desiste), com 3 pontos
+- a espera até pagar: 3 saídas (consulta de novo, paga, desiste) e a origem do tempo gravado (o `201`), com 4 pontos
 - o ajudante de requisição: 4 parâmetros de rota trocados e o formato do `X-Request-ID`, com 5 pontos
 - o que conta como erro inesperado (rodada 3 da verificação): o status fora de `expect` no `send()` e o corpo que falha com status esperado no `verify()`, sem contar duas vezes o status inesperado, com 3 pontos (C93, C94)
 - análogo mais próximo no repositório: nenhum para JavaScript de carga, `Makefile` ou Compose. O precedente aqui é o "exercício temporário" do `ModuleBoundariesTest` (features `module-facades` C7 e `uuid-record-ids` C62), que prova uma propriedade da infraestrutura de teste com uma falha de propósito, revertida

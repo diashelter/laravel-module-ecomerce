@@ -22,6 +22,25 @@ export function waitUntilPayable(readStatus, sleep) {
 }
 
 /**
+ * Places an order and waits until it can be paid, timing order_payable_wait from the 201 (AC 36). The clock starts
+ * when place() returned the id of the created order, so the POST is not in it, and stops at the read of
+ * awaiting_payment, so the payment is not in it either. place() returns that id, or null when the order was not
+ * created (then nothing waits); readStatus(id) reads its status; now() is the clock in milliseconds.
+ */
+export function placeAndWaitUntilPayable(place, readStatus, sleep, now) {
+    const id = place();
+
+    if (id === null) {
+        return null;
+    }
+
+    const createdAt = now();
+    const wait = waitUntilPayable(() => readStatus(id), sleep);
+
+    return { id, wait, waitedMs: now() - createdAt };
+}
+
+/**
  * A wait that gave up counts one unexpected error in the given metric (the relay or the worker did not keep up);
  * a payable one counts nothing. The checkout passes the unexpected_errors metric itself.
  */

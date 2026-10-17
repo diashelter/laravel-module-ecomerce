@@ -6,7 +6,7 @@ import { Trend } from 'k6/metrics';
 import { errorCode, json, send, unexpectedErrors, verify } from '../lib/http.js';
 import { loginCustomer } from '../lib/session.js';
 import { customerForVu, shouldOrderUnavailable, shouldRunErrorPaths, startsWithDeclinedCard } from '../lib/mix.js';
-import { countGiveUp, payWhenPayable, waitUntilPayable } from '../lib/payable.js';
+import { countGiveUp, payWhenPayable, placeAndWaitUntilPayable } from '../lib/payable.js';
 import { MODE, pickMany, position, think } from '../lib/steps.js';
 
 export const orderPayableWait = new Trend('order_payable_wait', true);
@@ -37,28 +37,27 @@ function start(vu) {
     address = addresses.length > 0 ? addresses[0] : null;
 }
 
-/** Places one order of available products: its id and the moment of the 201, or null when it was not created. */
+/** Places one order of available products: its id, or null when it was not created. */
 function placeOrder(data) {
     const items = pickMany(data.available, 1 + Math.floor(Math.random() * 3));
     const order = send('POST', '/api/orders', { body: orderBody(items, address.id), expect: [201] });
-    const createdAt = Date.now();
 
-    return verify('checkout: order is 201', order, [201], (r) => typeof json(r, 'data.id') === 'string') ? { id: json(order, 'data.id'), createdAt } : null;
+    return verify('checkout: order is 201', order, [201], (r) => typeof json(r, 'data.id') === 'string') ? json(order, 'data.id') : null;
 }
 
-function waitAndPay(orderId, createdAt, declinedFirst) {
-    const wait = waitUntilPayable(
-        () => json(send('GET', '/api/orders/{order}', { params: { order: orderId } }), 'data.status'),
-        sleep,
-    );
+function readOrderStatus(orderId) {
+    return json(send('GET', '/api/orders/{order}', { params: { order: orderId } }), 'data.status');
+}
 
+/** Pays an order that placeAndWaitUntilPayable placed and waited for. */
+function payOrder({ id: orderId, wait, waitedMs }, declinedFirst) {
     check(wait, { 'checkout: order became awaiting_payment': (w) => w.payable });
 
     if (!countGiveUp(wait, unexpectedErrors)) {
         return false;
     }
 
-    orderPayableWait.add(Date.now() - createdAt);
+    orderPayableWait.add(waitedMs);
 
     return payWhenPayable(wait, () => {
         const pay = (token, expect) => send('POST', '/api/orders/{order}/payment', { params: { order: orderId }, body: { card_token: token }, expect });
@@ -124,9 +123,9 @@ export function checkout(data) {
     let paidOrderId = null;
 
     for (const declinedFirst of paths) {
-        const order = placeOrder(data);
+        const order = placeAndWaitUntilPayable(() => placeOrder(data), readOrderStatus, sleep, () => Date.now());
 
-        if (order && waitAndPay(order.id, order.createdAt, declinedFirst)) {
+        if (order && payOrder(order, declinedFirst)) {
             paidOrderId = order.id;
         }
     }

@@ -91,7 +91,13 @@ case "$CASE" in
         $LOAD --profile k6 config | grep -q 'published:' && fail "um serviço de carga publica porta no host"
         ok "nenhuma porta publicada no host"
         ;;
+    dev-compose-unchanged)
+        # The range of the feature, from main before it to its merge: main and HEAD keep moving after the merge.
+        git merge-base --is-ancestor "$HEL14_MERGE" HEAD || fail "o merge $HEL14_MERGE da HEL-14 não é ancestral de HEAD"
+        git diff --quiet "$HEL14_MERGE^1" "$HEL14_MERGE" -- docker-compose.yml docker/ || fail "a HEL-14 mudou o Compose de dev"
+        ok "o Compose de dev não mudou entre $HEL14_MERGE^1 e o merge $HEL14_MERGE da HEL-14"
+        ;;
     *)
-        unknown_case "connection reports app-settings opcache-and-caches fpm-pool limiter-env bcrypt-and-delivery cache-env k6-image no-host-ports"
+        unknown_case "connection reports app-settings opcache-and-caches fpm-pool limiter-env bcrypt-and-delivery cache-env k6-image no-host-ports dev-compose-unchanged"
         ;;
 esac
