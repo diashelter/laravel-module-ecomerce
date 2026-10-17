@@ -50,7 +50,7 @@ jobs:
         run: docker compose exec -T api php artisan key:generate --force
 
       - name: Code style (Pint)
-        run: docker compose exec -T api ./vendor/bin/pint --test
+        run: make pint
 
       - name: Tests (Pest, including the module boundary architecture tests)
         run: make test

@@ -101,14 +101,10 @@ make test
 ```
 
 ```bash
-docker compose exec -T api ./vendor/bin/pint --test
+make pint
 ```
 
-**Num `git worktree`**, o `make test` já roda o `backend/` do próprio worktree, num container `api` avulso e no banco `ecommerce_testing_<nome do worktree>`, criado na primeira execução; duas suítes em worktrees diferentes podem rodar ao mesmo tempo (ver [Um banco de testes por checkout](README.md#um-banco-de-testes-por-checkout)). Não teste pelo `docker compose exec api`, que monta o `backend/` da pasta principal. O Pint, ali, é:
-
-```bash
-docker compose run --rm --no-deps -T api ./vendor/bin/pint --test
-```
+**Num `git worktree`**, o `make test` já roda o `backend/` do próprio worktree, num container `api` avulso e no banco `ecommerce_testing_<nome do worktree>`, criado na primeira execução; duas suítes em worktrees diferentes podem rodar ao mesmo tempo (ver [Um banco de testes por checkout](README.md#um-banco-de-testes-por-checkout)). O `make test-filter`, o `make pint`, o `make shell`, o `make artisan`, o `make test-frontend` e o `make frontend-shell` também abrem o código do worktree. Não rode esses comandos pelo `docker compose exec`: os containers de dev montam o `backend/` e o `frontend/` da pasta principal. O `make artisan` do worktree fala com o banco e o Redis de dev: um `migrate` ali altera o banco que a pasta principal serve.
 
 Depois de alterar consumidores, jobs ou o relay do outbox, reinicie o worker e o relay:
 
@@ -122,12 +118,12 @@ Depois de alterar uma rota, um status, um payload ou os scripts de `load-tests/`
 make load-test TYPE=smoke
 ```
 
-O CI (`.github/workflows/ci.yml`) roda o Pint, o `make test` e o smoke de carga em todo pull request, com o mesmo Docker Compose do ambiente local. Rode os três localmente antes de abrir o PR: o CI só confirma.
+O CI (`.github/workflows/ci.yml`) roda o `make pint`, o `make test` e o smoke de carga em todo pull request, com o mesmo Docker Compose do ambiente local. Rode os três localmente antes de abrir o PR: o CI só confirma.
 
 ### Checklist final
 
 - [ ] Os testes passam (`make test`).
-- [ ] O estilo está correto (Pint).
+- [ ] O estilo está correto (`make pint`).
 - [ ] O smoke de carga passa (`make load-test TYPE=smoke`), se a mudança tocou uma rota, um payload ou `load-tests/`.
 - [ ] Se mudou o ambiente (Dockerfile, `docker-compose.yml`, `Makefile`, `.env.example`), o workflow de CI continua coerente com ele.
 - [ ] O README descreve o comportamento atual.
