@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/load-tests-k6/plan.md`
 
-92 checks em 8 slices e o fechamento (C88 a C92 entraram na rodada 1 da verificação) · 7 one-way doors · 0 open
+94 checks em 8 slices e o fechamento (C88 a C92 entraram na rodada 1 da verificação, e C93 e C94 na rodada 3) · 7 one-way doors · 0 open
 
 ## Como rodar as provas
 
@@ -343,6 +343,16 @@ Proof: `sh load-tests/tests/k6.sh summary.test.js --only overshoot`
 **C92** - Nos perfis de volume, os casos de erro sem fração no plano rodam em exatamente 100 de 1.000 iterações seguidas de um VU (1 em 10). No `smoke`, rodam em toda iteração
 Proof: `sh load-tests/tests/k6.sh mix.test.js --only error-paths-rate`
 
+### Rodada 3 da verificação · 2 arquivos · 12 KB · ~3k
+
+**C93** - O `send()` que o `createSender` monta conta 1 erro inesperado na métrica que recebe para um status fora de `expect`, o `0` do timeout incluído, e nenhum para um status dentro dele; sem `expect`, só o `200` é esperado. O `send` dos fluxos é montado sobre o `k6/http` e a métrica `unexpected_errors` (S3 a S6, "qualquer outro status conta como erro", que vale para os AC 22 a AC 51; Key decision 6)
+Proof: `sh load-tests/tests/k6.sh http.test.js --only unexpected-status`
+Proof: `grep -nF "export const send = createSender(http, unexpectedErrors);" load-tests/lib/http.js`
+
+**C94** - O `verify()` que o `createVerifier` monta conta 1 erro inesperado para um status esperado com o corpo errado ou com um predicado que lança exceção, e nenhum para o corpo certo; o check do k6 com o nome dado passa só no corpo certo; e um status fora da lista falha o check sem contar de novo, porque o `send()` já contou. O `verify` dos fluxos é montado sobre o `check` do k6 e a métrica `unexpected_errors` (Key decision 6: "um check do corpo que falhou")
+Proof: `sh load-tests/tests/k6.sh http.test.js --only body-check`
+Proof: `grep -nF "export const verify = createVerifier(check, unexpectedErrors);" load-tests/lib/http.js`
+
 ### S8 - CI smoke · 2 arquivos · 3 KB · ~1k
 
 **C78** - O workflow de CI tem um job que não é o `backend`, roda em `pull_request` e em `push` na `main` (os gatilhos do workflow) e chama `make load-test TYPE=smoke`. Depois do push autorizado, a última execução do workflow nesta branch termina com `success` (AC 73)
@@ -398,6 +408,7 @@ Proof: `make test`
 | frações da mistura (6) | cadastro 1% C36 · pedido sem unidades 5% C39 · cartão aprovado 90% C44 · cartão recusado 10% C45 · ajuste de estoque 2% C53 · casos de erro 10% C92 | - |
 | mapeamento de VU para conta (2) | cliente C37 · equipe C51 | - |
 | espera até pagar (3) | `placed` consulta de novo C41 · `awaiting_payment` paga C41, C43 · 60 s desiste C42 | - |
+| o que conta como erro inesperado (4) | status fora de `expect` C93 · timeout (status `0`) C93 · check do corpo que falhou com status esperado C94 · pedido que não ficou pagável em 60 s C42 | - |
 | divisão dos VUs (4) | 50 VUs C71 · 150 VUs C71 · 300 VUs C71 · taxa de 500/s C71 | - |
 | limites de aprovação (6 grupos) | `smoke` C65 · `load`, `stress` e `soak` C72, C77 · `spike` C73 · `breakpoint` C69 · `contention` C89 · `limits` sem limite de rajada C63 | - |
 | resultados do `contention` (5) | `201` × 10 C57, C89 · `409` × 40 C57, C89 · `5xx` 0 C57, C89 · estoque final 0 C58 · pedidos cruzados 100 C59, C89 | - |
@@ -431,6 +442,7 @@ Evidence:
 - o `handleSummary`: 2 linhas derivadas (o excesso da rajada e a taxa na parada), com 3 pontos
 - a espera até pagar: 3 saídas (consulta de novo, paga, desiste), com 3 pontos
 - o ajudante de requisição: 4 parâmetros de rota trocados e o formato do `X-Request-ID`, com 5 pontos
+- o que conta como erro inesperado (rodada 3 da verificação): o status fora de `expect` no `send()` e o corpo que falha com status esperado no `verify()`, sem contar duas vezes o status inesperado, com 3 pontos (C93, C94)
 - análogo mais próximo no repositório: nenhum para JavaScript de carga, `Makefile` ou Compose. O precedente aqui é o "exercício temporário" do `ModuleBoundariesTest` (features `module-facades` C7 e `uuid-record-ids` C62), que prova uma propriedade da infraestrutura de teste com uma falha de propósito, revertida
 
 Cost: os arquivos de teste novos em `load-tests/tests` (6 em JavaScript, contando o `harness.js`, e 10 scripts de shell, contando os ajudantes) e 1 teste Pest. Sem estas linhas, as 5 frações, os 2 mapeamentos e a espera seriam provados só pelo `smoke`, que percorre um caso de cada e não falha se a fração estiver errada.
@@ -492,4 +504,8 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
   - O texto do C14 diz de onde vem a mensagem. O `make.sh` cria `results/`, e os scripts recusam uma opção sem valor em vez de travar.
   - As 4 variantes foram mortas num worktree antes da rodada 3 (F3c com saída 99).
 - **Linha de base:** a correção da rodada 2 mudou o código medido, e as linhas em `09760e2` deixaram de valer pelo C76. Em `d563093`, com a máquina ocupada (carga média de 3 a 6), cinco rodadas do `load` variaram até 33% entre pares seguidos, e nenhuma foi aceita. A pedido de diashelter, a medição foi refeita com a máquina sem outros aplicativos pesados. Em `f58ff69`, os dois pares cumpriram a regra dos 20% sobre o menor p95: no `load`, 30,3 e 30,0 ms na vitrine e 50,5 e 55,4 ms em `POST /api/orders`; no `breakpoint`, a parada em 54,8 e 49,4 it/s. As linhas e o `lib/baseline.js` são dessa medição.
+- **Rodada 3 da verificação (FAIL, 1 mutante vivo):** a HEL-14 entrou na `main` assim (PR [#19](https://github.com/diashelter/laravel-module-ecomerce/pull/19), `746797a`), por decisão de diashelter. A correção veio depois, em `aa594f7`, a partir da `main` com o PR [#20](https://github.com/diashelter/laravel-module-ecomerce/pull/20) (`0e5a0eb`).
+  - O `createSender` passou a receber a métrica em que conta os status inesperados, e o `verify()` passou a ser montado por um `createVerifier`, que recebe o `check` do k6 e a mesma métrica, como o `countGiveUp` já fazia. Os casos `unexpected-status` e `body-check` do `http.test.js` leem o que foi contado (C93 e C94, lacunas 1 e 2 da rodada 3), e as duas ligações reais são fixadas pela linha exata, como no C42.
+  - Mutantes vistos falhando antes da rodada 4: F7b (`errors.add(false)` no `send()`), a contagem invertida do `send()`, `errors.add(false)` e a contagem removida no `verify()` e a condição `if (!bodyOk)`, que contaria de novo o status inesperado, todos com saída 99; e as duas ligações trocadas por `{ add: () => {} }`, com o `grep` saindo 1.
+  - O `k6.sh` rodado logo depois de um `git checkout` do arquivo pode sair 107 (`couldn't be found on local disk`): o checkout apaga e recria o arquivo, e o compartilhamento de arquivos do Docker demora a enxergá-lo. Repetida depois de alguns segundos, a rodada sai com o código da mutação.
 - **Lições:** L-019 a L-025 foram gravadas como candidatas a partir das rodadas 1 e 2.
