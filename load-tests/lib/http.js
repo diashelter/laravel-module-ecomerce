@@ -87,10 +87,11 @@ export function buildRequest(method, template, options = {}) {
 }
 
 /**
- * Builds send() over a k6 http client: the real `k6/http`, or a fake in tests/http.test.js, which proves what
- * send() hands to k6 (the URL, the `name` tag, the headers, the jar) at its own layer.
+ * Builds send() over a k6 http client and the metric it counts unexpected statuses in: the real `k6/http` and
+ * unexpected_errors, or fakes in tests/http.test.js, which prove what send() hands to k6 (the URL, the `name`
+ * tag, the headers, the jar) and what it counts, at its own layer.
  */
-export function createSender(client) {
+export function createSender(client, errors) {
     const callbacks = {};
     const responseCallback = (expected) => {
         const key = expected.join(',');
@@ -117,13 +118,13 @@ export function createSender(client) {
             responseCallback: responseCallback(expect),
         });
 
-        unexpectedErrors.add(!isExpected(response.status, expect));
+        errors.add(!isExpected(response.status, expect));
 
         return response;
     };
 }
 
-export const send = createSender(http);
+export const send = createSender(http, unexpectedErrors);
 
 /** The X-Request-ID of the last request this VU sent. */
 export function lastRequestId() {
@@ -140,27 +141,33 @@ export function json(response, path) {
 }
 
 /**
- * A named check: the status must be one of `statuses` and the body predicate must hold.
- * A body that fails with an expected status is also an unexpected error.
+ * Builds verify() over k6's check() and the unexpected_errors metric, or fakes in tests/http.test.js.
+ * verify() is a named check: the status must be one of `statuses` and the body predicate must hold.
+ * A body that fails with an expected status is also an unexpected error; an unexpected status is not counted
+ * again, because send() already counted it.
  */
-export function verify(name, response, statuses, predicate = () => true) {
-    const statusOk = isExpected(response.status, statuses);
-    let bodyOk = false;
+export function createVerifier(checker, errors) {
+    return function verify(name, response, statuses, predicate = () => true) {
+        const statusOk = isExpected(response.status, statuses);
+        let bodyOk = false;
 
-    try {
-        bodyOk = statusOk && predicate(response) === true;
-    } catch (e) {
-        bodyOk = false;
-    }
+        try {
+            bodyOk = statusOk && predicate(response) === true;
+        } catch (e) {
+            bodyOk = false;
+        }
 
-    check(response, { [name]: () => bodyOk });
+        checker(response, { [name]: () => bodyOk });
 
-    if (statusOk && !bodyOk) {
-        unexpectedErrors.add(true);
-    }
+        if (statusOk && !bodyOk) {
+            errors.add(true);
+        }
 
-    return bodyOk;
+        return bodyOk;
+    };
 }
+
+export const verify = createVerifier(check, unexpectedErrors);
 
 export function errorCode(response) {
     return json(response, 'code');
