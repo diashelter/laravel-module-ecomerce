@@ -62,3 +62,38 @@ jobs:
       - name: Stop the containers
         if: always()
         run: docker compose down --volumes
+
+  # The k6 smoke against the load stack (load-tests/): fails when a route, a status or a payload changes and the
+  # scripts did not follow. It checks the responses only, never the latency: a CI runner is not a stable machine.
+  load-smoke:
+    name: Load smoke (k6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create the .env files from the examples
+        run: make env-files
+
+      - name: Restore Composer dependencies
+        uses: actions/cache@v6
+        with:
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+
+      - name: Install Composer dependencies and generate the application key
+        run: |
+          docker compose -f load-tests/docker-compose.yml run --rm --no-deps api composer install --no-interaction --prefer-dist --no-progress
+          docker compose -f load-tests/docker-compose.yml run --rm --no-deps api php artisan key:generate --force
+
+      - name: Smoke (k6, real rate limits)
+        run: make load-test TYPE=smoke
+
+      - name: Load stack logs
+        if: failure()
+        run: docker compose -f load-tests/docker-compose.yml logs --no-color api queue-worker outbox-relay nginx
+
+      - name: Stop the load stack
+        if: always()
+        run: make load-down

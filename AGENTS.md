@@ -86,6 +86,7 @@ Atualize a documentação sempre que a mudança:
   - O Catalog não usa models nem repositories do Ordering. Quando precisar de algo dos pedidos, use o contrato que ele mesmo define (`ProductOrderHistory`), implementado pelo Ordering.
   - O módulo `Shared` é só infraestrutura e não depende de nenhum módulo de negócio.
   - O teste de arquitetura `ModuleBoundariesTest` cobra essas regras: a privacidade das pastas é gerada a partir das pastas que existem, a do vocabulário a partir das classes que existem e das assinaturas, e as regras de direção são escritas uma a uma. Ao criar uma regra nova, use **um namespace por expectativa**: com uma lista de namespaces, o `not->toUse` do Pest nunca falha. Confirme também que a regra falha com uma violação de propósito.
+- **Testes de carga** (HEL-14, ver o [README da pasta](load-tests/README.md)): a pilha de carga é o projeto Compose `ecommerce-load` e compartilha com a de dev a árvore `backend/`. Nada rodado nos containers de carga pode gravar ali um arquivo que a API de dev lê: os caches ficam em `/tmp/laravel` (`APP_CONFIG_CACHE`, `APP_ROUTES_CACHE`, `APP_EVENTS_CACHE`) e os logs vão para `stderr`. Nunca rode `php artisan optimize` nesses containers: o cache iria para `bootstrap/cache`, e a API de dev passaria a ler o banco de carga. Uma variável nova que separa as duas pilhas entra no `environment` do Compose de carga, porque a variável de ambiente prevalece sobre o `backend/.env`. O k6 só fala HTTP, como o SPA: nada de rota só de teste, acesso ao banco ou atalho de autenticação.
 - **Limites de requisição:** todo `throttle` de rota nomeia o seu contador no terceiro parâmetro (`throttle:10,1,customer-login`), com um nome que nenhuma outra rota usa. Sem o nome, a chave é só o cliente, e as rotas com limite dividiriam um contador (o `RateLimitTest` cobra). O alias `throttle` é o `AtomicThrottleRequests` (Shared), que conta a requisição antes de decidir, sobre o `AtomicRateLimiter`, que incrementa num só comando do Redis. Não volte ao `ThrottleRequests` do framework nem use o `throttleWithRedis()`: os dois conferem antes de contar, e uma rajada simultânea passa do limite (o `RateLimitBurstTest` cobra).
 - **Commits** em inglês, no formato `feat:`, `fix:`, `refactor:`, `test:`, `docs:`.
 
@@ -109,12 +110,19 @@ Depois de alterar consumidores, jobs ou o relay do outbox, reinicie o worker e o
 make queue-restart
 ```
 
-O CI (`.github/workflows/ci.yml`) roda o Pint e o `make test` em todo pull request, com o mesmo Docker Compose do ambiente local. Rode os dois localmente antes de abrir o PR: o CI só confirma.
+Depois de alterar uma rota, um status, um payload ou os scripts de `load-tests/`, rode o smoke de carga:
+
+```bash
+make load-test TYPE=smoke
+```
+
+O CI (`.github/workflows/ci.yml`) roda o Pint, o `make test` e o smoke de carga em todo pull request, com o mesmo Docker Compose do ambiente local. Rode os três localmente antes de abrir o PR: o CI só confirma.
 
 ### Checklist final
 
 - [ ] Os testes passam (`make test`).
 - [ ] O estilo está correto (Pint).
+- [ ] O smoke de carga passa (`make load-test TYPE=smoke`), se a mudança tocou uma rota, um payload ou `load-tests/`.
 - [ ] Se mudou o ambiente (Dockerfile, `docker-compose.yml`, `Makefile`, `.env.example`), o workflow de CI continua coerente com ele.
 - [ ] O README descreve o comportamento atual.
 - [ ] A análise de domínio reflete o estado atual dos contextos.
