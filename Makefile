@@ -18,7 +18,8 @@ DB_USERNAME ?= ecommerce
 	shell artisan migrate migrate-fresh seed fresh optimize clear \
 	db-shell db-reset db-dump db-restore \
 	queue queue-restart queue-failed queue-retry \
-	test test-filter test-frontend npm-install frontend-shell setup env-files wait-api
+	test test-filter test-frontend npm-install frontend-shell setup env-files wait-api \
+	load-test load-down
 
 help: ## Lista os comandos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -129,6 +130,39 @@ npm-install: ## Instala as dependências do frontend
 
 frontend-shell: ## Abre um shell no container do frontend
 	$(EXEC_NODE) sh
+
+## ---------- Testes de carga (k6) ----------
+
+LOAD_PROFILES  = smoke load stress spike breakpoint soak contention limits
+# Profiles whose volume would trip the rate limits: their limiter keeps the counts in memory, per request.
+LOAD_UNLIMITED = load stress spike breakpoint soak contention
+LOAD_LIMITER   = $(if $(filter $(TYPE),$(LOAD_UNLIMITED)),array,)
+LOAD           = CACHE_LIMITER=$(LOAD_LIMITER) $(DC) -f load-tests/docker-compose.yml
+LOAD_STAMP    := $(shell date +%Y%m%d-%H%M%S)
+
+load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYPE=smoke
+	@if [ "$(words $(TYPE))" != "1" ] || [ -z "$(filter $(TYPE),$(LOAD_PROFILES))" ]; then \
+		echo "Informe um perfil: make load-test TYPE=<perfil>"; \
+		echo "Perfis: $(LOAD_PROFILES)"; \
+		exit 1; \
+	fi
+	$(LOAD) down --volumes --remove-orphans
+	$(LOAD) up -d --wait db redis
+	$(LOAD) up -d api
+	@until $(LOAD) exec -T api test -f vendor/autoload.php 2>/dev/null; do sleep 2; done
+	@$(LOAD) exec -T api sh -c 'php artisan migrate:fresh --force && php artisan db:seed --class=LoadTestSeeder --force' \
+		|| { echo "A pilha de carga não subiu. Logs da api de carga:"; $(LOAD) logs --no-color api; exit 1; }
+	$(LOAD) exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache'
+	$(LOAD) up -d queue-worker outbox-relay nginx
+	@mkdir -p load-tests/results && chmod a+rwx load-tests/results
+	$(LOAD) run --rm \
+		-e PROFILE=$(TYPE) -e RUN_STAMP=$(LOAD_STAMP) \
+		-e K6_WEB_DASHBOARD=true -e K6_WEB_DASHBOARD_PERIOD=2s \
+		-e K6_WEB_DASHBOARD_EXPORT=results/$(TYPE)-$(LOAD_STAMP).html \
+		k6 run main.js
+
+load-down: ## Remove a pilha de carga e os volumes dela (a de dev não muda)
+	$(LOAD) down --volumes --remove-orphans
 
 ## ---------- Setup ----------
 

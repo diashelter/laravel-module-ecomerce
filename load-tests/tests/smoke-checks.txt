@@ -1,0 +1,48 @@
+setup: dataset has 201 products
+storefront: product list is 200
+storefront: invalid sort is 422 VALIDATION_FAILED
+storefront: page after the last is 200 and empty
+storefront: available product is 200
+storefront: inactive product is 404 NOT_FOUND
+storefront: product without units is 404 NOT_FOUND
+storefront: malformed id is 404 NOT_FOUND
+storefront: unknown id is 404 NOT_FOUND
+storefront: known state quote is 200
+storefront: unknown state quote is 422
+storefront: available cart is 200 without problems
+storefront: inactive product in cart is 200 unavailable
+storefront: product without units in cart is 200 unavailable
+storefront: new email registers 201
+storefront: taken email is 422
+smoke: api echoes the request id
+checkout: csrf cookie is 204
+checkout: customer login is 200
+checkout: order is 201
+checkout: order with a product without units is 409 INSUFFICIENT_STOCK
+checkout: malformed address_id is 422
+checkout: address of another customer is 422
+checkout: order became awaiting_payment
+checkout: approved card is 202
+checkout: declined card is 402 PAYMENT_DECLINED
+checkout: approved card after a decline is 202
+checkout: paying a paid order is 409
+checkout: payment without card_token is 422
+checkout: order of another customer is 404
+checkout: order without session is 401
+checkout: account is 200
+checkout: order list is 200
+checkout: new address is 201
+checkout: address deletion is 204
+checkout: address of another customer on PUT is 404
+backoffice: staff login is 200
+backoffice: dashboard is 200
+backoffice: order list page is 200
+backoffice: order detail is 200
+backoffice: stock list is 200
+backoffice: product list is 200
+backoffice: stock adjustment is 200
+backoffice: support deleting a product is 403
+backoffice: product survives the support deletion
+backoffice: unknown product is 404
+backoffice: customer session on the dashboard is 401
+backoffice: staff session on the store orders is 401
