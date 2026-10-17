@@ -203,10 +203,12 @@ Os oito perfis têm a forma de carga e os limites de aprovação decididos, e o 
 68. WHILE the `spike` profile runs, it SHALL fail when unexpected errors reach 5%
 69. The k6 metrics SHALL tag every request with its route template in the `name` tag, and SHALL never tag it with a URL holding an id
 70. The k6 scripts SHALL send on every request an `X-Request-ID` that names the profile, the VU and the iteration
-71. The file `load-tests/README.md` SHALL hold a baseline table with the columns of door 6, and one row each for `load` and `breakpoint` measured at the commit that closes this feature
+71. The file `load-tests/README.md` SHALL hold a baseline table with the columns of door 6, and one row each for `load` and `breakpoint` measured at a commit of this feature whose measured code is unchanged up to the merge that closes it (`746797a`, PR #19)
 72. WHEN the first `load` row is recorded THEN the latency thresholds of AC 67 SHALL become the recorded p95 times 1.2, rounded up to the next 10 ms
 
 **Independent test:** rodar o `load` duas vezes no mesmo commit, registrar a linha e rodar o `breakpoint`.
+
+**Emenda do AC 71 (2026-10-17, aprovada por diashelter):** o texto original pedia as linhas "measured at the commit that closes this feature". A HEL-14 continuou depois do merge `746797a` com a correção da rodada 3 da verificação (`aa594f7`), que mudou `load-tests/lib/http.js` sem mudar o que uma rodada executa, e com isso o "commit que fecha a feature" deixou de ser um só. A linha de base fica ancorada no merge: os commits posteriores, os da própria HEL-14 incluídos, se comparam com estas linhas e não as reabrem. Ver o C76 e o `Handoff` do `checks.md`.
 
 ### S8: CI smoke (P2)
 

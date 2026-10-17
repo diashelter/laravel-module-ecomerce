@@ -122,6 +122,7 @@ const cases = {
             throw new Error('no JSON body');
         };
         expectEqual('a predicate that throws fails', verify('no body', { status: 200 }, [200], throws), false);
+        expectEqual('the check of a predicate that throws fails', checks[2], { name: 'no body', passed: false });
         expectEqual('a predicate that throws counts 1 unexpected error', errors.added, [true, true]);
 
         expectEqual('an unexpected status fails', verify('wrong status', { status: 500, code: 'NOT_FOUND' }, [404], notFound), false);

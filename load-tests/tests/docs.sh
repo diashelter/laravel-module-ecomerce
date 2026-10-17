@@ -5,9 +5,9 @@
 LOAD_README=load-tests/README.md
 # What a run measures. Recording a row (load-tests/lib/baseline.js and the READMEs) is not part of it.
 MEASURED="backend docker Makefile load-tests/docker-compose.yml load-tests/docker load-tests/main.js load-tests/lib load-tests/flows load-tests/scenarios"
-# The merge of the HEL-14 (PR #19) into main, the commit that closes the feature: its first parent is main
-# before the feature, its second the tip of the feature branch. Later changes to the measured code are not
-# the feature's, so the rows are held against this commit and not against HEAD.
+# The merge of the HEL-14 (PR #19) into main: its first parent is main before the feature, its second the tip
+# of the feature branch. The rows are held against this commit and not against HEAD (AC 71): later commits,
+# the feature's own follow-ups included, are compared with the rows and do not reopen them.
 HEL14_MERGE=746797a639c16273b776b16252fb842707e38378
 PROFILES="smoke load stress spike breakpoint soak contention limits"
 
