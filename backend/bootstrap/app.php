@@ -3,6 +3,7 @@
 use App\Modules\Identity\Http\Middleware\EnsureUserIsAdmin;
 use App\Modules\Shared\Exceptions\ApiExceptionRenderer;
 use App\Modules\Shared\Http\Middleware\AssignRequestId;
+use App\Modules\Shared\Http\Middleware\AtomicThrottleRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -26,6 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            // The framework's throttle checks the count before adding to it: a burst would pass the limit.
+            'throttle' => AtomicThrottleRequests::class,
         ]);
 
         // This is an API: never redirect guests, just answer 401.

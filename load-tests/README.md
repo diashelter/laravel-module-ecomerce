@@ -103,7 +103,7 @@ Quando um limite cai, o `make load-test` sai com código diferente de zero, e os
   - um check do corpo que falhou;
   - um pedido que não ficou pagável em 60 segundos.
 - **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 2 segundos, como o frontend faz, então a resolução da métrica é de 2 segundos. Ela mede o relay do outbox e o worker sob carga.
-- **`rate_limit_overshoot`:** quantos logins da rajada simultânea do `limits` passaram além do limite de 10. A métrica é só registrada, sem limite de aprovação.
+- **`rate_limit_overshoot`:** quantos logins da rajada simultânea do `limits` passaram além do limite de 10. A métrica é só registrada, sem limite de aprovação. O esperado é 0: o `throttle` conta a requisição antes de decidir (`AtomicThrottleRequests`, ver o [README do projeto](../README.md)), e passam exatamente 10. Com o `throttle` do framework, que confere antes de contar, passavam 11.
 
 Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine, 1 s em `POST /api/orders` e 10 s em `order_payable_wait`. Agora eles são o p95 da linha do `load` vezes 1,2, arredondado para cima até a dezena de ms seguinte: 40 ms, 70 ms e 2.450 ms (`BASELINE` em `lib/baseline.js`, que muda junto com a linha). O `stress` e o `soak` usam os mesmos limites, então eles costumam reprovar: o relatório mostra quanto a API degradou.
 

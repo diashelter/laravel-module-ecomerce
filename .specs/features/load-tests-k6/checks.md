@@ -470,7 +470,7 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
   - Os casos de erro sem fração no plano rodam em 1 de 10 iterações dos perfis de volume.
   - O `breakpoint` mantém as pausas de 1 a 3 s, com no máximo 1.000 VUs.
   - As duas primeiras rodadas do `breakpoint` ficaram em commits diferentes; as linhas foram medidas de novo em `09760e2`, com as duas rodadas de cada perfil no mesmo commit (ver a rodada 1 da verificação abaixo).
-  - A rajada de 30 logins simultâneos deixou passar 11, um além do limite: o limitador confere e depois conta. O plano manda registrar sem reprovar (AC 58), e o achado vira uma issue própria.
+  - A rajada de 30 logins simultâneos deixou passar 11, um além do limite: o limitador confere e depois conta. O plano manda registrar sem reprovar (AC 58), e o achado vira uma issue própria. Corrigido na branch `helterdias/fix-throttle-race` (`AtomicThrottleRequests` e `AtomicRateLimiter`): depois do merge com esta branch, o `limits` teve 13 de 13 checks, `rate_limit_burst_passed` = 10 e `rate_limit_overshoot` = 0, e as provas do C63 continuam passando.
   - O door 6 chama `rate_limit_overshoot` de contador, mas ele é uma linha derivada no fim da rodada (`rate_limit_burst_passed − 10`, nunca negativa): uma rodada do k6 não consegue gravar uma métrica depois de terminar. O contador de verdade é o `rate_limit_burst_passed` (C63, C91).
 - **Rodada 1 da verificação (FAIL, 4 mutantes vivos):** o Verifier achou as lacunas abaixo, corrigidas em `52bebb6` e `301a7f8`.
   - O teste da tag olhava o `requestName`, não o que o `send()` manda ao k6: o pedido agora sai de um `buildRequest` puro, testado (C74).

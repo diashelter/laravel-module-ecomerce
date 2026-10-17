@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Modules\Shared\Cache\AtomicRateLimiter;
 use App\Modules\Shared\Console\RelayOutboxCommand;
 use App\Modules\Shared\Messaging\EventOutbox;
 use App\Modules\Shared\Messaging\EventSubscriptions;
@@ -11,6 +12,8 @@ use App\Modules\Shared\Messaging\EventTransport;
 use App\Modules\Shared\Messaging\QueueEventTransport;
 use App\Modules\Shared\Repositories\OutboxMessageRepository;
 use App\Modules\Shared\Support\RecordId;
+use Illuminate\Cache\RateLimiter;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -31,7 +34,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        //
+        // The framework registers its RateLimiter in a deferred provider, which would replace a plain binding
+        // when it loads: the extension swaps the instance it builds, on the same store (cache.limiter).
+        $this->app->extend(RateLimiter::class, fn (RateLimiter $limiter, Application $app) => new AtomicRateLimiter(
+            $app->make('cache')->driver($app['config']->get('cache.limiter')),
+        ));
     }
 
     public function boot(): void
