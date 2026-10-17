@@ -187,7 +187,7 @@ Existem dois arquivos:
 
 | Arquivo | Para que serve |
 | --- | --- |
-| `.env` (raiz) | Variáveis do Docker Compose: `APP_PORT`, credenciais do PostgreSQL, `DB_FORWARD_PORT`. |
+| `.env` (raiz) | Variáveis do Docker Compose: `APP_PORT`, credenciais do PostgreSQL, `DB_FORWARD_PORT`. E, opcional, `TEST_DB_DATABASE`, lida só pelo Makefile: o banco dos testes deste checkout (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)). |
 | `backend/.env` | Configuração do Laravel: banco (`DB_*`), Redis, fila, sessão, Sanctum, locale, delay da entrega. |
 
 Variáveis importantes do `backend/.env`:
@@ -259,8 +259,9 @@ Execute `make` (ou `make help`) para listar todos os comandos.
 
 | Comando | Descrição |
 | --- | --- |
-| `make test` | Executa todos os testes (Pest) |
+| `make test` | Executa todos os testes (Pest) no banco de testes deste checkout, criado se ainda não existir (ver [Testes](#testes)) |
 | `make test-filter FILTER="..."` | Executa testes filtrados. Ex.: `make test-filter FILTER=CheckoutTest` |
+| `make test-db-drop` | Apaga o banco de testes deste checkout (o próximo `make test` o recria). Rode antes de remover um worktree |
 | `make test-frontend` | Executa os testes do frontend (Vitest) no container `frontend` |
 
 ### Testes de carga
@@ -705,7 +706,22 @@ make test-frontend                     # testes do frontend (Vitest)
 
 O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento com cartão de teste (`composables/usePayment`), o caderno de endereços (`composables/useAddressBook`), o checkout com endereço e frete (`composables/useCheckout`), o texto de entrega, a data só-dia, o CEP, as UFs e o menu da conta (`utils/delivery`, `utils/date`, `utils/postalCode`, `utils/states`, `utils/accountMenu`), os erros tratados globalmente (`services/api`: `401` por área, `403`, `419`, `429` e `5xx`; os demais ficam com cada página), a decisão do guard do router (inclusive a rota do caderno) e o menu do admin (`router/guards`, `utils/adminMenu`) e as permissões por papel (`stores/staff`, `stores/auth`). A lógica é testada sem DOM; o arranjo visual das telas é conferido no navegador. O CI roda só o backend; `make test-frontend` roda localmente.
 
-Os testes usam um banco PostgreSQL separado (`ecommerce_testing`, criado automaticamente pelo container `db`), porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes, e nenhum relay roda sozinho: um evento gravado fica pendente até o teste rodar `outbox:relay --once` (`relayOnce()` e `relayUntilIdle()` em `tests/Pest.php`). Com a fila `sync`, os consumidores rodam dentro do ciclo do relay. O cache é `array` nos testes; só o `RateLimitBurstTest` conta no Redis do container `redis`, com contadores próprios que expiram em um minuto, e dispara as requisições de processos filhos (`pcntl_fork`, presente na imagem PHP do projeto).
+Os testes usam um banco PostgreSQL separado, no container `db`, porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes, e nenhum relay roda sozinho: um evento gravado fica pendente até o teste rodar `outbox:relay --once` (`relayOnce()` e `relayUntilIdle()` em `tests/Pest.php`). Com a fila `sync`, os consumidores rodam dentro do ciclo do relay. O cache é `array` nos testes; só o `RateLimitBurstTest` conta no Redis do container `redis`, com contadores próprios que expiram em um minuto, e dispara as requisições de processos filhos (`pcntl_fork`, presente na imagem PHP do projeto).
+
+### Um banco de testes por checkout
+
+Todos os checkouts do repositório (a pasta principal e cada `git worktree`) usam o mesmo projeto Compose (`ecommerce`) e, portanto, o mesmo container `db`. Como o `RefreshDatabase` roda `migrate:fresh`, duas suítes no mesmo banco quebram uma à outra (`deadlock detected`, `relation "migrations" does not exist`). Por isso o `make test` e o `make test-filter` escolhem o banco e o container pelo checkout, sem passo manual:
+
+| Checkout | Banco | Onde a suíte roda |
+| --- | --- | --- |
+| Pasta principal (e o CI) | `ecommerce_testing` | No container `api` de dev (`docker compose exec`), que monta o `backend/` dela |
+| `git worktree` | `ecommerce_testing_<nome do worktree>`, em minúsculas e com `_` no lugar de `-` e `.` (ex.: `ecommerce_testing_upbeat_lewin_b6b8e7`) | Num container `api` avulso (`docker compose run --rm --no-deps`), que monta o `backend/` do próprio worktree. O `api` de dev testaria o código da pasta principal |
+
+Antes da suíte, o Makefile cria o banco se ele ainda não existir e o passa ao Pest em `DB_DATABASE` (a variável real vence o `<env>` do `phpunit.xml`, que não usa `force`). Num worktree, ele também copia o `backend/.env` da pasta principal quando falta, e o entrypoint do container instala o `vendor/` na primeira execução (`composer install`). O worktree usa o `db` e o `redis` da pilha de dev, que precisa estar no ar (`make up` na pasta principal).
+
+Outro banco: `make test TEST_DB_DATABASE=<nome>`, ou a mesma variável no `.env` da raiz. O nome aceita só minúsculas, dígitos e `_`, sem começar por dígito (até 63 caracteres), e nunca pode ser o banco de desenvolvimento (`DB_DATABASE`), que a suíte apagaria. O `make test-db-drop` apaga o banco do checkout. Os bancos de worktrees já removidos ficam no `db` até alguém apagá-los: liste com `make db-shell` e `\l ecommerce_testing*`, e apague com `DROP DATABASE <nome> WITH (FORCE);`.
+
+O Pint segue a mesma regra: na pasta principal, `docker compose exec -T api ./vendor/bin/pint --test`; num worktree, `docker compose run --rm --no-deps -T api ./vendor/bin/pint --test`.
 
 ### Em que nível testar
 
@@ -730,7 +746,7 @@ O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em todo p
 2. constrói a imagem PHP e sobe `db`, `redis` e `api`;
 3. instala as dependências do Composer (com cache por `composer.lock`) e gera a `APP_KEY`;
 4. verifica o estilo com o Pint (`pint --test`);
-5. roda toda a suíte (`make test`), inclusive os testes de arquitetura que verificam as fronteiras entre módulos.
+5. roda toda a suíte (`make test`), inclusive os testes de arquitetura que verificam as fronteiras entre módulos. O checkout do CI não é um worktree, então a suíte roda no container `api` e no banco `ecommerce_testing`, como na pasta principal.
 
 Se algum passo falhar, os logs dos containers `db` e `api` aparecem no próprio run. Um push novo na mesma branch cancela o run anterior que ainda estiver em andamento.
 
@@ -834,7 +850,7 @@ Os relatórios (HTML do painel do k6, JSON e a lista de checks) vão para `load-
 | `queue-worker` | mesma imagem da `api` | `php artisan queue:work redis` — processa as entregas aos consumidores (`DeliverEvent`) e os jobs |
 | `outbox-relay` | mesma imagem da `api` | `php artisan outbox:relay` — publica as mensagens pendentes de `outbox_messages` na fila, em até 1 s, e apaga as publicadas há mais de 7 dias |
 | `frontend` | `docker/node/Dockerfile` (Node 24) | Servidor de desenvolvimento do Vite |
-| `db` | `postgres:18-alpine` | Banco principal (`ecommerce`) e de testes (`ecommerce_testing`) |
+| `db` | `postgres:18-alpine` | Banco principal (`ecommerce`) e de testes (`ecommerce_testing`, mais um `ecommerce_testing_<worktree>` por `git worktree` que rodou `make test`) |
 | `redis` | `redis:8-alpine` | Fila, sessões e cache |
 
 O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O worker e o relay precisam de `make queue-restart` após mudanças em jobs, consumidores ou no relay.
@@ -958,3 +974,7 @@ Decisões relevantes:
   - **O `throttleWithRedis()` do Laravel não resolve**: o `ThrottleRequestsWithRedis` confere num script, soma em outro e ignora a resposta do próprio `acquire()`; passaram 21, 13 e 15 de 30 em três rajadas. O `RateLimiter::attempt` também confere antes de somar. Uma trava (`Cache::lock`) em volta da conferência e da soma faria as requisições da mesma chave esperarem umas pelas outras.
   - **Uma requisição recusada também conta**, porque soma antes de saber. A janela não estica: termina um minuto depois do primeiro acerto, e o `Retry-After` continua vindo dela. Com mais de um limite na rota (hoje nenhuma tem), a requisição recusada por um já contou nos anteriores. Um limite com `after()` só sabe se conta depois da resposta e continua na ordem do framework.
   - Fora do Redis, o incremento é o do framework: a store `array`, dos testes e dos perfis de volume do k6, vive num processo só.
+- **Um banco de testes por checkout** (visto em 17/10/2026, com duas suítes rodando ao mesmo tempo em worktrees diferentes: `deadlock detected` e `relation "migrations" does not exist`): todos os checkouts dividem o projeto Compose `ecommerce`, e todos testavam no mesmo `ecommerce_testing`. Agora o Makefile dá a cada `git worktree` o banco `ecommerce_testing_<nome>` e um container `api` avulso com o próprio `backend/`; a pasta principal e o CI continuam no `ecommerce_testing` e no `api` de dev (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)).
+  - **O worktree é reconhecido pelo git**, sem variável a definir: o `git rev-parse --git-dir` de um worktree termina em `.git/worktrees/<nome>`, e o git não repete um nome no mesmo repositório. Um segundo clone (que não é um worktree) se comporta como a pasta principal e roda no `api` de dev, que monta o `backend/` de quem subiu a pilha.
+  - **Um projeto Compose por worktree** (o `name` vindo de uma variável) foi descartado: duplicaria `db`, `redis`, `nginx` e o frontend, as portas publicadas (`8080` e `5433`) colidiriam, e cada worktree precisaria do próprio `make setup`.
+  - **O `--parallel` do Laravel não resolve**: ele separa os processos de uma suíte, e os bancos dele derivam do `DB_DATABASE` (`<banco>_test_<n>`). Duas suítes sobre o mesmo `ecommerce_testing` disputariam os mesmos bancos.
