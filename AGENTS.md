@@ -104,6 +104,12 @@ make test
 docker compose exec -T api ./vendor/bin/pint --test
 ```
 
+**Num `git worktree`**, o `make test` já roda o `backend/` do próprio worktree, num container `api` avulso e no banco `ecommerce_testing_<nome do worktree>`, criado na primeira execução; duas suítes em worktrees diferentes podem rodar ao mesmo tempo (ver [Um banco de testes por checkout](README.md#um-banco-de-testes-por-checkout)). Não teste pelo `docker compose exec api`, que monta o `backend/` da pasta principal. O Pint, ali, é:
+
+```bash
+docker compose run --rm --no-deps -T api ./vendor/bin/pint --test
+```
+
 Depois de alterar consumidores, jobs ou o relay do outbox, reinicie o worker e o relay:
 
 ```bash

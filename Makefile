@@ -18,7 +18,7 @@ DB_USERNAME ?= ecommerce
 	shell artisan migrate migrate-fresh seed fresh optimize clear \
 	db-shell db-reset db-dump db-restore \
 	queue queue-restart queue-failed queue-retry \
-	test test-filter test-frontend npm-install frontend-shell setup env-files wait-api \
+	test test-filter test-prepare test-db-drop test-frontend npm-install frontend-shell setup env-files wait-api \
 	load-test load-down
 
 help: ## Lista os comandos disponíveis
@@ -112,13 +112,41 @@ queue-retry: ## Reprocessa jobs falhos: make queue-retry (todos) ou make queue-r
 
 ## ---------- Testes ----------
 
-test: ## Executa todos os testes (Pest)
-	$(ARTISAN) config:clear --quiet
-	$(EXEC_API) ./vendor/bin/pest
+# Each checkout tests on a database of its own, created on the first run: RefreshDatabase runs migrate:fresh,
+# so two suites on one database break each other. The main checkout, whose backend/ the dev api container
+# mounts, keeps ecommerce_testing and runs in that container. A linked git worktree (its git dir is
+# <repository>/.git/worktrees/<name>) runs its own backend/ in a one-off api container, on
+# ecommerce_testing_<name>. Any checkout can pick another database: make test TEST_DB_DATABASE=<name>.
+WORKTREE         := $(shell git rev-parse --git-dir 2>/dev/null | sed -n 's|.*/worktrees/\([^/]*\)$$|\1|p')
+MAIN_CHECKOUT    := $(if $(WORKTREE),$(patsubst %/.git,%,$(shell git rev-parse --path-format=absolute --git-common-dir)))
+TEST_DB_DATABASE := $(or $(TEST_DB_DATABASE),ecommerce_testing$(if $(WORKTREE),_$(shell printf '%s' '$(WORKTREE)' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '_' | cut -c1-45)))
+TEST_API          = $(DC) $(if $(WORKTREE),run --rm --no-deps,exec) -e DB_DATABASE=$(TEST_DB_DATABASE) api
+PEST              = sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$$@"' pest
+# The name goes unquoted into SQL, and the suite would wipe the development database. The check reads it
+# from the environment, so no value can break its own quoting.
+export TEST_DB_DATABASE
+CHECK_TEST_DB     = printf '%s' "$$TEST_DB_DATABASE" | grep -Eqx '[a-z_][a-z0-9_]{0,62}' && [ "$$TEST_DB_DATABASE" != '$(DB_DATABASE)' ] \
+	|| { echo "TEST_DB_DATABASE inválido: '$$TEST_DB_DATABASE'. Use minúsculas, dígitos e _ (até 63), e nunca o banco de desenvolvimento ($(DB_DATABASE))."; exit 1; }
 
-test-filter: ## Executa testes filtrados: make test-filter FILTER=CheckoutTest
-	$(ARTISAN) config:clear --quiet
-	$(EXEC_API) ./vendor/bin/pest --filter="$(FILTER)"
+test: test-prepare ## Executa todos os testes (Pest) no banco de testes deste checkout
+	$(TEST_API) $(PEST)
+
+test-filter: test-prepare ## Executa testes filtrados: make test-filter FILTER=CheckoutTest
+	$(TEST_API) $(PEST) --filter="$(FILTER)"
+
+# Creates the database when it is missing; a worktree also gets the main checkout's backend/.env (vendor/ is
+# installed by the api container's entrypoint).
+test-prepare:
+	@$(CHECK_TEST_DB)
+	@test -z "$(WORKTREE)" || test -f backend/.env \
+		|| { cp "$(MAIN_CHECKOUT)/backend/.env" backend/.env && echo "Copiado backend/.env de $(MAIN_CHECKOUT)"; }
+	@printf '%s\n' "SELECT 'CREATE DATABASE $(TEST_DB_DATABASE) OWNER $(DB_USERNAME)' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$(TEST_DB_DATABASE)')\gexec" \
+		| $(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -q -v ON_ERROR_STOP=1
+	@echo "Banco de testes: $(TEST_DB_DATABASE)"
+
+test-db-drop: ## Apaga o banco de testes deste checkout (o próximo make test o recria)
+	@$(CHECK_TEST_DB)
+	$(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -c 'DROP DATABASE IF EXISTS $(TEST_DB_DATABASE) WITH (FORCE)'
 
 ## ---------- Frontend ----------
 
