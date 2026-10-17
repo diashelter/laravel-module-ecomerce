@@ -164,6 +164,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C85 (verification round 2), tests/docs.sh:56 (docs)
 - last seen: 2026-10-16T21:08:52Z
 
+### L-026 - Prove that a shared request helper counts an unexpected status as an error, not only what it sends.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `load-tests/lib` · harmful: 0
+- features: load-tests-k6
+- evidence: F7b (verification round 3), load-tests/lib/http.js:120 (load-tests/lib)
+- last seen: 2026-10-17T00:42:57Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
