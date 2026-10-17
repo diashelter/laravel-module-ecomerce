@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/load-tests-k6/plan.md`
 
-92 checks em 8 slices e o fechamento (C88 a C92 entraram na rodada 1 da verificação) · 7 one-way doors · 0 open
+94 checks em 8 slices e o fechamento (C88 a C92 entraram na rodada 1 da verificação, e C93 e C94 na rodada 3) · 7 one-way doors · 0 open
 
 ## Como rodar as provas
 
@@ -319,7 +319,7 @@ Proof: `grep -n "tags: request.tags" load-tests/lib/http.js`
 Proof: `sh load-tests/tests/k6.sh http.test.js --only request-id`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "smoke: api echoes the request id"`
 
-**C76** - `load-tests/README.md` tem a tabela da linha de base com as 12 colunas do door 6 e uma linha do `load` e uma do `breakpoint`, cada uma com um commit de `origin/main..HEAD` a partir do qual nada do que a rodada mede mudou até `HEAD`: `backend/`, `docker/`, o `Makefile` e o Compose e o JavaScript de `load-tests/`, exceto `lib/baseline.js`, que só guarda os números registrados (AC 71, door 6)
+**C76** - `load-tests/README.md` tem a tabela da linha de base com as 12 colunas do door 6 e uma linha do `load` e uma do `breakpoint`, cada uma com um commit da HEL-14 (alcançável da ponta da branch, `746797a^2`, e não da `main` anterior, `746797a^1`) a partir do qual nada do que a rodada mede mudou até o merge `746797a` do PR #19, onde a linha de base fica ancorada: `backend/`, `docker/`, o `Makefile` e o Compose e o JavaScript de `load-tests/`, exceto `lib/baseline.js`, que só guarda os números registrados. `HEAD` contém esse merge (AC 71, emendado em 2026-10-17; door 6; a prova foi reescrita depois do merge, ver o `Handoff`)
 Proof: `sh load-tests/tests/docs.sh --only baseline-rows`
 
 **C77** - Depois da linha do `load`, os limites de latência do C72 são, no `load`, no `stress` e no `soak`, o p95 registrado vezes 1,2, arredondado para cima até a dezena de ms seguinte. O teste lê o `README.md` da pasta e compara com `lib/baseline.js` (AC 72)
@@ -342,6 +342,16 @@ Proof: `sh load-tests/tests/k6.sh summary.test.js --only overshoot`
 
 **C92** - Nos perfis de volume, os casos de erro sem fração no plano rodam em exatamente 100 de 1.000 iterações seguidas de um VU (1 em 10). No `smoke`, rodam em toda iteração
 Proof: `sh load-tests/tests/k6.sh mix.test.js --only error-paths-rate`
+
+### Rodada 3 da verificação · 2 arquivos · 12 KB · ~3k
+
+**C93** - O `send()` que o `createSender` monta conta 1 erro inesperado na métrica que recebe para um status fora de `expect`, o `0` do timeout incluído, e nenhum para um status dentro dele; sem `expect`, só o `200` é esperado. O `send` dos fluxos é montado sobre o `k6/http` e a métrica `unexpected_errors` (S3 a S6, "qualquer outro status conta como erro", que vale para os AC 22 a AC 51; Key decision 6)
+Proof: `sh load-tests/tests/k6.sh http.test.js --only unexpected-status`
+Proof: `grep -nF "export const send = createSender(http, unexpectedErrors);" load-tests/lib/http.js`
+
+**C94** - O `verify()` que o `createVerifier` monta conta 1 erro inesperado para um status esperado com o corpo errado ou com um predicado que lança exceção, e nenhum para o corpo certo; o check do k6 com o nome dado passa só no corpo certo; e um status fora da lista falha o check sem contar de novo, porque o `send()` já contou. O `verify` dos fluxos é montado sobre o `check` do k6 e a métrica `unexpected_errors` (Key decision 6: "um check do corpo que falhou")
+Proof: `sh load-tests/tests/k6.sh http.test.js --only body-check`
+Proof: `grep -nF "export const verify = createVerifier(check, unexpectedErrors);" load-tests/lib/http.js`
 
 ### S8 - CI smoke · 2 arquivos · 3 KB · ~1k
 
@@ -398,6 +408,7 @@ Proof: `make test`
 | frações da mistura (6) | cadastro 1% C36 · pedido sem unidades 5% C39 · cartão aprovado 90% C44 · cartão recusado 10% C45 · ajuste de estoque 2% C53 · casos de erro 10% C92 | - |
 | mapeamento de VU para conta (2) | cliente C37 · equipe C51 | - |
 | espera até pagar (3) | `placed` consulta de novo C41 · `awaiting_payment` paga C41, C43 · 60 s desiste C42 | - |
+| o que conta como erro inesperado (4) | status fora de `expect` C93 · timeout (status `0`) C93 · check do corpo que falhou com status esperado C94 · pedido que não ficou pagável em 60 s C42 | - |
 | divisão dos VUs (4) | 50 VUs C71 · 150 VUs C71 · 300 VUs C71 · taxa de 500/s C71 | - |
 | limites de aprovação (6 grupos) | `smoke` C65 · `load`, `stress` e `soak` C72, C77 · `spike` C73 · `breakpoint` C69 · `contention` C89 · `limits` sem limite de rajada C63 | - |
 | resultados do `contention` (5) | `201` × 10 C57, C89 · `409` × 40 C57, C89 · `5xx` 0 C57, C89 · estoque final 0 C58 · pedidos cruzados 100 C59, C89 | - |
@@ -431,6 +442,7 @@ Evidence:
 - o `handleSummary`: 2 linhas derivadas (o excesso da rajada e a taxa na parada), com 3 pontos
 - a espera até pagar: 3 saídas (consulta de novo, paga, desiste), com 3 pontos
 - o ajudante de requisição: 4 parâmetros de rota trocados e o formato do `X-Request-ID`, com 5 pontos
+- o que conta como erro inesperado (rodada 3 da verificação): o status fora de `expect` no `send()` e o corpo que falha com status esperado no `verify()`, sem contar duas vezes o status inesperado, com 3 pontos (C93, C94)
 - análogo mais próximo no repositório: nenhum para JavaScript de carga, `Makefile` ou Compose. O precedente aqui é o "exercício temporário" do `ModuleBoundariesTest` (features `module-facades` C7 e `uuid-record-ids` C62), que prova uma propriedade da infraestrutura de teste com uma falha de propósito, revertida
 
 Cost: os arquivos de teste novos em `load-tests/tests` (6 em JavaScript, contando o `harness.js`, e 10 scripts de shell, contando os ajudantes) e 1 teste Pest. Sem estas linhas, as 5 frações, os 2 mapeamentos e a espera seriam provados só pelo `smoke`, que percorre um caso de cada e não falha se a fração estiver errada.
@@ -492,4 +504,17 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
   - O texto do C14 diz de onde vem a mensagem. O `make.sh` cria `results/`, e os scripts recusam uma opção sem valor em vez de travar.
   - As 4 variantes foram mortas num worktree antes da rodada 3 (F3c com saída 99).
 - **Linha de base:** a correção da rodada 2 mudou o código medido, e as linhas em `09760e2` deixaram de valer pelo C76. Em `d563093`, com a máquina ocupada (carga média de 3 a 6), cinco rodadas do `load` variaram até 33% entre pares seguidos, e nenhuma foi aceita. A pedido de diashelter, a medição foi refeita com a máquina sem outros aplicativos pesados. Em `f58ff69`, os dois pares cumpriram a regra dos 20% sobre o menor p95: no `load`, 30,3 e 30,0 ms na vitrine e 50,5 e 55,4 ms em `POST /api/orders`; no `breakpoint`, a parada em 54,8 e 49,4 it/s. As linhas e o `lib/baseline.js` são dessa medição.
+- **Rodada 3 da verificação (FAIL, 1 mutante vivo):** a HEL-14 entrou na `main` assim (PR [#19](https://github.com/diashelter/laravel-module-ecomerce/pull/19), `746797a`), por decisão de diashelter. A correção veio depois, em `aa594f7`, a partir da `main` com o PR [#20](https://github.com/diashelter/laravel-module-ecomerce/pull/20) (`0e5a0eb`).
+  - O `createSender` passou a receber a métrica em que conta os status inesperados, e o `verify()` passou a ser montado por um `createVerifier`, que recebe o `check` do k6 e a mesma métrica, como o `countGiveUp` já fazia. Os casos `unexpected-status` e `body-check` do `http.test.js` leem o que foi contado (C93 e C94, lacunas 1 e 2 da rodada 3), e as duas ligações reais são fixadas pela linha exata, como no C42.
+  - Mutantes vistos falhando antes da rodada 4: F7b (`errors.add(false)` no `send()`), a contagem invertida do `send()`, `errors.add(false)` e a contagem removida no `verify()` e a condição `if (!bodyOk)`, que contaria de novo o status inesperado, todos com saída 99; e as duas ligações trocadas por `{ add: () => {} }`, com o `grep` saindo 1.
+  - O `k6.sh` rodado logo depois de um `git checkout` do arquivo pode sair 107 (`couldn't be found on local disk`): o checkout apaga e recria o arquivo, e o compartilhamento de arquivos do Docker demora a enxergá-lo. Repetida depois de alguns segundos, a rodada sai com o código da mutação.
+  - **C76 reescrito, a pedido de diashelter (2026-10-17):** a prova comparava o commit da linha com `origin/main` e `HEAD`, então só valia antes do merge. Depois do PR #19, ela saía 1 com "f58ff69 já está na main", e qualquer mudança posterior no código medido (o PR #20 no `backend/`, este fix em `load-tests/lib/http.js`) também a reprovaria. Agora o commit da linha precisa estar na branch da HEL-14 e fora da `main` anterior, e o código medido é comparado até o merge `746797a`, onde a linha de base fica ancorada. A prova nova passa em `HEAD`. A rodada 4 mostrou que isso contradizia o texto original do AC 71, emendado depois (ver a rodada 4 abaixo).
+  - A segunda prova do C78 passou: a última execução do CI na branch da HEL-14 (`0b150ea`) terminou com `success`.
+- **Rodada 4 da verificação (FAIL, 1 mutante vivo):** corrigida em `03d48e7`.
+  - O C76 reescrito chamava o merge `746797a` de "o commit que fecha a feature", mas a HEL-14 continuou depois dele com o `aa594f7`, que mudou `load-tests/lib/http.js`, e uma mudança nas pausas commitada depois do merge passou pela prova (F14). A pedido de diashelter, o AC 71 foi emendado no plano para a regra que a prova aplica: as linhas são de um commit da HEL-14 cujo código medido não mudou até o merge, e os commits posteriores, os da própria HEL-14 incluídos, se comparam com elas sem reabri-las. Com o plano emendado, o F14 fica fora do escopo do C76.
+  - **O C76 não avisa mais quando o código medido muda depois da medição.** Antes do merge, qualquer mudança nele reprovava a prova e obrigava a medir de novo; depois do merge, só a comparação manual de uma rodada nova com a linha mostra o efeito (Key decision 3). O PR #20 já mudou o `backend/` (`AtomicThrottleRequests` e `AtomicRateLimiter`), mas nos perfis de volume da linha de base o limitador é `array`, e o `AtomicRateLimiter` usa ali o `increment` do framework (`backend/app/Modules/Shared/Cache/AtomicRateLimiter.php:37-38`): da rodada, só o middleware mudou.
+  - O `aa594f7` fica registrado como refatoração sem efeito na execução: o `send` e o `verify` dos fluxos continuam ligados ao `k6/http`, ao `check` e ao `unexpected_errors`, e as requisições, os checks e a métrica são os mesmos. O smoke da rodada 4 teve 48 de 48 checks e `unexpected_errors` 0 de 90, como o da rodada 3. O `load-tests/README.md` cita o commit ao lado do PR #20.
+  - O comentário do `docs.sh` dizia que as mudanças posteriores no código medido não eram da feature; agora diz que elas se comparam com as linhas sem reabri-las.
+  - C94: o caso `body-check` confere também o check do predicado que lança exceção. Um mutante que deixa de registrar o check nesse caso (o `checker` dentro do `try`) sai 99.
+  - Ficam as lacunas menores da rodada 4: a prova do C26 (`origin/main...HEAD`) só cobre o diff de depois do merge (com `470d103..HEAD`, saiu 0), os scripts de asserção ignoram uma opção desconhecida, e o C41 aceita uma medição entre 2 s e 60 s a partir de outro instante que não o `201`.
 - **Lições:** L-019 a L-025 foram gravadas como candidatas a partir das rodadas 1 e 2.
