@@ -24,7 +24,10 @@ while [ $# -gt 0 ]; do
             esac
             shift 2
             ;;
-        *) shift ;;
+        *)
+            echo "FALHOU: opção desconhecida $1" >&2
+            exit 1
+            ;;
     esac
 done
 . "$(dirname "$0")/common.sh"

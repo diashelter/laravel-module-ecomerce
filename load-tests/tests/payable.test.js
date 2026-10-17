@@ -1,6 +1,6 @@
 // Proves the wait until an order can be paid (checks C41, C42 and C43), with a fake clock.
 import { expectEqual, runCase } from './harness.js';
-import { countGiveUp, payWhenPayable, waitUntilPayable } from '../lib/payable.js';
+import { countGiveUp, payWhenPayable, placeAndWaitUntilPayable, waitUntilPayable } from '../lib/payable.js';
 
 export { options } from './harness.js';
 
@@ -21,6 +21,36 @@ const cases = {
         expectEqual('sleeps 2 s before every read, the first included', order.sleeps, [2, 2, 2]);
         expectEqual('reads until awaiting_payment', order.reads(), 3);
         expectEqual('payable after 6 s', wait, { payable: true, waitedSeconds: 6 });
+    },
+    'times-from-the-201': () => {
+        // A fake clock in ms: the POST takes 300, every read 40, every sleep its seconds.
+        let clock = 0;
+        const reads = [];
+        const statuses = ['placed', 'awaiting_payment'];
+        const now = () => clock;
+        const sleep = (seconds) => {
+            clock += seconds * 1000;
+        };
+        const readStatus = (id) => {
+            reads.push(id);
+            clock += 40;
+            return statuses[reads.length - 1];
+        };
+        const place = () => {
+            clock += 300;
+            return 'order-1';
+        };
+
+        const order = placeAndWaitUntilPayable(place, readStatus, sleep, now);
+
+        expectEqual('reads the created order', reads, ['order-1', 'order-1']);
+        expectEqual('waits like waitUntilPayable', order.wait, { payable: true, waitedSeconds: 4 });
+        expectEqual('from the 201 to the read of awaiting_payment: 2 sleeps and 2 reads, not the POST', order.waitedMs, 4080);
+        expectEqual('the order placed', order.id, 'order-1');
+
+        const before = clock;
+        expectEqual('an order not created is not waited for', placeAndWaitUntilPayable(() => null, readStatus, sleep, now), null);
+        expectEqual('no read and no sleep', [reads.length, clock], [2, before]);
     },
     'gives-up-after-60s': () => {
         const order = fakeOrder(['placed']);

@@ -15,6 +15,8 @@ As provas usam cinco tipos de comando:
 - **Resultado de uma rodada:** `sh load-tests/tests/assert-check.sh <perfil> --name "<check>"` lê `load-tests/results/<perfil>-checks.txt`, que o `handleSummary` reescreve a cada rodada com uma linha `check <passes> <fails> <nome>` por check do k6 e uma linha `metric <nome> <contagem> <valor>` por métrica personalizada. A prova sai com 0 só quando o check existe, tem `passes` ≥ 1 e `fails` = 0. O `assert-metric.sh <perfil> --name <métrica> --equals <n>` (ou `--at-least <n>`) faz o mesmo com a contagem da métrica.
 - **Asserções da pilha:** `sh load-tests/tests/<script>.sh --only <caso>`. O `dataset.sh` consulta o Postgres de carga pelo `psql` do container `db` do projeto de carga. O `stack.sh` inspeciona os containers de carga, o `make.sh` roda o `make` e confere o que ficou, o `isolation.sh` compara o dev antes e depois de uma rodada, o `docs.sh` confere os documentos e o `ci.sh` confere o workflow.
 
+Todos esses scripts saem com 1 diante de uma opção sem valor (`FALHOU: <opção> sem valor`) ou de uma opção desconhecida (`FALHOU: opção desconhecida <opção>`), para que uma opção digitada errado nunca deixe a prova sem a asserção que ela pedia.
+
 Antes das provas de um perfil, rode `sh load-tests/tests/run.sh --only <perfil>`. As provas do `smoke` (S3 a S5) leem a última rodada do `smoke`. As do `contention` e do `limits` (S6) leem a última rodada de cada um. Os perfis longos (`load`, `stress`, `spike`, `breakpoint` e `soak`) são provados pela forma, com os testes unitários do k6. Só o `load` e o `breakpoint` rodam de verdade, para a linha de base (C76).
 
 Os nomes dos checks do k6 abaixo são literais: o script usa exatamente esses textos.
@@ -110,9 +112,9 @@ Proof: `docker compose exec -T api ./vendor/bin/pest --filter="leaves the rate l
 **C25** - O serviço `k6` usa a imagem `grafana/k6` com uma tag exata da linha 2.3, nunca `latest`. O `make load-test` liga `K6_WEB_DASHBOARD=true` com `K6_WEB_DASHBOARD_EXPORT` apontando para `results/` (door 5)
 Proof: `sh load-tests/tests/stack.sh --only k6-image`
 
-**C26** - Nenhum serviço do Compose de carga publica porta no host, e o Compose de dev (`docker-compose.yml`) não muda nesta feature (door 1)
+**C26** - Nenhum serviço do Compose de carga publica porta no host, e o Compose de dev (`docker-compose.yml` e `docker/`) não muda nesta feature, do primeiro pai do merge `746797a` do PR #19 (a `main` antes da HEL-14, `470d103`) até esse merge, que `HEAD` contém (door 1; a prova foi reescrita depois da rodada 5, ver o `Handoff`)
 Proof: `sh load-tests/tests/stack.sh --only no-host-ports`
-Proof: `git diff --quiet origin/main...HEAD -- docker-compose.yml docker/`
+Proof: `sh load-tests/tests/stack.sh --only dev-compose-unchanged`
 
 ### S3 - Storefront · 4 arquivos · 14 KB · ~4k
 
@@ -170,8 +172,11 @@ Proof: `sh load-tests/tests/k6.sh mix.test.js --only unavailable-order-rate`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: malformed address_id is 422"`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: address of another customer is 422"`
 
-**C41** - A espera lê o pedido a cada 2 segundos, com o primeiro intervalo também de 2 segundos, até o status `awaiting_payment`, e grava em `order_payable_wait` o tempo desde o `201`. No `smoke`, `checkout: order became awaiting_payment` passa e a métrica tem ao menos 1 amostra (AC 36, door 6)
+**C41** - A espera lê o pedido a cada 2 segundos, com o primeiro intervalo também de 2 segundos, até o status `awaiting_payment`, e grava em `order_payable_wait` o tempo desde o `201`: o relógio começa quando o `POST /api/orders` devolveu o pedido criado e para na leitura de `awaiting_payment`, pela função que o fluxo da compra chama, e o valor gravado é o que ela mediu. No `smoke`, `checkout: order became awaiting_payment` passa e a métrica tem ao menos 1 amostra (AC 36, door 6; a origem do tempo ganhou prova depois da rodada 5, ver o `Handoff`)
 Proof: `sh load-tests/tests/k6.sh payable.test.js --only polls-every-2s`
+Proof: `sh load-tests/tests/k6.sh payable.test.js --only times-from-the-201`
+Proof: `grep -nF "placeAndWaitUntilPayable(() => placeOrder(data), readOrderStatus, sleep, () => Date.now())" load-tests/flows/checkout.js`
+Proof: `grep -nF "orderPayableWait.add(waitedMs);" load-tests/flows/checkout.js`
 Proof: `sh load-tests/tests/assert-check.sh smoke --name "checkout: order became awaiting_payment"`
 Proof: `sh load-tests/tests/assert-metric.sh smoke --name order_payable_wait --at-least 1 --value-at-least 2000 --value-at-most 60000`
 
@@ -407,7 +412,7 @@ Proof: `make test`
 | estados da equipe (11) | login C51 · dashboard C52 · lista de pedidos C52 · detalhe do pedido C52 · lista de estoque C52 · lista de produtos C52 · ajuste de estoque C53 · exclusão pelo suporte C54 · produto sobrevive C54 · produto desconhecido C55 · sessões trocadas C56 | - |
 | frações da mistura (6) | cadastro 1% C36 · pedido sem unidades 5% C39 · cartão aprovado 90% C44 · cartão recusado 10% C45 · ajuste de estoque 2% C53 · casos de erro 10% C92 | - |
 | mapeamento de VU para conta (2) | cliente C37 · equipe C51 | - |
-| espera até pagar (3) | `placed` consulta de novo C41 · `awaiting_payment` paga C41, C43 · 60 s desiste C42 | - |
+| espera até pagar (4) | `placed` consulta de novo C41 · `awaiting_payment` paga C41, C43 · 60 s desiste C42 · o tempo gravado começa no `201` e para na leitura de `awaiting_payment` C41 | - |
 | o que conta como erro inesperado (4) | status fora de `expect` C93 · timeout (status `0`) C93 · check do corpo que falhou com status esperado C94 · pedido que não ficou pagável em 60 s C42 | - |
 | divisão dos VUs (4) | 50 VUs C71 · 150 VUs C71 · 300 VUs C71 · taxa de 500/s C71 | - |
 | limites de aprovação (6 grupos) | `smoke` C65 · `load`, `stress` e `soak` C72, C77 · `spike` C73 · `breakpoint` C69 · `contention` C89 · `limits` sem limite de rajada C63 | - |
@@ -440,7 +445,7 @@ Evidence:
 - os perfis do k6: 6 formas de carga, 4 grupos de limites e 1 regra de divisão, com 11 pontos
 - a mistura do k6: 2 mapeamentos de VU e 6 frações, com 8 pontos
 - o `handleSummary`: 2 linhas derivadas (o excesso da rajada e a taxa na parada), com 3 pontos
-- a espera até pagar: 3 saídas (consulta de novo, paga, desiste), com 3 pontos
+- a espera até pagar: 3 saídas (consulta de novo, paga, desiste) e a origem do tempo gravado (o `201`), com 4 pontos
 - o ajudante de requisição: 4 parâmetros de rota trocados e o formato do `X-Request-ID`, com 5 pontos
 - o que conta como erro inesperado (rodada 3 da verificação): o status fora de `expect` no `send()` e o corpo que falha com status esperado no `verify()`, sem contar duas vezes o status inesperado, com 3 pontos (C93, C94)
 - análogo mais próximo no repositório: nenhum para JavaScript de carga, `Makefile` ou Compose. O precedente aqui é o "exercício temporário" do `ModuleBoundariesTest` (features `module-facades` C7 e `uuid-record-ids` C62), que prova uma propriedade da infraestrutura de teste com uma falha de propósito, revertida
@@ -516,5 +521,11 @@ Estas linhas não entram nas diretrizes do repositório, a não ser que diashelt
   - O `aa594f7` fica registrado como refatoração sem efeito na execução: o `send` e o `verify` dos fluxos continuam ligados ao `k6/http`, ao `check` e ao `unexpected_errors`, e as requisições, os checks e a métrica são os mesmos. O smoke da rodada 4 teve 48 de 48 checks e `unexpected_errors` 0 de 90, como o da rodada 3. O `load-tests/README.md` cita o commit ao lado do PR #20.
   - O comentário do `docs.sh` dizia que as mudanças posteriores no código medido não eram da feature; agora diz que elas se comparam com as linhas sem reabri-las.
   - C94: o caso `body-check` confere também o check do predicado que lança exceção. Um mutante que deixa de registrar o check nesse caso (o `checker` dentro do `try`) sai 99.
-  - Ficam as lacunas menores da rodada 4: a prova do C26 (`origin/main...HEAD`) só cobre o diff de depois do merge (com `470d103..HEAD`, saiu 0), os scripts de asserção ignoram uma opção desconhecida, e o C41 aceita uma medição entre 2 s e 60 s a partir de outro instante que não o `201`.
+  - Ficam as lacunas menores da rodada 4: a prova do C26 (`origin/main...HEAD`) só cobre o diff de depois do merge (com `470d103..HEAD`, saiu 0), os scripts de asserção ignoram uma opção desconhecida, e o C41 aceita uma medição entre 2 s e 60 s a partir de outro instante que não o `201`. A rodada 5 as manteve, e elas foram fechadas depois dela (ver abaixo).
+- **Rodada 5 da verificação (PASS, 3 lacunas menores):** fechadas em `5fc8199`. O C26 e o C41 eram checks aprovados, então cada mudança de prova fica registrada aqui com o motivo e uma violação de propósito, que a prova nova pega e a antiga não pegava.
+  - **C26, prova reescrita.** A prova `git diff --quiet origin/main...HEAD -- docker-compose.yml docker/` compara a partir da base da branch na `main`. Depois do merge do PR #19, a `main` contém a feature, e o diff só cobria o que veio depois do merge: a mesma deriva que levou à reescrita do C76. A prova agora é o caso `dev-compose-unchanged` do `stack.sh`, que exige o merge `746797a` em `HEAD` e compara `docker-compose.yml` e `docker/` entre o primeiro pai do merge (`470d103`, a `main` antes da HEL-14) e o merge, o mesmo intervalo que o C76 usa. O SHA do merge foi do `docs.sh` para o `common.sh` (`HEL14_MERGE`), lido pelos dois scripts. Violação: num clone descartável, um merge falso da HEL-14 com uma linha a mais no `docker-compose.yml`, seguido de um commit em `HEAD`. Com o `HEL14_MERGE` apontando para o merge falso, a prova nova saiu 1 (`a HEL-14 mudou o Compose de dev`), e a forma antiga, com a `main` no merge falso, saiu 0. Como no C76, os commits posteriores ao merge, os da própria HEL-14 incluídos, ficam fora do intervalo.
+  - **Opções desconhecidas.** O `assert-metric.sh`, o `assert-check.sh` e o `common.sh`, que lê o `--only` dos outros scripts, saem 1 com `FALHOU: opção desconhecida <opção>` em vez de descartar a opção. O `k6.sh` tira o nome do arquivo dos argumentos antes de ler o `common.sh`, que agora recusaria esse argumento. Violações, todas com saída 1: `assert-metric.sh smoke --name order_payable_wait --at-least 1 --value-at-mostt 1` (na rodada 5, saiu 0), `assert-check.sh smoke --name "checkout: order is 201" --nmae x`, `docs.sh --only readme --verbose` e `k6.sh payable.test.js --onyl polls-every-2s`. As provas deste arquivo só usam `--only`, `--name`, `--equals`, `--at-least`, `--value-at-least` e `--value-at-most`, e continuam passando. A seção "Como rodar as provas" diz que uma opção desconhecida ou sem valor reprova.
+  - **C41, prova nova da origem do tempo.** O relógio da `order_payable_wait` saiu do fluxo da compra para o `placeAndWaitUntilPayable` de `load-tests/lib/payable.js`. Ele começa quando o `place()` devolve o id do pedido criado, logo depois do `201` e do `verify` dele, e para na leitura de `awaiting_payment`. O caso `times-from-the-201` do `payable.test.js` usa um relógio falso (o `POST` leva 300 ms, cada leitura 40 ms e cada espera os seus segundos) e exige 4.080 ms. Dois `grep` fixam a chamada no fluxo e o valor gravado (`orderPayableWait.add(waitedMs);`), como no C42. As faixas de 2 s a 60 s e a amostra no `smoke` continuam. Violações, todas com saída 99 no caso novo: o relógio começando antes do `POST` (4.380 ms), o tempo da consulta no lugar do relógio (4.000) e o relógio começando na primeira leitura (2.040). Com a primeira, o `polls-every-2s` passou, e um `smoke` inteiro passou com a prova antiga do valor saindo 0 (2.084,35 ms). No fluxo, gravar `wait.waitedSeconds * 1000` ou fazer o `POST` fora da chamada faz o `grep` correspondente sair 1.
+  - O C41 mudou o código medido depois do merge `746797a`. As requisições, os checks e as métricas de uma rodada são os mesmos; o relógio começa logo depois do `verify` do `201`, e não logo antes, e para logo antes do check da espera, e não logo depois. O `load-tests/README.md` registra a mudança na lista das posteriores à linha de base, com a comparação que ele pede: uma rodada do `load` em `5fc8199` (`load-20261017-082347`, exit 0, `unexpected_errors` 0 de 20.086) teve p95 de 2.046,75 ms em `order_payable_wait`, contra 2.035 da linha (0,6%). A vitrine (38,91 contra 30,0 ms) e `POST /api/orders` (66,14 contra 55,4 ms) variaram mais, mas não passam pelo código alterado, e a carga média da máquina era 6,7 no início, contra perto de 3 na medição da linha. A rodada não entra na tabela: é uma só, numa máquina ocupada.
+  - Fica aberta a lacuna 4 da rodada 5 (a redação do AC 71 e da mensagem do `docs.sh` sobre o que é da HEL-14), que não fazia parte deste pedido.
 - **Lições:** L-019 a L-025 foram gravadas como candidatas a partir das rodadas 1 e 2.
