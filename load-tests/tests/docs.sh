@@ -5,6 +5,10 @@
 LOAD_README=load-tests/README.md
 # What a run measures. Recording a row (load-tests/lib/baseline.js and the READMEs) is not part of it.
 MEASURED="backend docker Makefile load-tests/docker-compose.yml load-tests/docker load-tests/main.js load-tests/lib load-tests/flows load-tests/scenarios"
+# The merge of the HEL-14 (PR #19) into main, the commit that closes the feature: its first parent is main
+# before the feature, its second the tip of the feature branch. Later changes to the measured code are not
+# the feature's, so the rows are held against this commit and not against HEAD.
+HEL14_MERGE=746797a639c16273b776b16252fb842707e38378
 PROFILES="smoke load stress spike breakpoint soak contention limits"
 
 has() {
@@ -16,16 +20,17 @@ case "$CASE" in
         HEADER='| Data | Commit | Máquina | Perfil | VUs ou taxa | req/s | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Erro inesperado | Ponto de ruptura | Mudou desde a série anterior |'
         has "$LOAD_README" "$HEADER"
         ok "a tabela tem as 12 colunas"
+        git merge-base --is-ancestor "$HEL14_MERGE" HEAD || fail "o merge $HEL14_MERGE da HEL-14 não é ancestral de HEAD"
         for profile in load breakpoint; do
             ROW=$(grep -E "^\| [0-9]{4}-[0-9]{2}-[0-9]{2} \| [0-9a-f]{7,40} \| [^|]+ \| $profile \|" "$LOAD_README" | head -1)
             [ -n "$ROW" ] || fail "nenhuma linha do $profile"
             [ "$(echo "$ROW" | awk -F '|' '{ print NF }')" -eq 14 ] || fail "a linha do $profile não tem 12 colunas"
             SHA=$(echo "$ROW" | awk -F '|' '{ gsub(/ /, "", $3); print $3 }')
-            git merge-base --is-ancestor "$SHA" HEAD || fail "$SHA não é ancestral de HEAD"
-            git merge-base --is-ancestor "$SHA" origin/main && fail "$SHA já está na main"
+            git merge-base --is-ancestor "$SHA" "$HEL14_MERGE^2" || fail "$SHA não é da branch da HEL-14"
+            git merge-base --is-ancestor "$SHA" "$HEL14_MERGE^1" && fail "$SHA já estava na main antes da HEL-14"
             # shellcheck disable=SC2086
-            git diff --quiet "$SHA" HEAD -- $MEASURED ':(exclude)load-tests/lib/baseline.js' || fail "o código medido mudou depois de $SHA"
-            ok "linha do $profile no commit $SHA, e o código medido não mudou até HEAD"
+            git diff --quiet "$SHA" "$HEL14_MERGE" -- $MEASURED ':(exclude)load-tests/lib/baseline.js' || fail "o código medido mudou entre $SHA e o merge da HEL-14"
+            ok "linha do $profile no commit $SHA, da HEL-14, e o código medido não mudou até o merge $HEL14_MERGE"
         done
         ;;
     readme)
