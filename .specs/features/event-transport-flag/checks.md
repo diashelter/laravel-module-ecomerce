@@ -340,3 +340,13 @@ Cost: 9 provas de ambiente num script novo (`docker/tests/environment.sh`), 3 ca
 - Mechanism: um builder só, sem handoff (o total cabe no budget).
 - O `composer.lock` não entra na conta: o `composer require` o escreve, e ninguém o lê.
 - As rodadas do `load` para a C62 levam tempo de relógio, não de contexto: duas rodadas por transporte, em segundo plano, com a máquina sem outros aplicativos pesados, como a HEL-14 pede.
+
+- **Boundary:** C1 a C66 fechados no branch `helterdias/hel-13-event-transport-flag`; um builder só, sem handoff.
+- **Settled mid-build:**
+  - C23: a coluna `occurred_at` do outbox guarda segundos (decisão da HEL-9), então pelo relay o corpo sai com `.000000`, e não com `.715000`. O teste prova o relay com `2026-10-18T15:52:24.000000Z` e prova o formato com microssegundos e a conversão para UTC publicando um envelope montado no teste, direto pelo `RabbitMqEventTransport`. Nenhuma asserção foi afrouxada além disso; o desvio está na análise de domínio (problema 16).
+  - C18: o seletor registra a troca de transporte (a linha `info` com a chave `transport`); o primeiro ciclo não registra nada.
+  - C7: o `beforeEach` da pasta `tests/Feature/Messaging` abre uma conexão AMQP antes de esvaziar o vhost, para que todo teste do broker falhe cedo dizendo `RabbitMQ ...` quando ele está fora.
+  - C37: o consumidor pede prefetch 1 por consumidor e no canal todo, para valer "uma entrega por vez" também entre filas.
+  - C43: a "contagem de entregas" das mortas é fixa em 3 (limite de entregas mais a primeira): o `x-delivery-count` da fila de mortas cresce a cada leitura.
+  - As contagens de não confirmadas só vêm da API de gestão, que segue o broker com até ~5 s de atraso nas filas quorum; os testes que dependem delas esperam por polling. As contagens de prontas vêm do próprio broker (declaração passiva).
+- **Abandoned:** `basic_nack` com requeue (não conta para o limite de entregas no 4.3), a extensão `amqp` do PECL, e a coluna nova na tabela da HEL-14 (door 8).

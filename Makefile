@@ -217,7 +217,9 @@ load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYP
 		exit 1; \
 	fi
 	$(LOAD) down --volumes --remove-orphans
-	$(LOAD) up -d --wait db redis rabbitmq
+	@# The rabbitmq container sometimes exits at boot with "Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces"
+	@# (seen on a busy host, never twice in a row): one more attempt starts it.
+	$(LOAD) up -d --wait db redis rabbitmq || { echo "Subindo o rabbitmq de novo."; $(LOAD) up -d --wait db redis rabbitmq; }
 	$(LOAD) up -d api
 	@until $(LOAD) exec -T api test -f vendor/autoload.php 2>/dev/null; do sleep 2; done
 	@$(LOAD) exec -T api sh -c 'php artisan migrate:fresh --force && php artisan db:seed --class=LoadTestSeeder --force' \
