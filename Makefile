@@ -24,9 +24,9 @@ CHECKOUT_API   = $(CHECKOUT_RUN) api
 .DEFAULT_GOAL := help
 
 .PHONY: help up down build rebuild ps logs logs-api logs-worker logs-relay \
-	shell artisan worktree-env migrate migrate-fresh seed fresh optimize clear \
+	logs-consumer shell artisan worktree-env migrate migrate-fresh seed fresh optimize clear \
 	db-shell db-reset db-dump db-restore \
-	queue queue-restart queue-failed queue-retry \
+	queue queue-restart queue-failed queue-retry event-transport events-failed events-retry \
 	test test-filter test-prepare test-db-drop pint test-frontend npm-install frontend-shell setup env-files wait-api \
 	load-test load-down
 
@@ -50,8 +50,8 @@ rebuild: ## Reconstrói as imagens e inicia os containers
 ps: ## Mostra o status dos containers
 	$(DC) ps
 
-logs: ## Mostra os logs principais (api, worker, relay, nginx, frontend)
-	$(DC) logs -f --tail=100 api queue-worker outbox-relay nginx frontend
+logs: ## Mostra os logs principais (api, worker, relay, consumidor, nginx, frontend)
+	$(DC) logs -f --tail=100 api queue-worker outbox-relay event-consumer nginx frontend
 
 logs-api: ## Mostra os logs da API
 	$(DC) logs -f --tail=100 api
@@ -61,6 +61,9 @@ logs-worker: ## Mostra os logs do worker de filas
 
 logs-relay: ## Mostra os logs do relay do outbox
 	$(DC) logs -f --tail=100 outbox-relay
+
+logs-consumer: ## Mostra os logs do consumidor do RabbitMQ
+	$(DC) logs -f --tail=100 event-consumer
 
 ## ---------- Laravel ----------
 
@@ -116,8 +119,9 @@ db-restore: ## Restaura um dump: make db-restore FILE=storage-dumps/dump.sql
 queue: ## Executa um worker em primeiro plano (além do container queue-worker)
 	$(ARTISAN) queue:work redis --sleep=1 --tries=3 --verbose
 
-queue-restart: ## Reinicia os workers e o relay (necessário após alterar jobs, consumidores ou o relay)
+queue-restart: ## Reinicia o Horizon, o relay e o consumidor do RabbitMQ (necessário após alterar jobs, consumidores ou o relay)
 	$(ARTISAN) queue:restart
+	$(ARTISAN) horizon:terminate
 
 queue-failed: ## Lista os jobs que falharam
 	$(ARTISAN) queue:failed
@@ -125,13 +129,25 @@ queue-failed: ## Lista os jobs que falharam
 queue-retry: ## Reprocessa jobs falhos: make queue-retry (todos) ou make queue-retry ID=<uuid>
 	$(ARTISAN) queue:retry $(if $(ID),$(ID),all)
 
+# Which transport the outbox relay publishes through (the event-transport feature flag), without a deploy.
+# The user is recorded in the log of the change.
+event-transport: ## Mostra ou troca o transporte dos eventos: make event-transport [TO=redis|rabbitmq]
+	$(ARTISAN) events:transport $(if $(TO),$(TO) )--by=$(USER)
+
+events-failed: ## Lista as entregas mortas das filas do RabbitMQ
+	$(ARTISAN) events:failed
+
+events-retry: ## Devolve as entregas mortas aos consumidores: make events-retry (todas) ou make events-retry ID=<uuid>
+	$(ARTISAN) events:retry $(ID)
+
 ## ---------- Testes ----------
 
 # Each checkout tests on a database of its own, created on the first run: RefreshDatabase runs migrate:fresh,
 # so two suites on one database break each other. The main checkout keeps ecommerce_testing; a worktree uses
 # ecommerce_testing_<name>. Any checkout can pick another database: make test TEST_DB_DATABASE=<name>.
 TEST_DB_DATABASE := $(or $(TEST_DB_DATABASE),ecommerce_testing$(if $(WORKTREE),_$(shell printf '%s' '$(WORKTREE)' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '_' | cut -c1-45)))
-TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) api
+# The RabbitMQ vhost of the checkout has the name of its test database, so two suites never see each other's queues.
+TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) -e RABBITMQ_VHOST=$(TEST_DB_DATABASE) api
 PEST              = sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$$@"' pest
 # The name goes unquoted into SQL, and the suite would wipe the development database. The check reads it
 # from the environment, so no value can break its own quoting.
@@ -145,16 +161,19 @@ test: test-prepare ## Executa todos os testes (Pest) no banco de testes deste ch
 test-filter: test-prepare ## Executa testes filtrados: make test-filter FILTER=CheckoutTest
 	$(TEST_API) $(PEST) --filter="$(FILTER)"
 
-# Creates the database when it is missing.
+# Creates the database and the RabbitMQ vhost when they are missing.
 test-prepare: worktree-env
 	@$(CHECK_TEST_DB)
 	@printf '%s\n' "SELECT 'CREATE DATABASE $(TEST_DB_DATABASE) OWNER $(DB_USERNAME)' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$(TEST_DB_DATABASE)')\gexec" \
 		| $(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -q -v ON_ERROR_STOP=1
-	@echo "Banco de testes: $(TEST_DB_DATABASE)"
+	@$(DC) exec -T -e VHOST=$(TEST_DB_DATABASE) rabbitmq sh -c 'rabbitmqctl -q list_vhosts --no-table-headers | grep -qx "$$VHOST" \
+		|| { rabbitmqctl -q add_vhost "$$VHOST" && rabbitmqctl -q set_permissions -p "$$VHOST" "$$RABBITMQ_DEFAULT_USER" ".*" ".*" ".*"; }'
+	@echo "Banco de testes: $(TEST_DB_DATABASE) (vhost do RabbitMQ: $(TEST_DB_DATABASE))"
 
-test-db-drop: ## Apaga o banco de testes deste checkout (o próximo make test o recria)
+test-db-drop: ## Apaga o banco e o vhost do RabbitMQ de testes deste checkout (o próximo make test os recria)
 	@$(CHECK_TEST_DB)
 	$(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -c 'DROP DATABASE IF EXISTS $(TEST_DB_DATABASE) WITH (FORCE)'
+	$(DC) exec -T rabbitmq rabbitmqctl -q delete_vhost --if-exists $(TEST_DB_DATABASE)
 
 pint: worktree-env ## Verifica o estilo do backend/ deste checkout (Pint, sem corrigir)
 	$(CHECKOUT_API) ./vendor/bin/pint --test

@@ -12,6 +12,8 @@ x-php: &php
       condition: service_healthy
     redis:
       condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
 
 services:
   nginx:
@@ -31,15 +33,28 @@ services:
       INSTALL_DEPENDENCIES: "true"
     restart: unless-stopped
 
+  # The Laravel queue (Redis) under Horizon: one supervisor, the parameters of the former queue:work.
   queue-worker:
     <<: *php
-    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--timeout=60"]
+    command: ["php", "artisan", "horizon"]
     restart: unless-stopped
 
-  # Publishes the pending outbox messages to the queue (one DeliverEvent per consumer).
+  # Publishes the pending outbox messages through the transport of the event-transport flag.
   outbox-relay:
     <<: *php
     command: ["php", "artisan", "outbox:relay"]
+    restart: unless-stopped
+
+  # Delivers the RabbitMQ messages to the consumers (the other side of the event-transport flag).
+  event-consumer:
+    <<: *php
+    command: ["php", "artisan", "events:consume"]
+    restart: unless-stopped
+
+  # Runs the schedule (routes/console.php): the Horizon snapshot every five minutes.
+  scheduler:
+    <<: *php
+    command: ["php", "artisan", "schedule:work"]
     restart: unless-stopped
 
   frontend:
@@ -83,7 +98,26 @@ services:
       retries: 20
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:4.3.5-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-ecommerce}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-secret}"
+      # The management API refreshes the queue counts every 5 s by default; the tests read them from it.
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit collect_statistics_interval 100"
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped
+
 volumes:
   db_data:
   redis_data:
+  rabbitmq_data:
   frontend_node_modules:
