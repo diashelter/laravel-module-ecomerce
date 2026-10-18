@@ -12,6 +12,12 @@ Tudo roda no Docker; só é preciso ter o Docker e o `make`.
 make load-test TYPE=smoke
 ```
 
+Para rodar com o relay publicando pelo RabbitMQ, em vez da fila do Laravel (Redis), que é o padrão:
+
+```bash
+make load-test TYPE=smoke TRANSPORT=rabbitmq
+```
+
 ```bash
 make load-down
 ```
@@ -19,9 +25,9 @@ make load-down
 Cada `make load-test` faz, em ordem:
 
 1. apaga os containers e os volumes do projeto Compose `ecommerce-load`;
-2. sobe o Postgres e o Redis de carga, roda as migrations do zero e o `LoadTestSeeder`;
+2. sobe o Postgres, o Redis e o RabbitMQ de carga, roda as migrations do zero e o `LoadTestSeeder`;
 3. gera os caches de config, rotas e eventos dentro do container;
-4. sobe a API, o worker, o relay e o Nginx de carga;
+4. grava o transporte escolhido (`TRANSPORT`, `redis` por padrão) na flag `event-transport` da pilha, e sobe a API, o worker (Horizon), o relay, o consumidor do RabbitMQ e o Nginx de carga;
 5. roda o perfil no container `k6`.
 
 A pilha fica no ar depois da rodada, para inspeção. O `make load-down` a remove junto com os volumes.
@@ -32,7 +38,7 @@ Um perfil desconhecido ou ausente é recusado antes de subir qualquer container.
 
 O projeto `ecommerce-load` (`load-tests/docker-compose.yml`) roda ao lado da pilha de dev, que não precisa ser parada. As duas pilhas compartilham só a imagem do PHP e a árvore `backend/`.
 
-- **Banco e Redis próprios.** O banco é o `ecommerce_load`, recriado a cada rodada. Os dados de dev nunca mudam.
+- **Banco, Redis e RabbitMQ próprios.** O banco é o `ecommerce_load`, recriado a cada rodada, e o RabbitMQ usa o vhost `/`, sem porta no host. Os dados de dev nunca mudam.
 - **Configuração de produção.** A pilha roda com:
   - `APP_ENV=production` e `APP_DEBUG=false`;
   - logs de `warning` para cima na saída padrão;
@@ -102,7 +108,7 @@ Quando um limite cai, o `make load-test` sai com código diferente de zero, e os
   - um timeout;
   - um check do corpo que falhou;
   - um pedido que não ficou pagável em 60 segundos.
-- **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 2 segundos, como o frontend faz, então a resolução da métrica é de 2 segundos. Ela mede o relay do outbox e o worker sob carga.
+- **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 250 ms (o frontend consulta a cada 2 s), então a resolução da métrica é de 250 ms. Ela mede o relay do outbox e o worker, ou o consumidor do RabbitMQ, sob carga. Até a HEL-13 o k6 consultava a cada 2 s, e a linha de base da HEL-14 tem essa resolução: com 2 s, os dois transportes caíam na mesma leitura.
 - **`rate_limit_overshoot`:** quantos logins da rajada simultânea do `limits` passaram além do limite de 10. A métrica é só registrada, sem limite de aprovação. O esperado é 0: o `throttle` conta a requisição antes de decidir (`AtomicThrottleRequests`, ver o [README do projeto](../README.md)), e passam exatamente 10. Com o `throttle` do framework, que confere antes de contar, passavam 11.
 
 Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine, 1 s em `POST /api/orders` e 10 s em `order_payable_wait`. Agora eles são o p95 da linha do `load` vezes 1,2, arredondado para cima até a dezena de ms seguinte: 40 ms, 70 ms e 2.450 ms (`BASELINE` em `lib/baseline.js`, que muda junto com a linha). O `stress` e o `soak` usam os mesmos limites, então eles costumam reprovar: o relatório mostra quanto a API degradou.
@@ -112,7 +118,7 @@ Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine,
 Cada rodada grava em `load-tests/results/`, que fica fora do git:
 
 - `<perfil>-<data e hora>.html`: o relatório do painel do k6, com gráficos;
-- `<perfil>-<data e hora>.json`: o resumo completo;
+- `<perfil>-<data e hora>.json`: o resumo completo. Numa rodada com `TRANSPORT=rabbitmq`, os dois se chamam `<perfil>-rabbitmq-<data e hora>`;
 - `<perfil>-checks.txt`: uma linha por check e por métrica personalizada, lida pelas provas.
 
 As métricas de tempo são agrupadas por template de rota, na tag `name` (por exemplo `GET /api/orders/{order}`), nunca pela URL com o id. Toda requisição leva um `X-Request-ID` no formato `<perfil>-vu<n>-it<n>-<sequência>`, que a API grava nos logs dela.

@@ -1,4 +1,4 @@
-# The load test stack (HEL-14): a copy of the API with production settings, its own PostgreSQL and Redis, and k6.
+# The load test stack (HEL-14): a copy of the API with production settings, its own PostgreSQL, Redis and RabbitMQ, and k6.
 # It shares only the PHP image and the backend working tree with the development stack.
 # Run it through `make load-test TYPE=<profile>` and remove it with `make load-down` (see load-tests/README.md).
 name: ecommerce-load
@@ -23,6 +23,12 @@ x-php-environment: &php-environment
   DB_PASSWORD: secret
   REDIS_HOST: redis
   REDIS_PORT: "6379"
+  # Its own broker, on the default vhost; the event-transport flag (make load-test TRANSPORT=...) picks whether it is used.
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: ecommerce
+  RABBITMQ_PASSWORD: secret
+  RABBITMQ_VHOST: /
   SESSION_DRIVER: redis
   SESSION_DOMAIN: "null"
   SANCTUM_STATEFUL_DOMAINS: nginx
@@ -49,6 +55,8 @@ x-php: &php
       condition: service_healthy
     redis:
       condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
 
 services:
   db:
@@ -73,6 +81,18 @@ services:
       timeout: 3s
       retries: 30
 
+  # No port on the host: only the stack talks to it.
+  rabbitmq:
+    image: rabbitmq:4.3.5-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ecommerce
+      RABBITMQ_DEFAULT_PASS: secret
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 2s
+      timeout: 10s
+      retries: 30
+
   api:
     <<: *php
     environment:
@@ -86,11 +106,16 @@ services:
 
   queue-worker:
     <<: *php
-    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--timeout=60"]
+    command: ["php", "artisan", "horizon"]
 
   outbox-relay:
     <<: *php
     command: ["php", "artisan", "outbox:relay"]
+
+  event-consumer:
+    <<: *php
+    command: ["php", "artisan", "events:consume"]
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine

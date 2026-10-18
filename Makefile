@@ -194,31 +194,42 @@ frontend-shell: ## Abre um shell no container do frontend, com o frontend/ deste
 ## ---------- Testes de carga (k6) ----------
 
 LOAD_PROFILES  = smoke load stress spike breakpoint soak contention limits
+# The event-transport flag of the load stack for the run (HEL-13): the transport the relay publishes through.
+LOAD_TRANSPORTS = redis rabbitmq
+TRANSPORT      ?= redis
 # Profiles whose volume would trip the rate limits: their limiter keeps the counts in memory, per request.
 LOAD_UNLIMITED = load stress spike breakpoint soak contention
 LOAD_LIMITER   = $(if $(filter $(TYPE),$(LOAD_UNLIMITED)),array,)
 LOAD           = CACHE_LIMITER=$(LOAD_LIMITER) $(DC) -f load-tests/docker-compose.yml
 LOAD_STAMP    := $(shell date +%Y%m%d-%H%M%S)
+# The reports of a rabbitmq run say so: <profile>-rabbitmq-<stamp>.html and .json. The redis ones keep <profile>-<stamp>.
+LOAD_RUN       = $(if $(filter rabbitmq,$(TRANSPORT)),rabbitmq-)$(LOAD_STAMP)
 
-load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYPE=smoke
+load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYPE=smoke [TRANSPORT=redis|rabbitmq]
 	@if [ "$(words $(TYPE))" != "1" ] || [ -z "$(filter $(TYPE),$(LOAD_PROFILES))" ]; then \
 		echo "Informe um perfil: make load-test TYPE=<perfil>"; \
 		echo "Perfis: $(LOAD_PROFILES)"; \
 		exit 1; \
 	fi
+	@if [ "$(words $(TRANSPORT))" != "1" ] || [ -z "$(filter $(TRANSPORT),$(LOAD_TRANSPORTS))" ]; then \
+		echo "Transporte inválido: make load-test TYPE=$(TYPE) TRANSPORT=<transporte>"; \
+		echo "Transportes: $(LOAD_TRANSPORTS)"; \
+		exit 1; \
+	fi
 	$(LOAD) down --volumes --remove-orphans
-	$(LOAD) up -d --wait db redis
+	$(LOAD) up -d --wait db redis rabbitmq
 	$(LOAD) up -d api
 	@until $(LOAD) exec -T api test -f vendor/autoload.php 2>/dev/null; do sleep 2; done
 	@$(LOAD) exec -T api sh -c 'php artisan migrate:fresh --force && php artisan db:seed --class=LoadTestSeeder --force' \
 		|| { echo "A pilha de carga não subiu. Logs da api de carga:"; $(LOAD) logs --no-color api; exit 1; }
 	$(LOAD) exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache'
-	$(LOAD) up -d queue-worker outbox-relay nginx
+	$(LOAD) exec -T api php artisan events:transport $(TRANSPORT) --by=$(USER)
+	$(LOAD) up -d queue-worker outbox-relay event-consumer nginx
 	@mkdir -p load-tests/results && chmod a+rwx load-tests/results
 	$(LOAD) run --rm \
-		-e PROFILE=$(TYPE) -e RUN_STAMP=$(LOAD_STAMP) \
+		-e PROFILE=$(TYPE) -e RUN_STAMP=$(LOAD_RUN) \
 		-e K6_WEB_DASHBOARD=true -e K6_WEB_DASHBOARD_PERIOD=2s \
-		-e K6_WEB_DASHBOARD_EXPORT=results/$(TYPE)-$(LOAD_STAMP).html \
+		-e K6_WEB_DASHBOARD_EXPORT=results/$(TYPE)-$(LOAD_RUN).html \
 		k6 run main.js
 
 load-down: ## Remove a pilha de carga e os volumes dela (a de dev não muda)
@@ -237,7 +248,7 @@ wait-api:
 setup: env-files ## Sobe e prepara todo o projeto (ATENÇÃO: recria o banco de desenvolvimento)
 	$(DC) build
 	$(MAKE) npm-install
-	$(DC) up -d --wait db redis
+	$(DC) up -d --wait db redis rabbitmq
 	$(DC) up -d
 	@$(MAKE) --no-print-directory wait-api
 	$(EXEC_API) composer install --no-interaction --prefer-dist

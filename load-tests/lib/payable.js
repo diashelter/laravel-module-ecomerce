@@ -1,8 +1,10 @@
-// Pure: how the checkout waits for an order to become payable, as the frontend does (PaymentPage polls the
-// order every 2 seconds). The outbox relay and the queue worker move it from `placed` to `awaiting_payment`;
-// paying before that is a 409, which would hide the wait instead of measuring it. tests/payable.test.js.
+// Pure: how the checkout waits for an order to become payable. The outbox relay and the queue worker (or the
+// event consumer, with the rabbitmq transport) move it from `placed` to `awaiting_payment`; paying before that
+// is a 409, which would hide the wait instead of measuring it. The frontend polls every 2 seconds (PaymentPage);
+// the test reads every 250 ms, so the p95 of order_payable_wait can tell the two transports apart (HEL-13: at
+// 2 s, both would end up in the same reading). tests/payable.test.js.
 
-export const POLL_SECONDS = 2;
+export const POLL_SECONDS = 0.25;
 export const GIVE_UP_SECONDS = 60;
 
 /**

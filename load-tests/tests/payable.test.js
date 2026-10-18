@@ -14,13 +14,13 @@ function fakeOrder(statuses) {
 }
 
 const cases = {
-    'polls-every-2s': () => {
+    'polls-every-250ms': () => {
         const order = fakeOrder(['placed', 'placed', 'awaiting_payment']);
         const wait = waitUntilPayable(order.readStatus, order.sleep);
 
-        expectEqual('sleeps 2 s before every read, the first included', order.sleeps, [2, 2, 2]);
+        expectEqual('sleeps 0.25 s before every read, the first included', order.sleeps, [0.25, 0.25, 0.25]);
         expectEqual('reads until awaiting_payment', order.reads(), 3);
-        expectEqual('payable after 6 s', wait, { payable: true, waitedSeconds: 6 });
+        expectEqual('payable after 0.75 s', wait, { payable: true, waitedSeconds: 0.75 });
     },
     'times-from-the-201': () => {
         // A fake clock in ms: the POST takes 300, every read 40, every sleep its seconds.
@@ -44,8 +44,8 @@ const cases = {
         const order = placeAndWaitUntilPayable(place, readStatus, sleep, now);
 
         expectEqual('reads the created order', reads, ['order-1', 'order-1']);
-        expectEqual('waits like waitUntilPayable', order.wait, { payable: true, waitedSeconds: 4 });
-        expectEqual('from the 201 to the read of awaiting_payment: 2 sleeps and 2 reads, not the POST', order.waitedMs, 4080);
+        expectEqual('waits like waitUntilPayable', order.wait, { payable: true, waitedSeconds: 0.5 });
+        expectEqual('from the 201 to the read of awaiting_payment: 2 sleeps and 2 reads, not the POST', order.waitedMs, 580);
         expectEqual('the order placed', order.id, 'order-1');
 
         const before = clock;
@@ -56,7 +56,7 @@ const cases = {
         const order = fakeOrder(['placed']);
         const wait = waitUntilPayable(order.readStatus, order.sleep);
 
-        expectEqual('30 reads in 60 s', order.reads(), 30);
+        expectEqual('240 reads in 60 s', order.reads(), 240);
         expectEqual('waited exactly 60 s', order.sleeps.reduce((sum, s) => sum + s, 0), 60);
         expectEqual('not payable', wait, { payable: false, waitedSeconds: 60 });
 
