@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Outbox\Fixtures;
 
 use App\Modules\Shared\Messaging\EventConsumer;
+use Closure;
 use Illuminate\Support\Facades\Context;
 
 /**
@@ -16,8 +17,15 @@ class SpyConsumer implements EventConsumer
     /** @var list<array{event: SampleEvent, request_id: mixed}> */
     public array $calls = [];
 
+    /** Runs with each event while the delivery is in progress, to look at the broker or change the world. */
+    public ?Closure $during = null;
+
     public function handle(SampleEvent $event): void
     {
         $this->calls[] = ['event' => $event, 'request_id' => Context::get('request_id')];
+
+        if ($this->during !== null) {
+            ($this->during)($event);
+        }
     }
 }

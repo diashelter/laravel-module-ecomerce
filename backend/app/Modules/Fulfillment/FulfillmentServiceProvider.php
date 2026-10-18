@@ -24,6 +24,6 @@ class FulfillmentServiceProvider extends ServiceProvider
 
     public function boot(EventSubscriptions $subscriptions): void
     {
-        $subscriptions->subscribe(OrderPaid::class, ScheduleOrderDelivery::class);
+        $subscriptions->subscribe(OrderPaid::class, ScheduleOrderDelivery::class, 'fulfillment.schedule_order_delivery');
     }
 }

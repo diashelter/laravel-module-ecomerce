@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Modules\Shared\Cache\AtomicRateLimiter;
+use App\Modules\Shared\Console\ConsumeEventsCommand;
+use App\Modules\Shared\Console\EventTransportCommand;
+use App\Modules\Shared\Console\FailedEventsCommand;
 use App\Modules\Shared\Console\RelayOutboxCommand;
+use App\Modules\Shared\Console\RetryEventsCommand;
 use App\Modules\Shared\Messaging\EventOutbox;
 use App\Modules\Shared\Messaging\EventSubscriptions;
 use App\Modules\Shared\Messaging\EventTransport;
-use App\Modules\Shared\Messaging\QueueEventTransport;
+use App\Modules\Shared\Messaging\EventTransportFlag;
+use App\Modules\Shared\Messaging\EventTransportSelector;
+use App\Modules\Shared\Messaging\RabbitMq\RabbitMqEventTransport;
 use App\Modules\Shared\Repositories\OutboxMessageRepository;
 use App\Modules\Shared\Support\RecordId;
 use Illuminate\Cache\RateLimiter;
@@ -23,13 +29,17 @@ class AppServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     public array $bindings = [
         EventOutbox::class => OutboxMessageRepository::class,
-        // The one transport today. HEL-13 adds another behind a feature flag, here.
-        EventTransport::class => QueueEventTransport::class,
+        // The transport is the one the event-transport flag names (redis or rabbitmq), chosen on every publish.
+        EventTransport::class => EventTransportSelector::class,
     ];
 
     /** @var array<class-string, class-string> the modules subscribe their consumers into the same instance */
     public array $singletons = [
         EventSubscriptions::class => EventSubscriptions::class,
+        // One connection to the broker per process.
+        RabbitMqEventTransport::class => RabbitMqEventTransport::class,
+        // It remembers the last transport it used, to log a change once.
+        EventTransportSelector::class => EventTransportSelector::class,
     ];
 
     public function register(): void
@@ -52,6 +62,14 @@ class AppServiceProvider extends ServiceProvider
             Route::pattern($parameter, RecordId::PATTERN);
         }
 
-        $this->commands([RelayOutboxCommand::class]);
+        $this->app->make(EventTransportFlag::class)->define();
+
+        $this->commands([
+            RelayOutboxCommand::class,
+            EventTransportCommand::class,
+            ConsumeEventsCommand::class,
+            FailedEventsCommand::class,
+            RetryEventsCommand::class,
+        ]);
     }
 }

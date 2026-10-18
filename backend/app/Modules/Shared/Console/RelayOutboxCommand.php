@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Console;
 
+use App\Modules\Shared\Messaging\EventTransportFlag;
 use App\Modules\Shared\Messaging\OutboxRelay;
 use App\Modules\Shared\Messaging\RelayCycle;
 use Illuminate\Console\Command;
@@ -30,13 +31,13 @@ final class RelayOutboxCommand extends Command
 
     protected $description = 'Publish the pending outbox messages to the event transport';
 
-    public function handle(OutboxRelay $relay, Cache $cache): int
+    public function handle(OutboxRelay $relay, Cache $cache, EventTransportFlag $flag): int
     {
         $relay->prune();
         $nextPruneAt = now()->addHour();
 
         if ($this->option('once')) {
-            return $this->publish($relay) === RelayCycle::Failed ? self::FAILURE : self::SUCCESS;
+            return $this->publish($relay, $flag) === RelayCycle::Failed ? self::FAILURE : self::SUCCESS;
         }
 
         $restartSignal = $this->restartSignal($cache);
@@ -47,7 +48,7 @@ final class RelayOutboxCommand extends Command
                 $nextPruneAt = now()->addHour();
             }
 
-            $cycle = $this->publish($relay);
+            $cycle = $this->publish($relay, $flag);
             $currentSignal = $this->restartSignal($cache);
 
             if ($restartSignal === null) {
@@ -65,8 +66,11 @@ final class RelayOutboxCommand extends Command
         }
     }
 
-    private function publish(OutboxRelay $relay): RelayCycle
+    private function publish(OutboxRelay $relay, EventTransportFlag $flag): RelayCycle
     {
+        // Pennant keeps the flag in memory: a value changed by `events:transport` is read again each cycle.
+        $flag->refresh();
+
         $cycle = $relay->publishPending();
 
         // One line on the process output (make logs-relay); the message id and the error are in the log.

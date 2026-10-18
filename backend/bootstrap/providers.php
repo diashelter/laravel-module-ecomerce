@@ -8,9 +8,11 @@ use App\Modules\Inventory\InventoryServiceProvider;
 use App\Modules\Ordering\OrderingServiceProvider;
 use App\Modules\Payment\PaymentServiceProvider;
 use App\Providers\AppServiceProvider;
+use App\Providers\HorizonServiceProvider;
 
 return [
     AppServiceProvider::class,
+    HorizonServiceProvider::class,
     CatalogServiceProvider::class,
     CustomersServiceProvider::class,
     FulfillmentServiceProvider::class,
