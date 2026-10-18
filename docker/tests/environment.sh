@@ -85,7 +85,7 @@ case "$CASE" in
         ok "os .env.example"
         ;;
     test-vhost)
-        $DEV exec -T rabbitmq rabbitmqctl -q delete_vhost --if-exists ecommerce_testing >/dev/null || fail "não apagou o vhost"
+        has_vhost ecommerce_testing && { $DEV exec -T rabbitmq rabbitmqctl -q delete_vhost ecommerce_testing >/dev/null || fail "não apagou o vhost"; }
         has_vhost ecommerce_testing && fail "o vhost ecommerce_testing ainda existe"
         make test-filter FILTER="$TEST_FILTER" >/dev/null 2>&1 || fail "make test-filter FILTER=\"$TEST_FILTER\" falhou"
         has_vhost ecommerce_testing || fail "o vhost ecommerce_testing não existe depois do make test"

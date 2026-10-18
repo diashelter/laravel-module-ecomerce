@@ -173,7 +173,7 @@ test-prepare: worktree-env
 test-db-drop: ## Apaga o banco e o vhost do RabbitMQ de testes deste checkout (o próximo make test os recria)
 	@$(CHECK_TEST_DB)
 	$(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -c 'DROP DATABASE IF EXISTS $(TEST_DB_DATABASE) WITH (FORCE)'
-	$(DC) exec -T rabbitmq rabbitmqctl -q delete_vhost --if-exists $(TEST_DB_DATABASE)
+	$(DC) exec -T -e VHOST=$(TEST_DB_DATABASE) rabbitmq sh -c 'if rabbitmqctl -q list_vhosts --no-table-headers | grep -qx "$$VHOST"; then rabbitmqctl -q delete_vhost "$$VHOST"; fi'
 
 pint: worktree-env ## Verifica o estilo do backend/ deste checkout (Pint, sem corrigir)
 	$(CHECKOUT_API) ./vendor/bin/pint --test
