@@ -292,7 +292,7 @@ Proof: `make load-test TYPE=smoke`
 | documentos (4) | README C64 · `AGENTS.md` C65 · análise de domínio C65 · `load-tests/README.md` C65 | - |
 
 - Claims que citam rota, status ou formato de resposta: C52 e C53 (`/horizon`), C23 (a mensagem), C42 a C46 (a saída dos comandos). Cada um tem uma prova que cruza a borda: a requisição HTTP, a mensagem lida do broker, o comando pelo `Artisan`.
-- O laço contínuo do `outbox:relay` e o `--once` chamam o mesmo código de ciclo, que limpa o cache da flag; por isso o C17 vale pelas duas montagens. Um ciclo que leia a flag fora desse código falha o C18, que roda 5 ciclos.
+- O laço contínuo do `outbox:relay` e o `--once` chamam o mesmo código de ciclo, que limpa o cache da flag; por isso o C17 vale pelas duas montagens. Só o C17 prova a leitura por ciclo (o C18 limpa o cache pelo `storeFlag()`).
 - Nenhum outro check afirma mais do que os casos que a sua prova exercita.
 
 ## Test policy
@@ -344,9 +344,9 @@ Cost: 9 provas de ambiente num script novo (`docker/tests/environment.sh`), 3 ca
 - **Boundary:** C1 a C66 fechados no branch `helterdias/hel-13-event-transport-flag`; um builder só, sem handoff.
 - **Settled mid-build:**
   - C23: a coluna `occurred_at` do outbox guarda segundos (decisão da HEL-9), então pelo relay o corpo sai com `.000000`, e não com `.715000`. O teste prova o relay com `2026-10-18T15:52:24.000000Z` e prova o formato com microssegundos e a conversão para UTC publicando um envelope montado no teste, direto pelo `RabbitMqEventTransport`. Nenhuma asserção foi afrouxada além disso; o desvio está na análise de domínio (problema 16).
-  - C18: o seletor registra a troca de transporte (a linha `info` com a chave `transport`); o primeiro ciclo não registra nada.
+  - C18: o seletor registra a troca de transporte (a linha `info` com a chave `transport`); o primeiro ciclo não registra nada. A nota da Coverage que diz que ler a flag fora do ciclo falha o C18 está errada: o `storeFlag()` do teste limpa o cache sozinho, e só o C17 prova a leitura por ciclo.
   - C7: o `beforeEach` da pasta `tests/Feature/Messaging` abre uma conexão AMQP antes de esvaziar o vhost, para que todo teste do broker falhe cedo dizendo `RabbitMQ ...` quando ele está fora.
-  - C37: o consumidor pede prefetch 1 por consumidor e no canal todo, para valer "uma entrega por vez" também entre filas.
+  - C37 / AC 36: o Verifier achou que um `basic_qos` do canal inteiro não faz o broker segurar as outras filas (verificado: com duas filas, a cópia da outra já estava entregue durante o `handle()`); filas `quorum` só respeitam o prefetch por consumidor. O `ConsumeEventsCommand` pede prefetch 1 por consumidor: no máximo uma entrega sem confirmação **por fila**, e as entregas são tratadas uma de cada vez. A letra do AC 36 ("uma sem confirmação por vez") só valeria com uma fila, ou com `basic_get` no lugar do `basic_consume`, o que muda a door 5 e a medição do k6. Fica como desvio declarado para o usuário decidir.
   - C43: a "contagem de entregas" das mortas é fixa em 3 (limite de entregas mais a primeira): o `x-delivery-count` da fila de mortas cresce a cada leitura.
   - As contagens de não confirmadas só vêm da API de gestão, que segue o broker com até ~5 s de atraso nas filas quorum; os testes que dependem delas esperam por polling. As contagens de prontas vêm do próprio broker (declaração passiva).
 - **Abandoned:** `basic_nack` com requeue (não conta para o limite de entregas no 4.3), a extensão `amqp` do PECL, e a coluna nova na tabela da HEL-14 (door 8).

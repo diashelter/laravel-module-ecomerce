@@ -23,15 +23,15 @@ it('opens horizon for a staff admin', function () {
     $this->actingAs(admin(), 'staff')->get('/horizon')->assertOk();
 });
 
-it('refuses horizon to anyone but a staff admin', function (Closure $requester, string $path) {
+it('refuses horizon to anyone but a staff admin', function (Closure $requester, string $path, string $environment) {
     // Horizon alone would open the dashboard to everyone in the local environment.
-    app()->detectEnvironment(fn () => 'local');
+    app()->detectEnvironment(fn () => $environment);
     $requester($this)->get($path)->assertForbidden();
 })->with([
     'support' => [fn ($test) => $test->actingAs(support(), 'staff')],
     'customer' => [fn ($test) => $test->actingAs(customer(), 'customer')],
     'visitor' => [fn ($test) => $test],
-])->with(['/horizon', '/horizon/api/stats']);
+])->with(['/horizon', '/horizon/api/stats'])->with(['local', 'production']);
 
 it('schedules the horizon snapshot every five minutes', function () {
     $events = collect(app(Schedule::class)->events())

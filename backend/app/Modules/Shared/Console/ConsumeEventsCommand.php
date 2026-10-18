@@ -23,7 +23,7 @@ use Throwable;
 
 /**
  * The consumer process for the RabbitMQ transport (the event-consumer container): one consumer per
- * queue of the topology, one delivery at a time. A delivery is acknowledged after the consumer's
+ * queue of the topology, one delivery handled at a time and at most one unacknowledged per queue. A delivery is acknowledged after the consumer's
  * handle() returned; when it throws, the delivery is returned to the queue, and the broker moves it
  * to the dead queue after the third failure (see RabbitMqTopology). Without the broker it tries to
  * connect again every 5 seconds, and it stops after the delivery in progress when
@@ -92,9 +92,10 @@ final class ConsumeEventsCommand extends Command
         ?array &$restartSignal,
     ): bool {
         $channel = $connection->channel();
-        // One unacknowledged delivery per consumer and, since the consumers share the channel, one in all.
+        // One unacknowledged delivery per consumer (queue). The deliveries are handled one at a time, but a
+        // channel-wide limit would not make the broker hold the other queues' messages back: quorum queues
+        // only honour the per-consumer prefetch (checked against RabbitMQ 4.3.5).
         $channel->basic_qos(0, 1, false);
-        $channel->basic_qos(0, 1, true);
         $topology->declare($channel);
 
         foreach ($subscriptions->consumerClasses() as $name => $class) {

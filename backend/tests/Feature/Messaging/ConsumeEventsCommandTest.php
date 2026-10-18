@@ -239,3 +239,46 @@ it('consumes the queued messages while the flag is redis', function () {
 
     expect($spy->calls)->toHaveCount(1);
 });
+
+it('declares the topology when it boots', function () {
+    subscribeSpy(withFailing: true);
+
+    expect(brokerObjects()['queues'])->toBe([]);
+
+    expect(consumeUntilEmpty())->toBe(0);
+
+    expect(brokerObjects()['queues'])->toContain('testing.spy_consumer', 'testing.spy_consumer.dead', 'testing.failing_consumer', 'testing.failing_consumer.dead');
+});
+
+it('connects again after it loses the connection while consuming', function () {
+    subscribeSpy();
+    $spy = bindSpy();
+    publishToBroker(brokerEnvelope());
+    $connector = new class extends RabbitMqConnector
+    {
+        public ?AMQPStreamConnection $last = null;
+
+        public function connect(): AMQPStreamConnection
+        {
+            return $this->last = parent::connect();
+        }
+    };
+    app()->instance(RabbitMqConnector::class, $connector);
+    $dropped = false;
+    // The socket closes while the delivery is in progress: the acknowledgement cannot be sent.
+    $spy->during = function () use ($connector, &$dropped) {
+        if (! $dropped) {
+            $dropped = true;
+            $connector->last->getIO()->close();
+        }
+    };
+    Sleep::fake();
+
+    expect(consumeUntilEmpty())->toBe(0);
+
+    // The unacknowledged delivery went back to the queue and was delivered again, after one 5 s wait.
+    expect($spy->calls)->toHaveCount(2);
+    Sleep::assertSleptTimes(1);
+    Sleep::assertSequence([Sleep::for(5)->seconds()]);
+    expect(readyMessages('testing.spy_consumer'))->toBe(0);
+});

@@ -82,8 +82,9 @@ it('lists every dead delivery without taking it from the queue', function () {
             ->and($line)->toContain('testing.sample_event')
             ->toContain($envelope->id)
             ->toContain('2026-10-18T12:00:00.000000Z')
-            ->toContain('trace-dead-0001')
-            ->toContain('3');
+            ->toContain('trace-dead-0001');
+        // The last column of the row (the table borders are box characters): the number of deliveries.
+        expect(trim(preg_split('/[|│]/u', rtrim(trim($line), '|│'))[array_key_last(preg_split('/[|│]/u', rtrim(trim($line), '|│')))]))->toBe('3');
         expect(idsIn("{$consumer}.dead"))->toBe([$envelope->id]);
     }
 });
