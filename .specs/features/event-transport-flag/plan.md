@@ -156,7 +156,7 @@ As mensagens do RabbitMQ chegam a cada consumidor com as mesmas regras do `Deliv
 33. WHEN a consumer throws THEN the system SHALL write a `warning` log line carrying `message_id`, `name`, `consumer`, `attempt` and `error`
 34. IF the envelope `version` differs from the `eventVersion()` of the class subscribed under its `name`, or the body is not a JSON object with the 6 keys of door 4, THEN the consumer SHALL never be called, and the message SHALL end in `<name>.dead` after 3 deliveries
 35. IF the connection closes while a delivery is unacknowledged THEN the delivery SHALL count as an attempt, and the third such closing SHALL move the message to `<name>.dead`
-36. The `events:consume` process SHALL hold at most one unacknowledged delivery at a time
+36. The `events:consume` process SHALL hold at most one unacknowledged delivery per queue (prefetch 1 per consumer) and handle the deliveries one at a time _(amended on 2026-10-18 by diashelter: RabbitMQ 4.3.5 does not hold back other quorum queues with a channel-wide prefetch, so the original "at most one at a time" cannot hold across queues with `basic_consume`; the door 5 `basic_consume` stays)_
 37. WHILE the broker is unreachable `events:consume` SHALL keep running, retry connecting every 5 seconds, and consume again once it connects
 38. WHEN the cache key `illuminate:queue:restart` changes THEN `events:consume` SHALL exit 0 after acknowledging or returning the delivery in progress
 39. WHILE `event-transport` is `redis` `events:consume` SHALL keep consuming the messages already in the consumer queues
