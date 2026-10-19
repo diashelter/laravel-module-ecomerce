@@ -52,7 +52,7 @@ function subscribeInProviderBoot(string $event, string $consumer): void
 
         public function boot(EventSubscriptions $subscriptions): void
         {
-            $subscriptions->subscribe($this->event, $this->consumer);
+            $subscriptions->subscribe($this->event, $this->consumer, 'testing.'.str(class_basename($this->consumer))->snake());
         }
     };
     $provider->event = $event;
@@ -73,8 +73,8 @@ function spyOn(string $consumer): SpyConsumer
 it('pushes one delivery per subscribed consumer with the whole envelope', function () {
     $this->travelTo(CarbonImmutable::parse('2026-10-15 12:00:00'));
     Queue::fake()->serializeAndRestore();
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SecondSpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SecondSpyConsumer::class, 'testing.second_spy_consumer');
     $payload = ['order_id' => unknownId(), 'quantity' => 3];
     $message = OutboxMessage::factory()->create([
         'payload' => $payload,
@@ -102,7 +102,7 @@ it('pushes one delivery per subscribed consumer with the whole envelope', functi
 
 it('publishes an envelope with no subscribed consumer without pushing a job', function () {
     Queue::fake();
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
     $message = OutboxMessage::factory()->create(['name' => 'testing.unheard_event']);
 
     expect(relayOnce())->toBe(0);
@@ -112,7 +112,7 @@ it('publishes an envelope with no subscribed consumer without pushing a job', fu
 });
 
 it('rebuilds the event and calls the consumer once', function () {
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
     $spy = spyOn(SpyConsumer::class);
     $envelope = sampleEnvelope();
 
@@ -124,7 +124,7 @@ it('rebuilds the event and calls the consumer once', function () {
 });
 
 it('restores the envelope request id while the consumer runs', function () {
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
     $spy = spyOn(SpyConsumer::class);
     expect(Context::has('request_id'))->toBeFalse();
 
@@ -135,7 +135,7 @@ it('restores the envelope request id while the consumer runs', function () {
 });
 
 it('clears a stale request id when the envelope has none', function () {
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
     $spy = spyOn(SpyConsumer::class);
     Context::add('request_id', 'stale-request-0001');
 
@@ -146,7 +146,7 @@ it('clears a stale request id when the envelope has none', function () {
 });
 
 it('refuses an envelope version the event does not declare', function () {
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
     $spy = spyOn(SpyConsumer::class);
 
     expect(fn () => Bus::dispatch(new DeliverEvent(sampleEnvelope(['version' => 2]), SpyConsumer::class)))
@@ -159,8 +159,8 @@ it('refuses an envelope version the event does not declare', function () {
 
 it('retries only the failing consumer three times and fails it alone', function () {
     config(['queue.default' => 'database']);
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, FailingConsumer::class);
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, FailingConsumer::class, 'testing.failing_consumer');
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
     $failing = new FailingConsumer;
     app()->instance(FailingConsumer::class, $failing);
     $counting = spyOn(SpyConsumer::class);
@@ -207,7 +207,7 @@ it('refuses two event classes under the same name', function () {
 
 it('delivers an envelope whose message was already pruned', function () {
     Queue::fake();
-    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class);
+    app(EventSubscriptions::class)->subscribe(SampleEvent::class, SpyConsumer::class, 'testing.spy_consumer');
     $spy = spyOn(SpyConsumer::class);
     $event = new SampleEvent(['order_id' => unknownId()]);
     DB::transaction(fn () => app(EventOutbox::class)->record($event));

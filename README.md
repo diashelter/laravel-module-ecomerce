@@ -47,7 +47,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 | Camada | Tecnologias |
 | --- | --- |
 | Backend | PHP 8.5, Laravel 13, Laravel Sanctum 4, PestPHP 4 |
-| Banco / cache / fila | PostgreSQL 18, Redis 8, Laravel Queue (driver `redis`) |
+| Banco / cache / fila | PostgreSQL 18, Redis 8, Laravel Queue (driver `redis`) sob o Laravel Horizon, RabbitMQ 4.3 (php-amqplib) e feature flags com o Laravel Pennant |
 | Frontend | Vue.js 3, Pinia 4, Vue Router 5, Axios, Vite 8, TypeScript, Tailwind CSS 4, Chart.js |
 | Infraestrutura | Docker, Docker Compose, Nginx, Node.js 24 LTS, Makefile |
 
@@ -61,26 +61,33 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
                      ┌──────▼──────┐
                      │    nginx    │  ponto único de entrada
                      └──┬───────┬──┘
-        /api/*, /sanctum/*  │       │  /* (todo o resto)
-                 ┌──────────▼─┐   ┌─▼──────────┐
+ /api/*, /sanctum/*,    │       │  /* (todo o resto)
+ /horizon/*             │       │
+                 ┌──────▼─────┐   ┌─▼──────────┐
                  │ api        │   │ frontend   │
                  │ PHP-FPM    │   │ Vite (Vue) │
                  └──┬──────┬──┘   └────────────┘
                     │      │
             ┌───────▼┐   ┌─▼──────┐      ┌──────────────┐
-            │   db   │   │ redis  │◄─────┤ queue-worker │  php artisan queue:work redis
-            │ PG 18  │   │ fila / │      │ (mesma imagem│
+            │   db   │   │ redis  │◄─────┤ queue-worker │  php artisan horizon
+            │ PG 18  │   │ fila / │      │ (mesma imagem│  (a fila do Laravel)
             └▲───▲───┘   │ sessão │      │   da api)    │
              │   │       └───▲────┘      └──────┬───────┘
              │   └───────────┼──────────────────┘
-             │           ┌───┴──────────┐
-             └───────────┤ outbox-relay │  php artisan outbox:relay
-                         │ (mesma imagem│  outbox_messages → fila
-                         │   da api)    │
-                         └──────────────┘
+             │           ┌───┴──────────┐   flag event-transport = rabbitmq
+             └───────────┤ outbox-relay │ ─────────────────────────┐
+                         │ php artisan  │                          │
+                         │ outbox:relay │ ◄── flag = redis: fila   │
+                         └──────────────┘     do Laravel (redis)   │
+                                                            ┌──────▼─────┐   ┌────────────────┐
+                                                            │  rabbitmq  │◄──┤ event-consumer │  php artisan events:consume
+                                                            │ domain_    │   │ (mesma imagem  │
+                                                            │ events     │   │   da api)      │
+                                                            └────────────┘   └────────────────┘
+                         scheduler: php artisan schedule:work  (horizon:snapshot a cada 5 minutos)
 ```
 
-- **Frontend e backend no mesmo host** (`localhost:8080`): o Nginx encaminha `/api/*` e `/sanctum/*` para o Laravel e o restante para o Vite. Isso permite autenticação por cookie de sessão sem CORS.
+- **Frontend e backend no mesmo host** (`localhost:8080`): o Nginx encaminha `/api/*`, `/sanctum/*` e `/horizon/*` (o painel da fila) para o Laravel e o restante para o Vite. Isso permite autenticação por cookie de sessão sem CORS.
 - **Backend em Laravel organizado em módulos** (`app/Modules/<Módulo>`), um por contexto de negócio. Continua sendo **um monólito**, com um único banco e um único deploy, sem microsserviços. A separação entre leitura e escrita vale só para as leituras que cruzam módulos, que são consultas (camada `Queries/`, abaixo), e nada é projetado: a leitura é sempre exata. Os contextos e as fronteiras entre eles estão em [docs/domain-analysis.md](docs/domain-analysis.md).
 - **A facade de cada módulo é o seu `Contracts` mais os seus `Events`** (HEL-7, design em [.design/module-facades.md](.design/module-facades.md)). Um módulo usa outro só por interfaces de `Contracts/`, injetadas no construtor e ligadas, no service provider do módulo dono, a uma consulta dele (um contrato que só lê) ou a um repositório dele (um contrato que grava ou trava), e pelos eventos dele. Contratos e eventos falam em dados (ids, value objects, enums), nunca em models do Eloquent. Todas as outras pastas são privadas, inclusive uma pasta nova e o `Http`. De `DTOs`, `ValueObjects` e `Enums`, só é público o **vocabulário** do módulo (HEL-10, design em [.design/module-vocabulary.md](.design/module-vocabulary.md)): as classes dele que os tipos nativos das assinaturas dos seus `Contracts` e `Events` alcançam (parâmetros, retornos e propriedades públicas, o construtor incluído), de forma transitiva. O vocabulário é calculado a cada execução do teste, sem lista guardada: um tipo citado só em docblock não conta, e o contrato de um módulo não torna público um tipo interno de outro. Desde a HEL-6 o teste não declara nenhuma exceção.
 - **Dentro de cada módulo, as mesmas camadas**: validação em Form Requests e respostas com API Resources.
@@ -92,7 +99,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
   - **Value objects** (`ValueObjects/`): conceitos com invariante própria, `final readonly`, que lançam `InvalidArgumentException` se construídos com um valor inválido. Hoje existem no Identity: `Email` e `Password`. Os Form Requests os usam pelas regras `EmailRule` e `PasswordRule`, que cada módulo com formulário de conta tem no seu `Http/Rules` (Identity e Customers, porque o `Http` de um módulo é privado) e que só traduzem o que o value object decide, e eles viram `string` só na gravação, no `toArray()` do `CreateUserDTO` e do `UpdateUserProfileDTO` (este deixa a senha de fora quando nenhuma nova é enviada).
   - **Listas tipadas** (também em `ValueObjects/`): as listas de domínio que atravessam camadas não são `array`. Cada uma é `final readonly`, implementa `IteratorAggregate` e `Countable`, é construída com parâmetro variádico tipado (um elemento de outro tipo lança `TypeError`) e calcula os próprios totais. No Catalog: `ProductIds` e `CategoryIds` (ids no formato canônico do UUID e sem repetição, senão `InvalidArgumentException`) e `CatalogProducts`/`CatalogProduct` (o que o contrato `ProductCatalog` devolve: id, nome, imagem, preço e o `ProductStatus`, com a `availability()` do produto) e `ProductCountsByStatus` (o que o `CatalogMetrics` devolve, com zero para o status sem produtos). O `ProductAvailability` é a regra "pode ser comprado", e `ProductView`, `ProductCategories`/`ProductCategory` e `ProductRecord` são o que a consulta do Catalog monta para as telas de produto. No Inventory: `StockQuantities` (quantidade por produto, 0 para produto sem linha de estoque), `ProductStocks`/`ProductStock` (o id da linha de estoque e a quantidade de cada produto, `null` para o produto sem linha) e `StockTotals`; `StockView` e `StockRecord` são o que a lista de estoque monta. No Ordering: `ProductQuantities` (quantidade por produto, em ordem de `product_id`), `OrderLines`/`OrderLine` (linhas do pedido novo e o total derivado), `ValidatedCart`/`ValidatedCartLine` (resultado da validação do carrinho, com `total_cents` e `is_valid` derivados), `CustomerIds`, `OrderCountsByCustomer` (responde zero para cliente sem pedidos) e `OrderCountsByPeriod` (a contagem por dia ou mês do `OrderMetrics`, zero para o período sem pedidos). Também no Ordering, `DeliveryAddress` (a cópia de um endereço que o pedido guarda) e `ShippingQuote` (preço e prazo de uma UF) são o vocabulário dos contratos `DeliveryAddressBook` e `ShippingQuoter`, `OrderForPayment` é o que o `PayableOrders` devolve e `OrderSummaries`/`OrderSummary` (id, status, total e data) são o histórico que o `CustomerOrderHistory` devolve. No Identity, `CustomerProfile` (a conta sem credenciais) é o que o `CustomerAccounts` devolve. O `CartDTO` é a lista tipada de `CartItemDTO`. O `array` só aparece onde o Laravel o exige: `whereIn`, `sync`, `createMany` e o `ValidatedCartResource`.
 - **Fronteiras verificadas por teste**: o `ModuleBoundariesTest` (teste de arquitetura do Pest) é uma lista do que é permitido. Ele gera uma expectativa para cada pasta privada de cada módulo (o `Http` incluído), a partir das pastas que existem, e uma para cada classe de `DTOs`, `ValueObjects` e `Enums` fora do vocabulário do módulo dono, a partir dos arquivos que existem, e falha se outro módulo usar uma delas ou a classe da raiz de um módulo (o service provider). Também confere que `Contracts` só tem interfaces, que nenhuma assinatura de contrato usa model ou coleção do Eloquent e que nenhum repository usa os services do próprio módulo, além das regras de direção entre módulos. Para as consultas, confere que nenhuma assinatura pública declara model nem coleção do Eloquent e que nenhuma usa os repositories nem os casos de uso do próprio módulo. Não há lista de exceções.
-- **Processamento assíncrono**: mudanças de status do pedido são feitas por consumidores e jobs executados pelo container `queue-worker`. Os eventos chegam a eles pelo **outbox transacional**: o caso de uso grava o evento na mesma transação da mudança, e o container `outbox-relay` o publica na fila (ver [Eventos, outbox, consumidores e filas](#eventos-outbox-consumidores-e-filas)).
+- **Processamento assíncrono**: mudanças de status do pedido são feitas por consumidores e jobs executados pelo container `queue-worker`. Os eventos chegam a eles pelo **outbox transacional**: o caso de uso grava o evento na mesma transação da mudança, e o container `outbox-relay` o publica pelo transporte que a feature flag `event-transport` escolhe: a fila do Laravel (Redis, executada pelo `queue-worker` sob o Horizon) ou o RabbitMQ (lido pelo `event-consumer`). Ver [Eventos, outbox, consumidores e filas](#eventos-outbox-consumidores-e-filas).
 
 ---
 
@@ -111,9 +118,10 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 │   │   │   ├── Identity/            as duas contas (User = equipe, CustomerAccount = comprador), papéis, logins (Sanctum, um guard por área), Email e Password (ValueObjects), EnsureUserIsAdmin; publica Contracts/ (CustomerAccounts, CustomerMetrics) e IdentityServiceProvider
 │   │   │   ├── Customers/           "Minha conta", o caderno de endereços (`customer_addresses`) e a tela Clientes do admin (CustomerSummaryDTO), pelas contas do CustomerAccounts e pelo histórico do CustomerOrderHistory, com os próprios adaptadores HTTP de e-mail, senha, UF e conta; CustomersServiceProvider
 │   │   │   ├── Backoffice/          dashboard do admin (DashboardQuery, que lê os quatro contratos de métricas: CatalogMetrics, StockMetrics, CustomerMetrics e OrderMetrics)
-│   │   │   └── Shared/              infraestrutura comum: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID, o `throttle` que conta antes de decidir (Http/Middleware/AtomicThrottleRequests, Cache/AtomicRateLimiter) e o outbox transacional (Messaging/: DomainEvent, EventOutbox, EventTransport, EventSubscriptions, DeliverEvent, OutboxRelay; Console/: outbox:relay)
-│   │   └── Providers/               AppServiceProvider (configurações globais, a ligação do EventOutbox, do EventTransport e das inscrições, e o AtomicRateLimiter no lugar do RateLimiter do framework)
+│   │   │   └── Shared/              infraestrutura comum: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID, o `throttle` que conta antes de decidir (Http/Middleware/AtomicThrottleRequests, Cache/AtomicRateLimiter) o outbox transacional e os transportes de evento (Messaging/: DomainEvent, EventOutbox, EventTransport, EventTransportFlag, EventTransportSelector, QueueEventTransport, EventSubscriptions, EventDelivery, DeliverEvent, OutboxRelay; Messaging/RabbitMq/: RabbitMqEventTransport, RabbitMqTopology, RabbitMqEnvelope, RabbitMqConnector, DeadDeliveries; Console/: outbox:relay, events:transport, events:consume, events:failed, events:retry)
+│   │   └── Providers/               AppServiceProvider (configurações globais, a ligação do EventOutbox, do EventTransport e das inscrições, a definição da flag `event-transport`, e o AtomicRateLimiter no lugar do RateLimiter do framework) e HorizonServiceProvider (o painel `/horizon`, aberto só à equipe `admin`)
 │   ├── config/shop.php              configurações da loja (delay da entrega, paginação, tabela de frete por UF)
+│   ├── config/horizon.php, pennant.php, rabbitmq.php   o supervisor do Horizon, o driver das feature flags e a conexão com o RabbitMQ
 │   ├── database/
 │   │   ├── factories/
 │   │   ├── migrations/
@@ -138,7 +146,8 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 │   ├── nginx/default.conf
 │   ├── node/Dockerfile
 │   ├── php/Dockerfile, php.ini, entrypoint.sh
-│   └── postgres/init/               cria o banco de testes
+│   ├── postgres/init/               cria o banco de testes
+│   └── tests/environment.sh         provas do ambiente: Compose, imagem, alvos do Makefile, CI e documentos (`sh docker/tests/environment.sh --only <caso>`)
 ├── load-tests/                      testes de carga com k6 (ver Testes de carga): o Compose do projeto `ecommerce-load`, os fluxos, os perfis, as provas dos scripts e a linha de base
 ├── storage-dumps/                   destino do `make db-dump`
 ├── docker-compose.yml
@@ -170,10 +179,10 @@ O `make setup`:
 
 1. cria `.env` e `backend/.env` a partir dos `.env.example` (se ainda não existirem);
 2. constrói as imagens e instala as dependências do frontend (`npm install`);
-3. sobe os containers e aguarda PostgreSQL e Redis ficarem saudáveis;
+3. sobe os containers e aguarda PostgreSQL, Redis e RabbitMQ ficarem saudáveis;
 4. instala as dependências PHP (`composer install`) e gera a `APP_KEY`;
 5. executa `migrate:fresh --seed` (**recria o banco de desenvolvimento**);
-6. reinicia o worker da fila.
+6. reinicia o Horizon, o relay e o consumidor do RabbitMQ.
 
 Depois acesse **http://localhost:8080**.
 
@@ -187,8 +196,8 @@ Existem dois arquivos:
 
 | Arquivo | Para que serve |
 | --- | --- |
-| `.env` (raiz) | Variáveis do Docker Compose: `APP_PORT`, credenciais do PostgreSQL, `DB_FORWARD_PORT`. E, opcional, `TEST_DB_DATABASE`, lida só pelo Makefile: o banco dos testes deste checkout (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)). |
-| `backend/.env` | Configuração do Laravel: banco (`DB_*`), Redis, fila, sessão, Sanctum, locale, delay da entrega. |
+| `.env` (raiz) | Variáveis do Docker Compose: `APP_PORT`, credenciais do PostgreSQL, `DB_FORWARD_PORT`, e as do RabbitMQ (`RABBITMQ_USER`, `RABBITMQ_PASSWORD` e `RABBITMQ_MANAGEMENT_PORT`, a porta do painel de gestão em `http://localhost:15672`). E, opcional, `TEST_DB_DATABASE`, lida só pelo Makefile: o banco dos testes deste checkout (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)). |
+| `backend/.env` | Configuração do Laravel: banco (`DB_*`), Redis, RabbitMQ (`RABBITMQ_*`), fila, sessão, Sanctum, locale, delay da entrega. |
 
 Variáveis importantes do `backend/.env`:
 
@@ -196,7 +205,10 @@ Variáveis importantes do `backend/.env`:
 | --- | --- | --- |
 | `APP_URL` | `http://localhost:8080` | URL servida pelo Nginx |
 | `DB_HOST` / `DB_DATABASE` | `db` / `ecommerce` | Devem bater com o `.env` da raiz |
-| `QUEUE_CONNECTION` | `redis` | Fila consumida pelo `queue-worker` |
+| `QUEUE_CONNECTION` | `redis` | Fila consumida pelo `queue-worker` (o Horizon) |
+| `RABBITMQ_HOST` / `RABBITMQ_PORT` | `rabbitmq` / `5672` | O broker do transporte `rabbitmq` |
+| `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | `ecommerce` / `secret` | Devem bater com o `.env` da raiz |
+| `RABBITMQ_VHOST` | `/` | O vhost do ambiente de dev e da pilha de carga. O `make test` usa um vhost por checkout (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)) |
 | `SESSION_DRIVER` | `redis` | Sessão (cookie HTTP-only) |
 | `SANCTUM_STATEFUL_DOMAINS` | `localhost:8080,...` | Domínios que autenticam por cookie. **Se mudar `APP_PORT`, atualize aqui.** |
 | `APP_FAKER_LOCALE` | `pt_BR` | Locale do Faker |
@@ -221,10 +233,11 @@ Num `git worktree`, os alvos que leem o código do checkout (`make test`, `make 
 | `make build` | Reconstrói as imagens (`docker compose build`) |
 | `make rebuild` | Reconstrói as imagens e inicia os containers |
 | `make ps` | Mostra o status dos containers |
-| `make logs` | Logs principais (api, queue-worker, outbox-relay, nginx, frontend) |
+| `make logs` | Logs principais (api, queue-worker, outbox-relay, event-consumer, nginx, frontend) |
 | `make logs-api` | Logs da API |
 | `make logs-worker` | Logs do worker de filas |
 | `make logs-relay` | Logs do relay do outbox (`outbox-relay`) |
+| `make logs-consumer` | Logs do consumidor do RabbitMQ (`event-consumer`) |
 
 ### Laravel
 
@@ -252,8 +265,11 @@ Num `git worktree`, os alvos que leem o código do checkout (`make test`, `make 
 
 | Comando | Descrição |
 | --- | --- |
-| `make queue` | Executa `php artisan queue:work redis` em primeiro plano (útil para ver o processamento ao vivo) |
-| `make queue-restart` | Reinicia os workers e o relay do outbox (**necessário após alterar código de jobs, consumidores ou do relay**) |
+| `make queue` | Executa `php artisan queue:work redis` em primeiro plano (útil para ver o processamento ao vivo; o container `queue-worker` roda o Horizon) |
+| `make queue-restart` | Reinicia o Horizon (`horizon:terminate`), o relay do outbox e o consumidor do RabbitMQ (`queue:restart`) (**necessário após alterar código de jobs, consumidores ou do relay**) |
+| `make event-transport` | Mostra o transporte dos eventos (a flag `event-transport`). `make event-transport TO=rabbitmq` (ou `TO=redis`) o troca, sem deploy, e registra no log quem trocou |
+| `make events-failed` | Lista as entregas mortas das filas do RabbitMQ (as que falharam 3 vezes) |
+| `make events-retry` | Devolve as entregas mortas ao consumidor de cada uma (ou só as de uma mensagem: `make events-retry ID=<uuid>`) |
 | `make queue-failed` | Lista os jobs que falharam |
 | `make queue-retry` | Reprocessa todos os jobs falhos (ou um: `make queue-retry ID=<uuid>`) |
 
@@ -261,9 +277,9 @@ Num `git worktree`, os alvos que leem o código do checkout (`make test`, `make 
 
 | Comando | Descrição |
 | --- | --- |
-| `make test` | Executa todos os testes (Pest) no banco de testes deste checkout, criado se ainda não existir (ver [Testes](#testes)) |
+| `make test` | Executa todos os testes (Pest) no banco e no vhost do RabbitMQ de testes deste checkout, criados se ainda não existirem (ver [Testes](#testes)). O `rabbitmq` precisa estar no ar |
 | `make test-filter FILTER="..."` | Executa testes filtrados. Ex.: `make test-filter FILTER=CheckoutTest` |
-| `make test-db-drop` | Apaga o banco de testes deste checkout (o próximo `make test` o recria). Rode antes de remover um worktree |
+| `make test-db-drop` | Apaga o banco e o vhost do RabbitMQ de testes deste checkout (o próximo `make test` os recria). Rode antes de remover um worktree |
 | `make pint` | Verifica o estilo do backend com o Pint (`pint --test`, sem corrigir). É o mesmo passo do CI |
 | `make test-frontend` | Executa os testes do frontend (Vitest) no container `frontend` (num worktree, num `frontend` avulso com o `frontend/` dele) |
 
@@ -271,7 +287,8 @@ Num `git worktree`, os alvos que leem o código do checkout (`make test`, `make 
 
 | Comando | Descrição |
 | --- | --- |
-| `make load-test TYPE=<perfil>` | Recria a pilha de carga (`ecommerce-load`, com banco e Redis próprios) e roda um perfil do k6: `smoke`, `load`, `stress`, `spike`, `breakpoint`, `soak`, `contention` ou `limits`. A pilha de dev não muda |
+| `make load-test TYPE=<perfil>` | Recria a pilha de carga (`ecommerce-load`, com banco, Redis e RabbitMQ próprios) e roda um perfil do k6: `smoke`, `load`, `stress`, `spike`, `breakpoint`, `soak`, `contention` ou `limits`. A pilha de dev não muda |
+| `make load-test TYPE=<perfil> TRANSPORT=rabbitmq` | O mesmo perfil com o relay publicando pelo RabbitMQ (`redis` é o padrão); os relatórios se chamam `<perfil>-rabbitmq-<carimbo>` |
 | `make load-down` | Remove a pilha de carga e os volumes dela |
 
 ### Frontend
@@ -471,8 +488,10 @@ Todo evento passa pelo **outbox transacional** (HEL-9, design em [.design/transa
 
 1. O caso de uso grava o evento pelo `EventOutbox` **dentro da transação da mudança que ele anuncia**. O commit grava a mudança e a mensagem (uma linha de `outbox_messages`, pendente enquanto `published_at` é nulo) juntas, e um rollback desfaz as duas.
 2. O **relay** (`php artisan outbox:relay`, no container `outbox-relay`) reserva as mensagens pendentes das mais antigas para as mais novas, em lotes de 100 (`SELECT ... FOR UPDATE SKIP LOCKED`, então dois relays nunca pegam a mesma), entrega cada uma ao `EventTransport` e só então grava `published_at`.
-3. O transporte de hoje, o `QueueEventTransport`, põe na fila padrão (Redis) um job `DeliverEvent` **para cada consumidor inscrito** no nome do evento, com o envelope inteiro.
-4. O `queue-worker` roda o `DeliverEvent`: devolve ao `Context` o `request_id` da requisição que gravou o evento, reconstrói o evento (`fromPayload`) e chama o `handle()` do consumidor, que delega ao caso de uso. Esse caso de uso pode gravar o próximo evento da cadeia, de volta ao passo 1.
+3. O `EventTransport` que o relay recebe é o `EventTransportSelector`: a cada mensagem ele lê a **feature flag `event-transport`** (`redis` ou `rabbitmq`) e entrega o envelope ao transporte dela (HEL-13, design em [.design/event-transport-flag.md](.design/event-transport-flag.md)):
+   - `redis` (o padrão): o `QueueEventTransport` põe na fila padrão (Redis) um job `DeliverEvent` **para cada consumidor inscrito** no nome do evento, com o envelope inteiro, e o `queue-worker`, que roda o Horizon, o executa;
+   - `rabbitmq`: o `RabbitMqEventTransport` publica **uma** mensagem por evento na exchange `domain_events`, só retorna depois da confirmação do broker, e o broker copia a mensagem para a fila de cada consumidor. O `event-consumer` (`events:consume`) lê essas filas.
+4. Nos dois lados a entrega segue as mesmas regras (`EventDelivery`, extraída do `DeliverEvent`): devolve ao `Context` o `request_id` da requisição que gravou o evento, reconstrói o evento (`fromPayload`) e chama o `handle()` do consumidor, que delega ao caso de uso. Esse caso de uso pode gravar o próximo evento da cadeia, de volta ao passo 1.
 
 ```
 POST /api/orders ──► OrderPlaced ══► MarkOrderAsAwaitingPayment              placed → awaiting_payment
@@ -492,7 +511,8 @@ POST /api/orders/{order}/payment {card_token}
                                                     │
   Pedidos   ══► MarkOrderAsDelivered ◄──────────────┘                        payment_approved → delivered
 
-══►  gravado no outbox na transação ─► outbox-relay ─► DeliverEvent na fila ─► consumidor no queue-worker
+══►  gravado no outbox na transação ─► outbox-relay ─► (flag redis) DeliverEvent na fila ─► consumidor no queue-worker
+                                                  └► (flag rabbitmq) mensagem na domain_events ─► fila do consumidor ─► event-consumer
 ```
 
 | Classe | Parte | Tipo | O que faz |
@@ -516,11 +536,15 @@ A camada de publicar e consumir fica no `Shared`:
 | `Messaging\DomainEvent` | O contrato de todo evento de módulo: `eventName()`, `eventVersion()`, `toPayload()` e `fromPayload()` |
 | `Messaging\EventOutbox` | Onde o caso de uso grava o evento (`record()`). Implementado pelo `Repositories\OutboxMessageRepository`, que recusa a gravação sem transação aberta (`LogicException`) e um valor do payload que não seja escalar nem nulo (`InvalidArgumentException`) |
 | `Messaging\EventEnvelope` | A mensagem como ela viaja: `id`, `name`, `version`, `payload`, `occurredAt` e `requestId`, as mesmas chaves das colunas de `outbox_messages` |
-| `Messaging\EventTransport` | A porta por onde o relay publica: retornar é aceitar, lançar exceção é recusar. Hoje a única implementação é o `Messaging\QueueEventTransport`; a HEL-13 acrescenta outra atrás de uma feature flag |
-| `Messaging\EventSubscriptions` | As inscrições, por nome de evento. Recusa (`LogicException`) um consumidor que não implementa `EventConsumer` ou cujo `handle()` não recebe a classe inscrita, e duas classes de evento com o mesmo nome |
+| `Messaging\EventTransport` | A porta por onde o relay publica: retornar é aceitar, lançar exceção é recusar. Duas implementações: o `Messaging\QueueEventTransport` (a fila do Laravel) e o `Messaging\RabbitMq\RabbitMqEventTransport`. O que o container entrega à porta é o `Messaging\EventTransportSelector`, que escolhe uma delas pela flag |
+| `Messaging\EventTransportFlag`, `Messaging\EventTransportSelector` | A flag `event-transport` (`redis`, o padrão, ou `rabbitmq`), lida e gravada pelo Pennant com o driver `database`, e o seletor que lê a flag a cada publicação e registra uma linha de log quando o transporte muda |
+| `Messaging\EventSubscriptions` | As inscrições, por nome de evento, e o **nome estável** de cada consumidor, dado como terceiro argumento do `subscribe()`. Recusa (`LogicException`) um consumidor que não implementa `EventConsumer` ou cujo `handle()` não recebe a classe inscrita, duas classes de evento com o mesmo nome, um nome de consumidor fora de `^[a-z]+\.[a-z_]+$`, um nome de dois consumidores e dois nomes de um consumidor |
 | `Messaging\EventConsumer` | A interface dos consumidores, que ficam em `<Módulo>/Consumers` |
-| `Messaging\DeliverEvent` | O job de uma entrega (mensagem, consumidor), com `$tries = 3` |
+| `Messaging\EventDelivery`, `Messaging\DeliverEvent` | As regras de uma entrega (versão, `request_id`, reconstrução do evento, `handle()`), iguais nos dois transportes, e o job de uma entrega (mensagem, consumidor) da fila do Laravel, com `$tries = 3`, que as chama |
+| `Messaging\RabbitMq\RabbitMqConnector`, `RabbitMqTopology`, `RabbitMqEnvelope`, `RabbitMqEventTransport`, `DeadDeliveries` | A conexão com o broker (toda falha diz `RabbitMQ ...`), a topologia (exchanges e filas), a mensagem e o corpo JSON, o transporte e a leitura e a devolução das entregas mortas |
+| `Console\EventTransportCommand`, `ConsumeEventsCommand`, `FailedEventsCommand`, `RetryEventsCommand` | `events:transport`, `events:consume`, `events:failed` e `events:retry` |
 | `Messaging\OutboxRelay`, `Console\RelayOutboxCommand` | O ciclo do relay e o processo `outbox:relay [--once]` |
+| `Messaging\RestartSignal` | O sinal do `queue:restart` como um processo longo o enxerga (o relay e o `events:consume`): guarda o valor lido na partida e `changed()` fica verdadeiro quando o comando grava outro; com o cache ilegível (Redis fora) o processo segue e adota o sinal quando o cache voltar |
 | `Models\OutboxMessage` | Uma linha de `outbox_messages` |
 
 - **O evento é gravado na transação da mudança, e gravar fora de uma é erro.** Antes, cada evento saía depois do commit, numa chamada separada à fila, e uma falha dela travava o pedido para sempre: em `placed` (sem o `OrderPlaced`), em `awaiting_payment` com o cliente já cobrado (sem o `PaymentApproved`) ou, no caso do `OrderPaid`, com a transição já gravada e o retry sem conseguir repeti-la. Agora a mensagem fica pendente até o transporte aceitar, e uma falha da fila só atrasa o pedido. No pagamento, a tentativa aprovada e o `PaymentApproved` entram juntos. Na marcação de pago, a transição e o `OrderPaid` entram juntos, e uma transição que não acontece não grava nada. O agendamento da entrega e a entrega, que não têm estado próprio, abrem uma transação só para a mensagem, e o `DeliverOrder` entra na fila depois do commit da `DeliveryScheduled`.
@@ -542,19 +566,47 @@ A camada de publicar e consumir fica no `Shared`:
 - O endpoint de pagamento responde **`202 Accepted`** na aprovação, com a tentativa de pagamento, pois a mudança de status acontece de forma assíncrona. O frontend faz *polling* da página do pedido para mostrar a timeline sendo atualizada.
 - O administrador **não altera o status manualmente**: ele é controlado exclusivamente pelos eventos e jobs.
 
+### O transporte dos eventos: Redis ou RabbitMQ
+
+A HEL-13 pôs uma segunda implementação atrás da porta `EventTransport`, para comparar a fila do Laravel com o RabbitMQ no mesmo código e ver um consumidor rodar fora dos jobs do Laravel. Os casos de uso, os eventos e os consumidores não mudaram: só o que o relay faz com o envelope.
+
+- **A flag.** O valor global de `event-transport` vive na tabela `features` do Pennant (`laravel/pennant`, driver `database`), então a flag lê e muda mesmo com o Redis fora. Sem nenhuma linha, vale `redis`. `make event-transport` mostra o valor; `make event-transport TO=rabbitmq` (ou `TO=redis`) o troca, sem deploy, e escreve no log uma linha `info` com `previous`, `current` e `changed_by` (o `USER` do host). Outro valor sai com código `1` e lista os aceitos; o valor igual ao atual só avisa que já é aquele, sem gravar nem registrar. O relay limpa o cache em memória do Pennant a cada ciclo, então obedece à troca no ciclo seguinte, sem reiniciar, e registra uma linha de log, uma vez por troca, com o transporte novo.
+- **Mensagens em trânsito na troca.** O que já está na fila do Laravel continua sendo executado pelo `queue-worker`, e o que já está nas filas do RabbitMQ continua sendo lido pelo `event-consumer`: os dois processos rodam sempre. Se o relay cair depois de o transporte aceitar e antes de marcar a mensagem, ela sai de novo, inclusive pelo outro transporte, e as guardas dos consumidores a absorvem (a entrega é ao menos uma vez).
+- **O nome estável do consumidor.** Cada consumidor é inscrito com um nome (`$subscriptions->subscribe(PaymentApproved::class, MarkOrderAsPaid::class, 'ordering.mark_order_as_paid')`) que dá nome à fila dele, e por isso sobrevive a qualquer troca de namespace ou de classe. Os 5: `ordering.mark_order_as_awaiting_payment`, `ordering.mark_order_as_paid`, `ordering.record_estimated_delivery`, `ordering.mark_order_as_delivered` e `fulfillment.schedule_order_delivery`.
+- **A topologia no RabbitMQ.** O `RabbitMqEventTransport` a declara na primeira publicação de cada conexão, e o `events:consume`, ao subir (declarar de novo não muda nada):
+
+  | Objeto | Como é |
+  | --- | --- |
+  | Exchange `domain_events` | `topic`, durável. O relay publica nela, com o nome do evento como routing key |
+  | Exchange `domain_events.dead` | `direct`, durável. Recebe a entrega que falhou 3 vezes |
+  | Fila `<nome do consumidor>` | `quorum`, com `x-delivery-limit` 2, `x-dead-letter-exchange` `domain_events.dead`, `x-dead-letter-routing-key` o nome do consumidor, `x-dead-letter-strategy` `at-least-once` e `x-overflow` `reject-publish`. Ligada à `domain_events` pelo nome de cada evento que o consumidor assina |
+  | Fila `<nome do consumidor>.dead` | `quorum`, sem validade nem TTL, ligada à `domain_events.dead` pelo nome do consumidor. A entrega morta fica ali até o `make events-retry` ou o descarte à mão |
+
+- **A mensagem.** Uma por evento, persistente (`delivery_mode` 2), `content_type` `application/json`, `message_id` igual ao `id` do envelope e `type` igual ao nome do evento. O corpo é um JSON com exatamente as chaves `id`, `name`, `version`, `payload`, `occurred_at` (em UTC, `Y-m-d\TH:i:s.u\Z`) e `request_id`. O relay só marca a mensagem como publicada depois da confirmação do broker (espera de até 5 s); se o broker estiver fora, recusar a mensagem ou não confirmar, a mensagem continua pendente. Quem lê o corpo fora do PHP só precisa desse formato. A `occurred_at` guarda segundos, a precisão da coluna do outbox.
+- **O `event-consumer`** (`php artisan events:consume`): um canal, um consumidor por fila, prefetch 1 por consumidor (no máximo uma entrega sem confirmação por fila) e as entregas tratadas uma de cada vez. O broker não segura as outras filas enquanto uma entrega está em andamento: um limite de prefetch do canal inteiro não vale para filas `quorum` (visto no RabbitMQ 4.3.5), então cada fila pode ter a sua próxima entrega já recebida, à espera. Confirma (`basic_ack`) depois de o `handle()` retornar. Se ele lança, devolve a entrega à fila (`basic_reject` com requeue) e registra um `warning` com `message_id`, `name`, `consumer`, `attempt` e `error`; o broker conta as devoluções e, na terceira falha, move a entrega para `<consumidor>.dead`. Uma versão que a classe inscrita não declara, um corpo que não é o JSON acima e uma conexão que cai com a entrega em aberto contam como falhas do mesmo jeito. As tentativas são imediatas, sem espera, como as do `DeliverEvent`. Sem o broker, tenta conectar de novo a cada 5 segundos. Como o relay e os workers, termina com `0`, depois da entrega em andamento, quando o `make queue-restart` muda o sinal `illuminate:queue:restart`, e o container o sobe de novo.
+- **As entregas mortas.** `make events-failed` lista cada uma (consumidor, evento, `message_id`, `occurred_at`, `request_id` e o número de entregas) sem tirá-las da fila, ou imprime `Nenhuma entrega morta.`. `make events-retry` devolve todas, cada uma só à fila do consumidor dela (publica, espera a confirmação e só então a remove da fila de mortas, então uma parada no meio nunca perde uma entrega), e `make events-retry ID=<uuid>` devolve só as de uma mensagem, ou sai com `1` se nenhuma tem esse id. Uma entrega devolvida que falha 3 vezes de novo volta à fila de mortas. Os dois comandos saem com `1` e dizem `RabbitMQ ...` se o broker estiver fora.
+- **O painel do broker** está em `http://localhost:15672` (usuário e senha do `.env`): filas, mensagens, consumidores e a topologia.
+- **Mudar a fila.** Os argumentos de uma fila não mudam depois de declarada (o broker recusa a declaração com `PRECONDITION_FAILED`): mudar o limite de entregas ou a fila de mortas pede apagar o volume do `rabbitmq` (`docker compose down` e `docker volume rm ecommerce_rabbitmq_data`; em dev, o `make fresh` não basta). A topologia só acrescenta: a fila de um consumidor removido do código continua no broker, com as mensagens que tiver, porque apagá-la sozinho apagaria também a de um assinante de fora. Para apagá-la à mão, `docker compose exec rabbitmq rabbitmqctl delete_queue <nome>` e o mesmo com `<nome>.dead`.
+- **Horizon.** O container `queue-worker` roda `php artisan horizon` com um supervisor na conexão `redis`, na fila `default`, com os mesmos parâmetros do antigo `queue:work` (1 processo, 3 tentativas, `timeout` de 60 s, `sleep` de 1 s). O painel está em `http://localhost:8080/horizon` e abre só para a equipe com o papel `admin`, autenticada na sessão `staff` (o mesmo alias `admin` das rotas de gestão da equipe): o `support`, um cliente ou um visitante recebem `403`, em qualquer ambiente. O container `scheduler` roda `php artisan schedule:work`, e o agendamento (`routes/console.php`) roda o `horizon:snapshot` a cada 5 minutos, para as métricas do painel. O `make queue-restart` termina o Horizon (`horizon:terminate`) para ele subir com o código novo.
+- **Fora do RabbitMQ.** O `DeliverOrder` (o job da entrega com delay) continua na fila do Laravel: o RabbitMQ não atrasa mensagem sem plugin, e ele é um comando interno do Fulfillment. Também não há trace nem métricas do `event-consumer` (ficam para a HEL-8), nem inbox, espera crescente entre tentativas ou um processo por consumidor.
+
 Acompanhando a fila e o outbox:
 
 ```bash
 make logs-worker     # logs do container queue-worker
 make logs-relay      # logs do container outbox-relay
+make logs-consumer   # logs do container event-consumer (RabbitMQ)
 make queue           # worker extra em primeiro plano
-make queue-failed    # entregas e jobs que falharam
-make queue-retry     # reprocessar falhas
+make queue-failed    # entregas e jobs que falharam (fila do Laravel)
+make queue-retry     # reprocessar falhas (fila do Laravel)
+make event-transport # mostra o transporte; TO=rabbitmq ou TO=redis o troca
+make events-failed   # entregas mortas do RabbitMQ
+make events-retry    # devolve as mortas aos consumidores
 ```
 
-> Depois de alterar código de consumidores, jobs ou do relay, rode `make queue-restart` — o worker e o relay mantêm o código carregado em memória.
+> Depois de alterar código de consumidores, jobs ou do relay, rode `make queue-restart` — o Horizon, o relay e o consumidor do RabbitMQ mantêm o código carregado em memória.
 
-**Deploy que muda o formato de um evento ou job** (como a HEL-7, que trocou o model `Order` pelo `orderId`, a HEL-11, que trocou o `orderId` de inteiro para UUID em texto, e a HEL-9, que trocou os listeners pelos consumidores e as entregas `DeliverEvent`): o `queue-restart` só troca o código do worker e do relay. Os jobs que já estão na fila, inclusive os `DeliverOrder` com delay, continuam no formato antigo e falham no código novo (na HEL-7, com `Typed property ...::$orderId must not be accessed before initialization`; na HEL-11, com um erro de tipo no `orderId`; na HEL-9, porque a classe do listener mudou de lugar); o retry repete o erro e o pedido fica parado. Antes de subir o código, esvazie a fila e o outbox com o código antigo:
+**Deploy que muda o formato de um evento ou job** (como a HEL-7, que trocou o model `Order` pelo `orderId`, a HEL-11, que trocou o `orderId` de inteiro para UUID em texto, e a HEL-9, que trocou os listeners pelos consumidores e as entregas `DeliverEvent`): o `queue-restart` só troca o código do Horizon, do relay e do consumidor do RabbitMQ. As mensagens que já estão nas filas do RabbitMQ também (o formato e os argumentos de uma fila não mudam por deploy: ver acima como apagar o volume do `rabbitmq`). Os jobs que já estão na fila, inclusive os `DeliverOrder` com delay, continuam no formato antigo e falham no código novo (na HEL-7, com `Typed property ...::$orderId must not be accessed before initialization`; na HEL-11, com um erro de tipo no `orderId`; na HEL-9, porque a classe do listener mudou de lugar); o retry repete o erro e o pedido fica parado. Antes de subir o código, esvazie a fila e o outbox com o código antigo:
 
 ```bash
 make artisan CMD="down"
@@ -572,7 +624,7 @@ make artisan CMD="queue:monitor redis:default"
 make db-shell
 ```
 
-O `down` faz a API responder `503`, então nenhum pedido novo grava mensagem. O relay continua publicando as pendentes durante a manutenção, e o worker do container não processa jobs em manutenção, por isso o segundo comando usa `--force` e para sozinho depois de 30 segundos (mais que o `ORDER_DELIVERY_DELAY_SECONDS` padrão). Repita-o até o `queue:monitor` mostrar `[0]` (no Redis, essa contagem inclui os jobs com delay e os reservados) e, no `psql` do `make db-shell`, `select count(*) from outbox_messages where published_at is null;` responder `0`. Depois suba o código, rode `make queue-restart` e `make artisan CMD="up"`. Mudar o payload de um evento com mensagens em trânsito pede uma versão nova e a leitura das duas versões, que ainda não existe (só a versão atual de cada evento é aceita). No ambiente local, `make fresh` e `make queue-restart` bastam.
+O `down` faz a API responder `503`, então nenhum pedido novo grava mensagem. O relay continua publicando as pendentes durante a manutenção, e o Horizon do container não processa jobs em manutenção, por isso o segundo comando (um `queue:work` avulso) usa `--force` e para sozinho depois de 30 segundos (mais que o `ORDER_DELIVERY_DELAY_SECONDS` padrão). Repita-o até o `queue:monitor` mostrar `[0]` (no Redis, essa contagem inclui os jobs com delay e os reservados) e, no `psql` do `make db-shell`, `select count(*) from outbox_messages where published_at is null;` responder `0`. Depois suba o código, rode `make queue-restart` e `make artisan CMD="up"`. Mudar o payload de um evento com mensagens em trânsito pede uma versão nova e a leitura das duas versões, que ainda não existe (só a versão atual de cada evento é aceita). Com a flag em `rabbitmq`, esvazie também as filas do RabbitMQ antes do deploy (o `make events-failed` mostra as mortas, e o painel em `http://localhost:15672`, as filas). No ambiente local, `make fresh` e `make queue-restart` bastam.
 
 ---
 
@@ -711,20 +763,20 @@ make test-frontend                     # testes do frontend (Vitest)
 
 O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento com cartão de teste (`composables/usePayment`), o caderno de endereços (`composables/useAddressBook`), o checkout com endereço e frete (`composables/useCheckout`), o texto de entrega, a data só-dia, o CEP, as UFs e o menu da conta (`utils/delivery`, `utils/date`, `utils/postalCode`, `utils/states`, `utils/accountMenu`), os erros tratados globalmente (`services/api`: `401` por área, `403`, `419`, `429` e `5xx`; os demais ficam com cada página), a decisão do guard do router (inclusive a rota do caderno) e o menu do admin (`router/guards`, `utils/adminMenu`) e as permissões por papel (`stores/staff`, `stores/auth`). A lógica é testada sem DOM; o arranjo visual das telas é conferido no navegador. O CI roda só o backend; `make test-frontend` roda localmente.
 
-Os testes usam um banco PostgreSQL separado, no container `db`, porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes, e nenhum relay roda sozinho: um evento gravado fica pendente até o teste rodar `outbox:relay --once` (`relayOnce()` e `relayUntilIdle()` em `tests/Pest.php`). Com a fila `sync`, os consumidores rodam dentro do ciclo do relay. O cache é `array` nos testes; só o `RateLimitBurstTest` conta no Redis do container `redis`, com contadores próprios que expiram em um minuto, e dispara as requisições de processos filhos (`pcntl_fork`, presente na imagem PHP do projeto).
+Os testes usam um banco PostgreSQL separado, no container `db`, porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes, e nenhum relay roda sozinho (os testes do RabbitMQ, em `tests/Feature/Messaging`, usam o broker de verdade, no vhost do checkout, que cada teste esvazia antes de começar; sem o broker, todos falham dizendo `RabbitMQ ...`, e nenhum é pulado): um evento gravado fica pendente até o teste rodar `outbox:relay --once` (`relayOnce()` e `relayUntilIdle()` em `tests/Pest.php`). Com a fila `sync`, os consumidores rodam dentro do ciclo do relay. O cache é `array` nos testes; só o `RateLimitBurstTest` conta no Redis do container `redis`, com contadores próprios que expiram em um minuto, e dispara as requisições de processos filhos (`pcntl_fork`, presente na imagem PHP do projeto).
 
 ### Um banco de testes por checkout
 
-Todos os checkouts do repositório (a pasta principal e cada `git worktree`) usam o mesmo projeto Compose (`ecommerce`) e, portanto, o mesmo container `db`. Como o `RefreshDatabase` roda `migrate:fresh`, duas suítes no mesmo banco quebram uma à outra (`deadlock detected`, `relation "migrations" does not exist`). Por isso o `make test` e o `make test-filter` escolhem o banco e o container pelo checkout, sem passo manual:
+Todos os checkouts do repositório (a pasta principal e cada `git worktree`) usam o mesmo projeto Compose (`ecommerce`) e, portanto, o mesmo container `db` e o mesmo `rabbitmq`. Como o `RefreshDatabase` roda `migrate:fresh`, duas suítes no mesmo banco quebram uma à outra (`deadlock detected`, `relation "migrations" does not exist`). Por isso o `make test` e o `make test-filter` escolhem o banco e o container pelo checkout, sem passo manual:
 
 | Checkout | Banco | Onde a suíte roda |
 | --- | --- | --- |
 | Pasta principal (e o CI) | `ecommerce_testing` | No container `api` de dev (`docker compose exec`), que monta o `backend/` dela |
 | `git worktree` | `ecommerce_testing_<nome do worktree>`, em minúsculas e com `_` no lugar de `-` e `.` (ex.: `ecommerce_testing_upbeat_lewin_b6b8e7`) | Num container `api` avulso (`docker compose run --rm --no-deps`), que monta o `backend/` do próprio worktree. O `api` de dev testaria o código da pasta principal |
 
-Antes da suíte, o Makefile cria o banco se ele ainda não existir e o passa ao Pest em `DB_DATABASE` (a variável real vence o `<env>` do `phpunit.xml`, que não usa `force`). Num worktree, ele também copia o `backend/.env` da pasta principal quando falta, e o entrypoint do container instala o `vendor/` na primeira execução (`composer install`). O worktree usa o `db` e o `redis` da pilha de dev, que precisa estar no ar (`make up` na pasta principal).
+O **vhost do RabbitMQ** segue o mesmo critério: o nome é o do banco de testes do checkout (`ecommerce_testing` ou `ecommerce_testing_<worktree>`), o Makefile o cria com as permissões do usuário do broker (`rabbitmqctl add_vhost` e `set_permissions`) e o passa ao Pest em `RABBITMQ_VHOST`. Assim duas suítes em worktrees diferentes nunca veem as filas uma da outra. Antes da suíte, o Makefile cria o banco se ele ainda não existir e o passa ao Pest em `DB_DATABASE` (a variável real vence o `<env>` do `phpunit.xml`, que não usa `force`). Num worktree, ele também copia o `backend/.env` da pasta principal quando falta, e o entrypoint do container instala o `vendor/` na primeira execução (`composer install`). O worktree usa o `db`, o `redis` e o `rabbitmq` da pilha de dev, que precisa estar no ar (`make up` na pasta principal).
 
-Outro banco: `make test TEST_DB_DATABASE=<nome>`, ou a mesma variável no `.env` da raiz. O nome aceita só minúsculas, dígitos e `_`, sem começar por dígito (até 63 caracteres), e nunca pode ser o banco de desenvolvimento (`DB_DATABASE`), que a suíte apagaria. O `make test-db-drop` apaga o banco do checkout. Os bancos de worktrees já removidos ficam no `db` até alguém apagá-los: liste com `make db-shell` e `\l ecommerce_testing*`, e apague com `DROP DATABASE <nome> WITH (FORCE);`.
+Outro banco: `make test TEST_DB_DATABASE=<nome>`, ou a mesma variável no `.env` da raiz. O nome aceita só minúsculas, dígitos e `_`, sem começar por dígito (até 63 caracteres), e nunca pode ser o banco de desenvolvimento (`DB_DATABASE`), que a suíte apagaria. O `make test-db-drop` apaga o banco e o vhost do checkout. Os bancos e os vhosts de worktrees já removidos ficam no `db` e no `rabbitmq` até alguém apagá-los: liste os bancos com `make db-shell` e `\l ecommerce_testing*`, e apague com `DROP DATABASE <nome> WITH (FORCE);`; os vhosts, com `docker compose exec rabbitmq rabbitmqctl list_vhosts` e `rabbitmqctl delete_vhost <nome>`. O worktree usa o `db`, o `redis` e o `rabbitmq` da pilha de dev, que precisa estar no ar.
 
 Os outros alvos que leem o código do checkout seguem o mesmo critério. Num worktree, o `make pint` (o `pint --test`), o `make shell` e o `make artisan` rodam num `api` avulso com o `backend/` do worktree (copiando o `backend/.env` da pasta principal quando falta), e o `make test-frontend` e o `make frontend-shell` num `frontend` avulso com o `frontend/` dele. Na pasta principal e no CI, os cinco continuam no `docker compose exec` dos containers de dev, como antes. Cuidados no worktree:
 
@@ -743,6 +795,9 @@ O nível de um teste depende do formato do código, não do nome da camada. Cód
 | Decide no frontend (composables, stores, utils) | uma na própria camada, com Vitest e os services simulados | um caso por resposta tratada e por estado relevante |
 | Garantia do banco (índice único, `CHECK`) | uma direto no banco | um caso por restrição, aceito e recusado |
 | Regra de fronteira entre módulos | uma expectativa de arquitetura por namespace, gerada das pastas que existem, vista falhando com uma violação de propósito | toda regra nova |
+| Configuração declarativa do ambiente (Compose, Dockerfile, CI, Nginx e os alvos do Makefile que só repassam argumentos) | uma sobre a configuração resolvida: `docker compose config`, `make -n`, `php -m` na imagem, ou uma requisição pela porta publicada (`docker/tests/environment.sh`) | cada serviço, comando, imagem, porta e argumento que um critério nomeia |
+| Alvo do Makefile que decide (o vhost por checkout, o `TRANSPORT` do `make load-test`) | uma na borda: o alvo rodado de verdade, num script de prova (`docker/tests/environment.sh`, `load-tests/tests/make.sh`) | cada valor aceito, cada recusa e cada checkout (pasta principal e worktree) |
+| Comportamento do broker que a topologia configura (as 3 tentativas, a fila de mortas, a cópia por consumidor, a confirmação) | uma contra o RabbitMQ real, no vhost de testes; a própria camada só onde o broker não produz o caso (o timeout da confirmação, a parada no meio do retry, a reconexão) | cada caminho da mensagem: confirmada, recusada, entregue, devolvida, morta e devolvida pelo retry |
 | Instrumentação (controllers, Form Requests, service providers, renderização de exceções) | nenhuma própria | coberta pelas provas de borda |
 
 Um teste prova a camada em que ele **afirma**, não as camadas por onde ele passa. Um teste de feature que atravessa uma tabela de decisão exercita um caminho dela e não falha quando outra linha está errada. Por isso a tabela também é provada na própria camada, como já fazem `Unit/Services/PaymentServiceTest` e `Feature/UseCases/*`.
@@ -752,7 +807,7 @@ Um teste prova a camada em que ele **afirma**, não as camadas por onde ele pass
 O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em todo pull request e em todo push na `main`. Ele usa os **mesmos serviços do Docker Compose e os mesmos alvos do `Makefile`** do ambiente local, então o CI testa na mesma imagem PHP e na mesma versão do PostgreSQL que o `make test`:
 
 1. cria os `.env` a partir dos exemplos (`make env-files`);
-2. constrói a imagem PHP e sobe `db`, `redis` e `api`;
+2. constrói a imagem PHP e sobe `db`, `redis`, `rabbitmq` e `api` (o `rabbitmq` com `--wait`, até o healthcheck passar, antes do `make test`);
 3. instala as dependências do Composer (com cache por `composer.lock`) e gera a `APP_KEY`;
 4. verifica o estilo com o Pint (`make pint`, o `pint --test`);
 5. roda toda a suíte (`make test`), inclusive os testes de arquitetura que verificam as fronteiras entre módulos. O checkout do CI não é um worktree, então a suíte roda no container `api` e no banco `ecommerce_testing`, como na pasta principal.
@@ -781,8 +836,15 @@ O frontend ainda não é verificado no CI.
 | `Models/OrderDeliveryTest` | `CHECK`/`NOT NULL` da cópia do endereço, do frete, do prazo e do total direto no banco |
 | `OrderStatusFlowTest` | as 5 inscrições de consumidores, `OrderPlaced` entregue pela fila (`DeliverEvent`), transições, entrega agendada só após `OrderPaid`, job com delay, `DeliveryScheduled` com a data prevista, log sem o endereço, registro da data (primeira vale, status inalterado, pedido já entregue), idempotência, ciclo completo pelo relay com o `request_id` do pagamento em todas as mensagens seguintes |
 | `Outbox/EventOutboxTest` | a forma de `outbox_messages` no catálogo (colunas, índices, nenhuma chave estrangeira), a gravação dentro da transação (uma mensagem pendente, id v7), o rollback, a recusa fora de transação, os valores aceitos e recusados no payload (um `resource` também é recusado) e o `request_id` do `Context` e da requisição |
-| `Outbox/EventDeliveryTest` | uma entrega por consumidor com o envelope inteiro e um nome sem consumidor, pelo relay; o evento reconstruído, o `request_id` restaurado ou limpo, a versão recusada, a falha isolada com 3 tentativas, o `failed_jobs` e o que o `queue:failed` lista (o evento e o consumidor), pelo `queue:work` com a conexão `database`; as recusas da inscrição, pelo `boot()` de um service provider; a entrega depois da limpeza e nenhum listener do Laravel nos eventos |
+| `Outbox/EventDeliveryTest` | (com o nome estável de cada consumidor na inscrição) uma entrega por consumidor com o envelope inteiro e um nome sem consumidor, pelo relay; o evento reconstruído, o `request_id` restaurado ou limpo, a versão recusada, a falha isolada com 3 tentativas, o `failed_jobs` e o que o `queue:failed` lista (o evento e o consumidor), pelo `queue:work` com a conexão `database`; as recusas da inscrição, pelo `boot()` de um service provider; a entrega depois da limpeza e nenhum listener do Laravel nos eventos |
 | `Outbox/OutboxRelayTest` | o relay pelo comando: ordem, marcação, o envelope montado de cada coluna da linha, parada na primeira falha com o `warning`, saídas `0` e `1`, `FOR UPDATE SKIP LOCKED` com a reserva, a publicação e a marca numa transação só, a mensagem entregue de novo quando o relay para antes do commit, esperas de 500 ms e 5 s, retenção de 7 dias e limpeza por hora, sinal de reinício e o cache fora do ar |
+| `Messaging/BrokerIsolationTest` | a conexão com o vhost do checkout (`RABBITMQ_VHOST`) e o vhost vazio no começo de cada teste, visto falhando com uma exchange e uma fila deixadas para trás de propósito |
+| `Messaging/EventTransportFlagTest` | a flag: o padrão `redis`, `events:transport` mostrando, trocando, recusando outro valor, sem escrever nem registrar quando o valor é o mesmo, registrando quem trocou e funcionando com o Redis fora; o seletor entregando só ao transporte da flag, o relay obedecendo a uma troca no ciclo seguinte e o log de troca uma vez por mudança |
+| `Messaging/ConsumerNamesTest` | os 5 consumidores nos 5 nomes estáveis, e as recusas da inscrição (formato, um nome para dois consumidores, dois nomes para um) com as inscrições anteriores intactas |
+| `Messaging/RabbitMqEventTransportTest` | contra o broker: a topologia declarada antes da primeira mensagem (exchanges, os 6 argumentos da fila, ligações, fila de mortas), a mensagem (propriedades e as 6 chaves do corpo), uma cópia por fila de consumidor, o evento sem consumidor, a mensagem marcada só depois da confirmação, e pendente com o broker fora, quando ele recusa e quando não confirma em 5 s |
+| `Messaging/ConsumeEventsCommandTest` | contra o broker: a entrega confirmada depois do `handle()`, o `request_id` restaurado ou limpo, 3 falhas até a fila de mortas com o log de cada uma, os 4 corpos ilegíveis, a conexão fechada contada como falha, uma entrega por vez, a reconexão a cada 5 s, a parada pelo sinal de reinício e o consumo com a flag em `redis` |
+| `Messaging/DeadDeliveriesCommandsTest` | contra o broker: `events:failed` sem tirar nada da fila, `events:retry` devolvendo cada entrega só ao consumidor dela (todas ou por id), o id desconhecido, a parada no meio sem perder entrega, a nova queda para a fila de mortas e os dois comandos sem o broker |
+| `HorizonTest` | o supervisor do Horizon nos dois ambientes, o painel aberto só ao `admin` da equipe (e `403` ao `support`, ao cliente e ao visitante, também em `local`) e o `horizon:snapshot` a cada 5 minutos |
 | `Outbox/OrderEventsOutboxTest` | a gravação desfeita junto com a mudança (pagamento `500` sem aprovação nem mensagem, pedido ainda em `awaiting_payment`, nenhum `DeliverOrder`) e as janelas 1 e 2 com o transporte fora e de volta |
 | `Unit/Architecture/DomainEventsTest` | toda classe de `Events` implementa `DomainEvent`, e nenhum módulo usa o `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event` ou o helper `event()`. Vistos falhando com uma violação de propósito por regra |
 | `Unit/Architecture/OrderEventPayloadTest` | nenhum model nos 5 eventos e no `DeliverOrder`; o nome, a versão e o payload de cada evento (chaves exatas, o inteiro do `OrderPaid`, o dia de São Paulo do `DeliveryScheduled`) e a volta pelo `fromPayload` |
@@ -829,11 +891,12 @@ A pasta [`load-tests/`](load-tests/README.md) guarda os testes de desempenho e d
 make load-test TYPE=smoke
 ```
 
-- **Pilha de carga.** Cada rodada recria o projeto Compose `ecommerce-load` (`load-tests/docker-compose.yml`): Postgres (`ecommerce_load`) e Redis próprios, a API com configuração de produção (sem debug, opcache sem revalidação, caches em `/tmp/laravel` dentro do container, PHP-FPM estático com 16 workers), o worker, o relay, o Nginx e o k6. Ela compartilha com a de dev só a imagem do PHP e a árvore `backend/`, e nenhuma porta é publicada no host.
+- **Pilha de carga.** Cada rodada recria o projeto Compose `ecommerce-load` (`load-tests/docker-compose.yml`): Postgres (`ecommerce_load`), Redis e RabbitMQ próprios, a API com configuração de produção (sem debug, opcache sem revalidação, caches em `/tmp/laravel` dentro do container, PHP-FPM estático com 16 workers), o worker (Horizon), o relay, o consumidor do RabbitMQ, o Nginx e o k6. Ela compartilha com a de dev só a imagem do PHP e a árvore `backend/`, e nenhuma porta é publicada no host.
 - **Dados.** O `LoadTestSeeder` (fora do `DatabaseSeeder`) cria sempre os mesmos 1.000 clientes (`load-customer-<n>@example.com`), a equipe, 201 produtos (170 disponíveis, 10 sem unidades, 20 inativos e o `Produto Disputado`, com 10) e 10.000 pedidos de histórico, em cerca de 5 segundos.
 - **Mistura.** Os perfis de volume dividem os VUs em cerca de 75% vitrine, 20% compra e 5% equipe. Cada requisição declara os status que espera: um `404` ou um `409` esperados não são erro.
 - **Limites de requisição.** Nos perfis de volume e no `contention`, a pilha roda com `CACHE_LIMITER=array`, e nenhum limite é atingido. O `smoke` e o `limits` rodam com os limites reais.
-- **Espera até pagar.** A compra consulta o pedido a cada 2 segundos, como o frontend, até `awaiting_payment`. O tempo desde o `201` é a métrica `order_payable_wait`, que mede o relay do outbox e o worker sob carga.
+- **Espera até pagar.** A compra consulta o pedido a cada 250 ms (o frontend consulta a cada 2 s) até `awaiting_payment`: com 2 s, a leitura valeria o mesmo para os dois transportes. O tempo desde o `201` é a métrica `order_payable_wait`, que mede o relay do outbox e o worker (ou o consumidor do RabbitMQ) sob carga.
+- **Transporte.** `make load-test TYPE=<perfil> TRANSPORT=rabbitmq` grava `rabbitmq` na flag `event-transport` da pilha de carga antes de o k6 começar (`redis` é o padrão) e põe o transporte no nome dos relatórios (`<perfil>-rabbitmq-<carimbo>`). Um transporte desconhecido é recusado antes de subir qualquer container. A tabela por transporte fica no [README da pasta](load-tests/README.md).
 
 | Perfil | O que faz |
 | --- | --- |
@@ -854,17 +917,20 @@ Os relatórios (HTML do painel do k6, JSON e a lista de checks) vão para `load-
 
 | Container | Imagem | Função |
 | --- | --- | --- |
-| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api` e `/sanctum` para o PHP-FPM, com o IP da conexão em `REMOTE_ADDR`, e o resto para o Vite (inclui WebSocket do HMR) |
+| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api`, `/sanctum` e `/horizon` para o PHP-FPM, com o IP da conexão em `REMOTE_ADDR`, e o resto para o Vite (inclui WebSocket do HMR) |
 | `api` | `docker/php/Dockerfile` (PHP 8.5-FPM) | Laravel. Instala as dependências do Composer na primeira execução |
-| `queue-worker` | mesma imagem da `api` | `php artisan queue:work redis` — processa as entregas aos consumidores (`DeliverEvent`) e os jobs |
-| `outbox-relay` | mesma imagem da `api` | `php artisan outbox:relay` — publica as mensagens pendentes de `outbox_messages` na fila, em até 1 s, e apaga as publicadas há mais de 7 dias |
+| `queue-worker` | mesma imagem da `api` | `php artisan horizon` — o Horizon, com um supervisor na fila `default` do Redis: processa as entregas aos consumidores (`DeliverEvent`, com a flag em `redis`) e os jobs |
+| `outbox-relay` | mesma imagem da `api` | `php artisan outbox:relay` — publica as mensagens pendentes de `outbox_messages` pelo transporte da flag `event-transport`, em até 1 s, e apaga as publicadas há mais de 7 dias |
+| `event-consumer` | mesma imagem da `api` | `php artisan events:consume` — lê as filas dos consumidores no RabbitMQ (com a flag em `redis` ele fica ocioso, mas continua lendo o que já estava nas filas) |
+| `scheduler` | mesma imagem da `api` | `php artisan schedule:work` — o `horizon:snapshot` a cada 5 minutos |
 | `frontend` | `docker/node/Dockerfile` (Node 24) | Servidor de desenvolvimento do Vite |
 | `db` | `postgres:18-alpine` | Banco principal (`ecommerce`) e de testes (`ecommerce_testing`, mais um `ecommerce_testing_<worktree>` por `git worktree` que rodou `make test`) |
-| `redis` | `redis:8-alpine` | Fila, sessões e cache |
+| `redis` | `redis:8-alpine` | Fila, sessões, cache e os dados do Horizon |
+| `rabbitmq` | `rabbitmq:4.3.5-management-alpine` | O broker do transporte `rabbitmq`, com o volume `rabbitmq_data` e o painel de gestão em `:15672` (`RABBITMQ_MANAGEMENT_PORT`). Também tem um vhost de testes por checkout |
 
-O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O worker e o relay precisam de `make queue-restart` após mudanças em jobs, consumidores ou no relay.
+O código do backend e do frontend é montado como volume: alterações aparecem imediatamente (HMR no frontend; o PHP-FPM lê os arquivos a cada requisição). O Horizon, o relay e o consumidor do RabbitMQ precisam de `make queue-restart` após mudanças em jobs, consumidores ou no relay.
 
-Os testes de carga sobem um segundo projeto Compose, o `ecommerce-load` (`load-tests/docker-compose.yml`), com os seus próprios `db`, `redis`, `api`, `queue-worker`, `outbox-relay` e `nginx`, mais o `k6` (`grafana/k6`). Ele existe só durante as rodadas e não publica portas; ver [Testes de carga (k6)](#testes-de-carga-k6).
+Os testes de carga sobem um segundo projeto Compose, o `ecommerce-load` (`load-tests/docker-compose.yml`), com os seus próprios `db`, `redis`, `rabbitmq`, `api`, `queue-worker`, `outbox-relay`, `event-consumer` e `nginx`, mais o `k6` (`grafana/k6`). Ele existe só durante as rodadas e não publica portas; ver [Testes de carga (k6)](#testes-de-carga-k6).
 
 **IP do cliente:** o Nginx fala FastCGI com o PHP-FPM, e não HTTP, então para o Laravel ele não é um proxy. O `fastcgi_params` já entrega o endereço da conexão (`REMOTE_ADDR`, o `$remote_addr` do Nginx) e o esquema (`HTTPS` e `REQUEST_SCHEME`). Por isso o `bootstrap/app.php` não chama `trustProxies()`, e o `docker/nginx/default.conf` não repassa nenhum `X-Forwarded-*` próprio ao PHP. No Docker local, quem chega pela porta publicada aparece com o gateway da rede do Compose (por exemplo, `172.20.0.1`), então todo o tráfego do host divide, em cada rota, o mesmo contador por IP. Se um balanceador ou uma CDN entrar na frente do Nginx, o IP real deve ser restaurado no próprio Nginx (`set_real_ip_from` com o endereço do balanceador e `real_ip_header X-Forwarded-For`), nunca com `trustProxies(at: '*')`.
 
@@ -884,7 +950,7 @@ Os testes de carga sobem um segundo projeto Compose, o `ecommerce-load` (`load-t
 10. Veja o histórico em **Minha conta → Meus pedidos**.
 11. Entre novamente em `/admin/login` como admin: o pedido aparece em **Pedidos** e as métricas do dashboard foram atualizadas.
 
-Dica: deixe `make logs-worker` aberto em outro terminal para ver as entregas e os jobs sendo processados (`ordering.order_placed -> ...MarkOrderAsAwaitingPayment`). Para ver o outbox segurando um evento, pare o Redis (`docker compose stop redis`) antes de confirmar a compra: o pedido fica em *Pedido efetuado*, a mensagem continua pendente e o `make logs-relay` avisa a cada 5 s; depois de `docker compose start redis`, o pedido segue para *Aguardando pagamento*.
+Dica: deixe `make logs-worker` aberto em outro terminal para ver as entregas e os jobs sendo processados (`ordering.order_placed -> ...MarkOrderAsAwaitingPayment`). Para ver o outbox segurando um evento, pare o Redis (`docker compose stop redis`) antes de confirmar a compra: o pedido fica em *Pedido efetuado*, a mensagem continua pendente e o `make logs-relay` avisa a cada 5 s; depois de `docker compose start redis`, o pedido segue para *Aguardando pagamento*. Para ver o outro transporte, rode `make event-transport TO=rabbitmq` antes de confirmar a compra: o `make logs-relay` registra a troca, o `make logs-consumer` e o painel em `http://localhost:15672` mostram a entrega, e `make event-transport TO=redis` volta ao padrão. O painel da fila do Laravel está em `http://localhost:8080/horizon` (entre antes no `/admin/login` como admin).
 
 ---
 
@@ -989,3 +1055,13 @@ Decisões relevantes:
   - **Os outros alvos que leem o código seguem o mesmo critério** (`make pint`, `make shell`, `make artisan`, `make test-frontend` e `make frontend-shell`): num worktree, o `exec` no container de dev abriria a pasta principal. O Pint ganhou o alvo `make pint`, que o CI e o AGENTS.md usam, no lugar do `docker compose exec -T api ./vendor/bin/pint --test` escrito à mão. Os alvos que agem sobre o ambiente de dev (`migrate`, `seed`, `fresh`, `optimize`, `clear`, `queue*`) ficaram no `api` de dev: as migrations de um worktree no banco de dev deixariam o esquema fora do código que a pasta principal serve. Quem quiser isso de propósito usa o `make artisan CMD=migrate` do worktree.
   - **O `--parallel` do Laravel não resolve**: ele separa os processos de uma suíte, e os bancos dele derivam do `DB_DATABASE` (`<banco>_test_<n>`). Duas suítes sobre o mesmo `ecommerce_testing` disputariam os mesmos bancos.
   - **A sonda do `RateLimitBurstTest` fica em `/api`** (achado numa rodada da suíte inteira num worktree novo, que deu `[204 => 10, 429 => 19, 500 => 1]`). Fora de `/api`, o `429` era a página HTML do framework (`errors::429`), e sem o view já compilado (um checkout novo, ou depois de um `view:clear`) os 20 filhos recusados compilavam o Blade ao mesmo tempo. O compilador grava num arquivo temporário e o renomeia por cima do compilado, o que é atômico num sistema de arquivos Linux, mas não no bind mount (`virtiofs`) do Docker Desktop no macOS: ali, o arquivo que outro filho está renomeando some por um instante, e o `require` (ou o `hash_file` que compara o conteúdo) falha com `No such file or directory`, o que vira um `500`. Com os views apagados antes de cada rodada, o teste passou em 1 de 10; com os views compilados no sistema de arquivos do próprio container, em 15 de 15; com a sonda em `/api`, cujo `429` é o JSON do `ApiExceptionRenderer`, em 30 de 30. A API não muda: as rotas com `throttle` já ficam em `/api` e respondem em JSON, e o CI, em Linux, não tem a corrida. O filho agora devolve, junto com o status, a exceção de um `5xx` (ou de uma requisição que lançou), e a falha do teste mostra o motivo.
+- **O transporte dos eventos por feature flag** (HEL-13, design em [.design/event-transport-flag.md](.design/event-transport-flag.md) e plano em [.specs/features/event-transport-flag](.specs/features/event-transport-flag/)): a porta `EventTransport` da HEL-9 ganhou o RabbitMQ como segunda implementação, e o relay escolhe uma das duas pela flag `event-transport`.
+  - **A flag fica no banco, não no Redis**: com o Redis fora, ninguém leria nem trocaria uma flag guardada nele. Uma variável de ambiente exigiria reiniciar o relay, e a decisão foi trocar sem deploy. O Pennant (driver `database`) foi escolhido porque a HEL-13 é sobre usar feature flags, e os escopos dele servem às próximas.
+  - **`php-amqplib`, e não a extensão `amqp` do PECL nem o `laravel-queue-rabbitmq`**: a extensão compila uma biblioteca C a mais na imagem Alpine, e o `php-amqplib` atende a carga; o driver de fila manteria os consumidores como jobs do Laravel, o contrário do objetivo (ver um consumidor fora dos jobs). A imagem ganhou a extensão `sockets`.
+  - **Uma mensagem por evento, e o broker copia para cada consumidor.** O produtor não lista os consumidores (como já era no Redis, onde o `QueueEventTransport` lê as inscrições) e um consumidor fora do PHP só precisa de uma fila ligada à exchange.
+  - **Fila `quorum` com `x-delivery-limit` 2 e `basic_reject` com requeue**, a partir do RabbitMQ 4.3. O `basic_nack` com requeue não conta para o limite de entregas desde essa versão, e a mensagem ficaria em loop; o `basic_reject` conta. Por isso a imagem é a `4.3.5` (a `4.3.6`, de 16/10/2026, era nova demais para fixar).
+  - **O nome da fila é o nome estável do consumidor, dado na inscrição**, e não derivado da classe: a HEL-12 vai mudar os namespaces, e a fila ficaria órfã com mensagens dentro. Uma constante em cada consumidor mudaria os cinco, e o Review da HEL-9 pede que nenhum mude.
+  - **Argumentos de fila, e não políticas**: as políticas ficam fora da aplicação e precisariam ser criadas em cada vhost (dev, carga e cada vhost de testes).
+  - **Um vhost de testes por checkout**, como o banco: duas suítes em worktrees diferentes veriam as filas uma da outra. Um broker simulado não provaria as 3 tentativas, a fila de mortas nem a confirmação.
+  - **O Horizon fecha pelo alias `admin`**, e o portão dele é aberto (`Horizon::auth(fn () => true)`): o portão padrão abre o painel a qualquer um em `local` e, fora dele, usa o guard padrão, que não é o `staff`.
+  - **A medição no k6 ganhou uma segunda tabela**, e não uma coluna na da HEL-14: a coluna quebraria as provas `docs.sh baseline-rows` e `profiles.test.js`, que fixam aquela tabela e os limites de aprovação que saem dela (ver o [README da pasta](load-tests/README.md)).

@@ -24,9 +24,9 @@ CHECKOUT_API   = $(CHECKOUT_RUN) api
 .DEFAULT_GOAL := help
 
 .PHONY: help up down build rebuild ps logs logs-api logs-worker logs-relay \
-	shell artisan worktree-env migrate migrate-fresh seed fresh optimize clear \
+	logs-consumer shell artisan worktree-env migrate migrate-fresh seed fresh optimize clear \
 	db-shell db-reset db-dump db-restore \
-	queue queue-restart queue-failed queue-retry \
+	queue queue-restart queue-failed queue-retry event-transport events-failed events-retry \
 	test test-filter test-prepare test-db-drop pint test-frontend npm-install frontend-shell setup env-files wait-api \
 	load-test load-down
 
@@ -50,8 +50,8 @@ rebuild: ## Reconstrói as imagens e inicia os containers
 ps: ## Mostra o status dos containers
 	$(DC) ps
 
-logs: ## Mostra os logs principais (api, worker, relay, nginx, frontend)
-	$(DC) logs -f --tail=100 api queue-worker outbox-relay nginx frontend
+logs: ## Mostra os logs principais (api, worker, relay, consumidor, nginx, frontend)
+	$(DC) logs -f --tail=100 api queue-worker outbox-relay event-consumer nginx frontend
 
 logs-api: ## Mostra os logs da API
 	$(DC) logs -f --tail=100 api
@@ -61,6 +61,9 @@ logs-worker: ## Mostra os logs do worker de filas
 
 logs-relay: ## Mostra os logs do relay do outbox
 	$(DC) logs -f --tail=100 outbox-relay
+
+logs-consumer: ## Mostra os logs do consumidor do RabbitMQ
+	$(DC) logs -f --tail=100 event-consumer
 
 ## ---------- Laravel ----------
 
@@ -116,8 +119,9 @@ db-restore: ## Restaura um dump: make db-restore FILE=storage-dumps/dump.sql
 queue: ## Executa um worker em primeiro plano (além do container queue-worker)
 	$(ARTISAN) queue:work redis --sleep=1 --tries=3 --verbose
 
-queue-restart: ## Reinicia os workers e o relay (necessário após alterar jobs, consumidores ou o relay)
+queue-restart: ## Reinicia o Horizon, o relay e o consumidor do RabbitMQ (necessário após alterar jobs, consumidores ou o relay)
 	$(ARTISAN) queue:restart
+	$(ARTISAN) horizon:terminate
 
 queue-failed: ## Lista os jobs que falharam
 	$(ARTISAN) queue:failed
@@ -125,13 +129,25 @@ queue-failed: ## Lista os jobs que falharam
 queue-retry: ## Reprocessa jobs falhos: make queue-retry (todos) ou make queue-retry ID=<uuid>
 	$(ARTISAN) queue:retry $(if $(ID),$(ID),all)
 
+# Which transport the outbox relay publishes through (the event-transport feature flag), without a deploy.
+# The user is recorded in the log of the change.
+event-transport: ## Mostra ou troca o transporte dos eventos: make event-transport [TO=redis|rabbitmq]
+	$(ARTISAN) events:transport $(if $(TO),$(TO) )--by=$(USER)
+
+events-failed: ## Lista as entregas mortas das filas do RabbitMQ
+	$(ARTISAN) events:failed
+
+events-retry: ## Devolve as entregas mortas aos consumidores: make events-retry (todas) ou make events-retry ID=<uuid>
+	$(ARTISAN) events:retry $(ID)
+
 ## ---------- Testes ----------
 
 # Each checkout tests on a database of its own, created on the first run: RefreshDatabase runs migrate:fresh,
 # so two suites on one database break each other. The main checkout keeps ecommerce_testing; a worktree uses
 # ecommerce_testing_<name>. Any checkout can pick another database: make test TEST_DB_DATABASE=<name>.
 TEST_DB_DATABASE := $(or $(TEST_DB_DATABASE),ecommerce_testing$(if $(WORKTREE),_$(shell printf '%s' '$(WORKTREE)' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '_' | cut -c1-45)))
-TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) api
+# The RabbitMQ vhost of the checkout has the name of its test database, so two suites never see each other's queues.
+TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) -e RABBITMQ_VHOST=$(TEST_DB_DATABASE) api
 PEST              = sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$$@"' pest
 # The name goes unquoted into SQL, and the suite would wipe the development database. The check reads it
 # from the environment, so no value can break its own quoting.
@@ -145,16 +161,19 @@ test: test-prepare ## Executa todos os testes (Pest) no banco de testes deste ch
 test-filter: test-prepare ## Executa testes filtrados: make test-filter FILTER=CheckoutTest
 	$(TEST_API) $(PEST) --filter="$(FILTER)"
 
-# Creates the database when it is missing.
+# Creates the database and the RabbitMQ vhost when they are missing.
 test-prepare: worktree-env
 	@$(CHECK_TEST_DB)
 	@printf '%s\n' "SELECT 'CREATE DATABASE $(TEST_DB_DATABASE) OWNER $(DB_USERNAME)' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$(TEST_DB_DATABASE)')\gexec" \
 		| $(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -q -v ON_ERROR_STOP=1
-	@echo "Banco de testes: $(TEST_DB_DATABASE)"
+	@$(DC) exec -T -e VHOST=$(TEST_DB_DATABASE) rabbitmq sh -c 'rabbitmqctl -q list_vhosts --no-table-headers | grep -qx "$$VHOST" \
+		|| { rabbitmqctl -q add_vhost "$$VHOST" && rabbitmqctl -q set_permissions -p "$$VHOST" "$$RABBITMQ_DEFAULT_USER" ".*" ".*" ".*"; }'
+	@echo "Banco de testes: $(TEST_DB_DATABASE) (vhost do RabbitMQ: $(TEST_DB_DATABASE))"
 
-test-db-drop: ## Apaga o banco de testes deste checkout (o próximo make test o recria)
+test-db-drop: ## Apaga o banco e o vhost do RabbitMQ de testes deste checkout (o próximo make test os recria)
 	@$(CHECK_TEST_DB)
 	$(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -c 'DROP DATABASE IF EXISTS $(TEST_DB_DATABASE) WITH (FORCE)'
+	$(DC) exec -T -e VHOST=$(TEST_DB_DATABASE) rabbitmq sh -c 'if rabbitmqctl -q list_vhosts --no-table-headers | grep -qx "$$VHOST"; then rabbitmqctl -q delete_vhost "$$VHOST"; fi'
 
 pint: worktree-env ## Verifica o estilo do backend/ deste checkout (Pint, sem corrigir)
 	$(CHECKOUT_API) ./vendor/bin/pint --test
@@ -175,31 +194,44 @@ frontend-shell: ## Abre um shell no container do frontend, com o frontend/ deste
 ## ---------- Testes de carga (k6) ----------
 
 LOAD_PROFILES  = smoke load stress spike breakpoint soak contention limits
+# The event-transport flag of the load stack for the run (HEL-13): the transport the relay publishes through.
+LOAD_TRANSPORTS = redis rabbitmq
+TRANSPORT      ?= redis
 # Profiles whose volume would trip the rate limits: their limiter keeps the counts in memory, per request.
 LOAD_UNLIMITED = load stress spike breakpoint soak contention
 LOAD_LIMITER   = $(if $(filter $(TYPE),$(LOAD_UNLIMITED)),array,)
 LOAD           = CACHE_LIMITER=$(LOAD_LIMITER) $(DC) -f load-tests/docker-compose.yml
 LOAD_STAMP    := $(shell date +%Y%m%d-%H%M%S)
+# The reports of a rabbitmq run say so: <profile>-rabbitmq-<stamp>.html and .json. The redis ones keep <profile>-<stamp>.
+LOAD_RUN       = $(if $(filter rabbitmq,$(TRANSPORT)),rabbitmq-)$(LOAD_STAMP)
 
-load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYPE=smoke
+load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYPE=smoke [TRANSPORT=redis|rabbitmq]
 	@if [ "$(words $(TYPE))" != "1" ] || [ -z "$(filter $(TYPE),$(LOAD_PROFILES))" ]; then \
 		echo "Informe um perfil: make load-test TYPE=<perfil>"; \
 		echo "Perfis: $(LOAD_PROFILES)"; \
 		exit 1; \
 	fi
+	@if [ "$(words $(TRANSPORT))" != "1" ] || [ -z "$(filter $(TRANSPORT),$(LOAD_TRANSPORTS))" ]; then \
+		echo "Transporte inválido: make load-test TYPE=$(TYPE) TRANSPORT=<transporte>"; \
+		echo "Transportes: $(LOAD_TRANSPORTS)"; \
+		exit 1; \
+	fi
 	$(LOAD) down --volumes --remove-orphans
-	$(LOAD) up -d --wait db redis
+	@# The rabbitmq container sometimes exits at boot with "Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces"
+	@# (seen on a busy host, never twice in a row): one more attempt starts it.
+	$(LOAD) up -d --wait db redis rabbitmq || { echo "Subindo o rabbitmq de novo."; $(LOAD) up -d --wait db redis rabbitmq; }
 	$(LOAD) up -d api
 	@until $(LOAD) exec -T api test -f vendor/autoload.php 2>/dev/null; do sleep 2; done
 	@$(LOAD) exec -T api sh -c 'php artisan migrate:fresh --force && php artisan db:seed --class=LoadTestSeeder --force' \
 		|| { echo "A pilha de carga não subiu. Logs da api de carga:"; $(LOAD) logs --no-color api; exit 1; }
 	$(LOAD) exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache'
-	$(LOAD) up -d queue-worker outbox-relay nginx
+	$(LOAD) exec -T api php artisan events:transport $(TRANSPORT) --by=$(USER)
+	$(LOAD) up -d queue-worker outbox-relay event-consumer nginx
 	@mkdir -p load-tests/results && chmod a+rwx load-tests/results
 	$(LOAD) run --rm \
-		-e PROFILE=$(TYPE) -e RUN_STAMP=$(LOAD_STAMP) \
+		-e PROFILE=$(TYPE) -e RUN_STAMP=$(LOAD_RUN) \
 		-e K6_WEB_DASHBOARD=true -e K6_WEB_DASHBOARD_PERIOD=2s \
-		-e K6_WEB_DASHBOARD_EXPORT=results/$(TYPE)-$(LOAD_STAMP).html \
+		-e K6_WEB_DASHBOARD_EXPORT=results/$(TYPE)-$(LOAD_RUN).html \
 		k6 run main.js
 
 load-down: ## Remove a pilha de carga e os volumes dela (a de dev não muda)
@@ -218,7 +250,7 @@ wait-api:
 setup: env-files ## Sobe e prepara todo o projeto (ATENÇÃO: recria o banco de desenvolvimento)
 	$(DC) build
 	$(MAKE) npm-install
-	$(DC) up -d --wait db redis
+	$(DC) up -d --wait db redis rabbitmq
 	$(DC) up -d
 	@$(MAKE) --no-print-directory wait-api
 	$(EXEC_API) composer install --no-interaction --prefer-dist

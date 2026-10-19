@@ -29,6 +29,8 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- The RabbitMQ vhost of the main checkout; `make test` sets the one of a worktree. -->
+        <env name="RABBITMQ_VHOST" value="ecommerce_testing"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="APP_URL" value="http://localhost"/>
         <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost"/>

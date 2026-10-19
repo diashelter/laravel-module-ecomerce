@@ -37,9 +37,9 @@ jobs:
       - name: Build the PHP image
         run: docker compose build api
 
-      - name: Start PostgreSQL, Redis and the API container
+      - name: Start PostgreSQL, Redis, RabbitMQ and the API container
         run: |
-          docker compose up -d --wait db redis
+          docker compose up -d --wait db redis rabbitmq
           docker compose up -d api
           make wait-api
 
@@ -92,7 +92,7 @@ jobs:
 
       - name: Load stack logs
         if: failure()
-        run: docker compose -f load-tests/docker-compose.yml logs --no-color api queue-worker outbox-relay nginx
+        run: docker compose -f load-tests/docker-compose.yml logs --no-color api queue-worker outbox-relay event-consumer nginx
 
       - name: Stop the load stack
         if: always()

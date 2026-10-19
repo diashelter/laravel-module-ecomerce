@@ -37,9 +37,9 @@ class OrderingServiceProvider extends ServiceProvider
 
     public function boot(EventSubscriptions $subscriptions): void
     {
-        $subscriptions->subscribe(OrderPlaced::class, MarkOrderAsAwaitingPayment::class);
-        $subscriptions->subscribe(PaymentApproved::class, MarkOrderAsPaid::class);
-        $subscriptions->subscribe(DeliveryScheduled::class, RecordEstimatedDelivery::class);
-        $subscriptions->subscribe(OrderDelivered::class, MarkOrderAsDelivered::class);
+        $subscriptions->subscribe(OrderPlaced::class, MarkOrderAsAwaitingPayment::class, 'ordering.mark_order_as_awaiting_payment');
+        $subscriptions->subscribe(PaymentApproved::class, MarkOrderAsPaid::class, 'ordering.mark_order_as_paid');
+        $subscriptions->subscribe(DeliveryScheduled::class, RecordEstimatedDelivery::class, 'ordering.record_estimated_delivery');
+        $subscriptions->subscribe(OrderDelivered::class, MarkOrderAsDelivered::class, 'ordering.mark_order_as_delivered');
     }
 }

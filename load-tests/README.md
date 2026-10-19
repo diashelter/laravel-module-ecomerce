@@ -12,6 +12,12 @@ Tudo roda no Docker; só é preciso ter o Docker e o `make`.
 make load-test TYPE=smoke
 ```
 
+Para rodar com o relay publicando pelo RabbitMQ, em vez da fila do Laravel (Redis), que é o padrão:
+
+```bash
+make load-test TYPE=smoke TRANSPORT=rabbitmq
+```
+
 ```bash
 make load-down
 ```
@@ -19,9 +25,9 @@ make load-down
 Cada `make load-test` faz, em ordem:
 
 1. apaga os containers e os volumes do projeto Compose `ecommerce-load`;
-2. sobe o Postgres e o Redis de carga, roda as migrations do zero e o `LoadTestSeeder`;
+2. sobe o Postgres, o Redis e o RabbitMQ de carga, roda as migrations do zero e o `LoadTestSeeder`;
 3. gera os caches de config, rotas e eventos dentro do container;
-4. sobe a API, o worker, o relay e o Nginx de carga;
+4. grava o transporte escolhido (`TRANSPORT`, `redis` por padrão) na flag `event-transport` da pilha, e sobe a API, o worker (Horizon), o relay, o consumidor do RabbitMQ e o Nginx de carga;
 5. roda o perfil no container `k6`.
 
 A pilha fica no ar depois da rodada, para inspeção. O `make load-down` a remove junto com os volumes.
@@ -32,7 +38,7 @@ Um perfil desconhecido ou ausente é recusado antes de subir qualquer container.
 
 O projeto `ecommerce-load` (`load-tests/docker-compose.yml`) roda ao lado da pilha de dev, que não precisa ser parada. As duas pilhas compartilham só a imagem do PHP e a árvore `backend/`.
 
-- **Banco e Redis próprios.** O banco é o `ecommerce_load`, recriado a cada rodada. Os dados de dev nunca mudam.
+- **Banco, Redis e RabbitMQ próprios.** O banco é o `ecommerce_load`, recriado a cada rodada, e o RabbitMQ usa o vhost `/`, sem porta no host. Os dados de dev nunca mudam.
 - **Configuração de produção.** A pilha roda com:
   - `APP_ENV=production` e `APP_DEBUG=false`;
   - logs de `warning` para cima na saída padrão;
@@ -102,7 +108,7 @@ Quando um limite cai, o `make load-test` sai com código diferente de zero, e os
   - um timeout;
   - um check do corpo que falhou;
   - um pedido que não ficou pagável em 60 segundos.
-- **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 2 segundos, como o frontend faz, então a resolução da métrica é de 2 segundos. Ela mede o relay do outbox e o worker sob carga.
+- **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 250 ms (o frontend consulta a cada 2 s), então a resolução da métrica é de 250 ms. Ela mede o relay do outbox e o worker, ou o consumidor do RabbitMQ, sob carga. Até a HEL-13 o k6 consultava a cada 2 s, e a linha de base da HEL-14 tem essa resolução: com 2 s, os dois transportes caíam na mesma leitura.
 - **`rate_limit_overshoot`:** quantos logins da rajada simultânea do `limits` passaram além do limite de 10. A métrica é só registrada, sem limite de aprovação. O esperado é 0: o `throttle` conta a requisição antes de decidir (`AtomicThrottleRequests`, ver o [README do projeto](../README.md)), e passam exatamente 10. Com o `throttle` do framework, que confere antes de contar, passavam 11.
 
 Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine, 1 s em `POST /api/orders` e 10 s em `order_payable_wait`. Agora eles são o p95 da linha do `load` vezes 1,2, arredondado para cima até a dezena de ms seguinte: 40 ms, 70 ms e 2.450 ms (`BASELINE` em `lib/baseline.js`, que muda junto com a linha). O `stress` e o `soak` usam os mesmos limites, então eles costumam reprovar: o relatório mostra quanto a API degradou.
@@ -112,7 +118,7 @@ Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine,
 Cada rodada grava em `load-tests/results/`, que fica fora do git:
 
 - `<perfil>-<data e hora>.html`: o relatório do painel do k6, com gráficos;
-- `<perfil>-<data e hora>.json`: o resumo completo;
+- `<perfil>-<data e hora>.json`: o resumo completo. Numa rodada com `TRANSPORT=rabbitmq`, os dois se chamam `<perfil>-rabbitmq-<data e hora>`;
 - `<perfil>-checks.txt`: uma linha por check e por métrica personalizada, lida pelas provas.
 
 As métricas de tempo são agrupadas por template de rota, na tag `name` (por exemplo `GET /api/orders/{order}`), nunca pela URL com o id. Toda requisição leva um `X-Request-ID` no formato `<perfil>-vu<n>-it<n>-<sequência>`, que a API grava nos logs dela.
@@ -139,6 +145,20 @@ Como as linhas foram aceitas:
   - a métrica injetada no `createSender` e no `createVerifier` (`aa594f7`), uma refatoração do harness que não muda o que a rodada executa;
   - o relógio da `order_payable_wait`, que saiu do fluxo da compra para o `placeAndWaitUntilPayable` de `lib/payable.js`, testado com um relógio falso: as requisições, os checks e as métricas são os mesmos, e o relógio começa logo depois do `verify` do `201`, e não logo antes, e para logo antes do check da espera, e não logo depois, uma diferença de uma leitura de JSON e de um check do k6 em cada ponta. Uma rodada do `load` em `5fc8199`, com a máquina ocupada (carga média de 6,7 no início), teve p95 de 2.047 ms em `order_payable_wait`, a 0,6% da linha. A vitrine (38,9 ms) e `POST /api/orders` (66,1 ms), que essa mudança não toca, variaram mais, como nas rodadas recusadas abaixo.
 - **Rodadas não aceitas, antes desta medição.** Com a máquina ocupada (carga média de 3 a 6), cinco rodadas seguidas do `load` em `d563093`, o mesmo código medido, variaram até 33% entre pares seguidos. O p95 de `POST /api/orders` foi de 47,9 a 74,8 ms, e nenhuma linha entrou. É a razão da regra dos 20%: numa máquina ocupada, a diferença entre duas rodadas é maior que a de uma mudança no código.
+
+### Linha de base por transporte
+
+A HEL-13 mede o mesmo perfil `load` com o relay publicando por cada transporte (`make load-test TYPE=load TRANSPORT=<redis|rabbitmq>`), com a espera até pagar lida a cada 250 ms. É uma tabela à parte porque a da HEL-14 tem 12 colunas, travadas pelas provas `docs.sh baseline-rows` e `profiles.test.js`, e porque os limites de aprovação continuam sendo os dela (2.450 ms na espera): a série nova não os recalcula. A regra para aceitar uma linha é a mesma de cima.
+
+| Data | Commit | Máquina | Transporte | Perfil | VUs ou taxa | req/s | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Erro inesperado | Mudou desde a série anterior |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-18 | 99094d7 | Apple M1, VM do Docker com 8 CPUs e 4 GB | redis | load | 50 VUs | 50.6 | 35.6 | 50.2 | 1382 | 0% | primeira série. Aceita pela regra dos 20%: a rodada anterior do redis, no mesmo commit, teve p95 de 30,4 ms na vitrine, 49,4 ms em `POST /api/orders` e 1.369 ms em `order_payable_wait` |
+| 2026-10-18 | 99094d7 | Apple M1, VM do Docker com 8 CPUs e 4 GB | rabbitmq | load | 50 VUs | 50.1 | 32.3 | 52.2 | 558 | 0% | primeira série. Aceita pela regra dos 20%: a rodada anterior do rabbitmq, no mesmo commit, teve p95 de 29,7 ms na vitrine, 47,5 ms em `POST /api/orders` e 555 ms em `order_payable_wait` |
+
+- **O que a tabela mostra.** Com a vitrine e `POST /api/orders` iguais dentro do ruído, a espera até pagar do p95 caiu de cerca de 1,4 s no Redis para cerca de 0,56 s no RabbitMQ. A causa não foi medida; a hipótese é o `sleep` de 1 s do supervisor do Horizon quando a fila está vazia, contra a entrega por push do consumidor do RabbitMQ. Nenhum dos dois transportes teve erro inesperado.
+- **Como foram feitas.** Quatro rodadas no commit `99094d7`, com a pilha de dev parada: duas do rabbitmq em sequência (15:43 e 15:50) e duas do redis em sequência (16:17 e 16:24). O código medido não mudou até o commit que grava esta tabela, que só mexe nos documentos.
+- **Rodadas descartadas, todas do mesmo dia.** A máquina (8 GB, com 4,7 a 4,9 GB de swap em uso e uma VM do Docker que chegou a 300% de CPU sem nenhum container no ar) deixou a maioria das rodadas fora dos 20%: o p95 da vitrine foi de 24 a 949 ms entre rodadas do mesmo transporte e do mesmo código, e o do `POST /api/orders`, de 35 a 1.372 ms. As rodadas do redis às 14:29 e às 14:37 diferiram 29% na vitrine; as do rabbitmq às 15:10 e às 15:18, 83% na espera. Só entraram os pares que passaram nos três p95.
+- **Duas rodadas do rabbitmq caíram no arranque** com `Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces`, com o host a mais de 15 de carga. O `make load-test` agora tenta subir o broker de novo uma vez.
 
 ## As provas dos scripts
 

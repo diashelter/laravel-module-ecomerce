@@ -14,10 +14,11 @@ last_profile() {
 case "$CASE" in
     connection)
         grep -qx 'name: ecommerce-load' load-tests/docker-compose.yml || fail "o projeto não se chama ecommerce-load"
-        expect_eq "os serviços" "$($LOAD --profile k6 config --services | sort | tr '\n' ' ')" "api db k6 nginx outbox-relay queue-worker redis "
+        expect_eq "os serviços" "$($LOAD --profile k6 config --services | sort | tr '\n' ' ')" "api db event-consumer k6 nginx outbox-relay queue-worker rabbitmq redis "
         expect_eq "DB_HOST" "$(env_of api DB_HOST)" db
         expect_eq "DB_DATABASE" "$(env_of api DB_DATABASE)" ecommerce_load
         expect_eq "REDIS_HOST" "$(env_of api REDIS_HOST)" redis
+        expect_eq "RABBITMQ_HOST" "$(env_of api RABBITMQ_HOST)" rabbitmq
         expect_eq "SESSION_DOMAIN" "$(env_of api SESSION_DOMAIN)" null
         expect_eq "SANCTUM_STATEFUL_DOMAINS" "$(env_of api SANCTUM_STATEFUL_DOMAINS)" nginx
         expect_eq "APP_URL" "$(env_of api APP_URL)" http://nginx
@@ -72,7 +73,7 @@ case "$CASE" in
         expect_eq "a config em cache usa o mesmo atraso" "$($LOAD exec -T api php artisan tinker --execute="echo config('shop.delivery_delay_seconds');" | tr -d '[:space:]')" 10
         ;;
     cache-env)
-        for service in api queue-worker outbox-relay; do
+        for service in api queue-worker outbox-relay event-consumer; do
             expect_eq "$service APP_CONFIG_CACHE" "$(env_of $service APP_CONFIG_CACHE)" /tmp/laravel/config.php
             expect_eq "$service APP_ROUTES_CACHE" "$(env_of $service APP_ROUTES_CACHE)" /tmp/laravel/routes-v7.php
             expect_eq "$service APP_EVENTS_CACHE" "$(env_of $service APP_EVENTS_CACHE)" /tmp/laravel/events.php
