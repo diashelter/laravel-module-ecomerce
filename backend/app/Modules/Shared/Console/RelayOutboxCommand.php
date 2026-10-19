@@ -7,10 +7,10 @@ namespace App\Modules\Shared\Console;
 use App\Modules\Shared\Messaging\EventTransportFlag;
 use App\Modules\Shared\Messaging\OutboxRelay;
 use App\Modules\Shared\Messaging\RelayCycle;
+use App\Modules\Shared\Messaging\RestartSignal;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Sleep;
-use Throwable;
 
 /**
  * The outbox relay process (the outbox-relay container): publishes the pending messages within
@@ -19,9 +19,6 @@ use Throwable;
  */
 final class RelayOutboxCommand extends Command
 {
-    /** The cache key `queue:restart` writes, the same signal the queue workers watch. */
-    public const RESTART_SIGNAL = 'illuminate:queue:restart';
-
     private const IDLE_WAIT_MILLISECONDS = 500;
 
     /** Longer than the idle wait: with Redis down, the relay would log two warnings a second. */
@@ -40,7 +37,7 @@ final class RelayOutboxCommand extends Command
             return $this->publish($relay, $flag) === RelayCycle::Failed ? self::FAILURE : self::SUCCESS;
         }
 
-        $restartSignal = $this->restartSignal($cache);
+        $restartSignal = new RestartSignal($cache);
 
         while (true) {
             if (now()->greaterThanOrEqualTo($nextPruneAt)) {
@@ -49,11 +46,8 @@ final class RelayOutboxCommand extends Command
             }
 
             $cycle = $this->publish($relay, $flag);
-            $currentSignal = $this->restartSignal($cache);
 
-            if ($restartSignal === null) {
-                $restartSignal = $currentSignal;
-            } elseif ($currentSignal !== null && $currentSignal !== $restartSignal) {
+            if ($restartSignal->changed()) {
                 return self::SUCCESS;
             }
 
@@ -79,20 +73,5 @@ final class RelayOutboxCommand extends Command
         }
 
         return $cycle;
-    }
-
-    /**
-     * The signal in a one-item list, or null while the cache cannot be read (Redis down): the relay
-     * then keeps publishing, and adopts the signal it reads once the cache is back.
-     *
-     * @return array{0: mixed}|null
-     */
-    private function restartSignal(Cache $cache): ?array
-    {
-        try {
-            return [$cache->get(self::RESTART_SIGNAL)];
-        } catch (Throwable) {
-            return null;
-        }
     }
 }

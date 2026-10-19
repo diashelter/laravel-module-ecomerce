@@ -9,6 +9,7 @@ use App\Modules\Shared\Messaging\EventSubscriptions;
 use App\Modules\Shared\Messaging\RabbitMq\RabbitMqConnector;
 use App\Modules\Shared\Messaging\RabbitMq\RabbitMqEnvelope;
 use App\Modules\Shared\Messaging\RabbitMq\RabbitMqTopology;
+use App\Modules\Shared\Messaging\RestartSignal;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Log;
@@ -47,13 +48,13 @@ final class ConsumeEventsCommand extends Command
         EventDelivery $delivery,
         Cache $cache,
     ): int {
-        $restartSignal = $this->restartSignal($cache);
+        $restartSignal = new RestartSignal($cache);
 
         while (true) {
             $connection = $this->connect($connector);
 
             try {
-                if ($this->consume($connection, $topology, $subscriptions, $delivery, $cache, $restartSignal)) {
+                if ($this->consume($connection, $topology, $subscriptions, $delivery, $restartSignal)) {
                     return self::SUCCESS;
                 }
             } catch (AMQPExceptionInterface $e) {
@@ -80,7 +81,6 @@ final class ConsumeEventsCommand extends Command
     /**
      * Consumes until the process has to stop.
      *
-     * @param  array{0: mixed}|null  $restartSignal
      * @return bool true when the process must exit (restart signal, or every queue is empty)
      */
     private function consume(
@@ -88,8 +88,7 @@ final class ConsumeEventsCommand extends Command
         RabbitMqTopology $topology,
         EventSubscriptions $subscriptions,
         EventDelivery $delivery,
-        Cache $cache,
-        ?array &$restartSignal,
+        RestartSignal $restartSignal,
     ): bool {
         $channel = $connection->channel();
         // One unacknowledged delivery per consumer (queue). The deliveries are handled one at a time, but a
@@ -112,11 +111,7 @@ final class ConsumeEventsCommand extends Command
                 $idle = true;
             }
 
-            $currentSignal = $this->restartSignal($cache);
-
-            if ($restartSignal === null) {
-                $restartSignal = $currentSignal;
-            } elseif ($currentSignal !== null && $currentSignal !== $restartSignal) {
+            if ($restartSignal->changed()) {
                 return true;
             }
 
@@ -177,21 +172,6 @@ final class ConsumeEventsCommand extends Command
             $connection->close();
         } catch (Throwable) {
             // The connection is already gone.
-        }
-    }
-
-    /**
-     * The signal in a one-item list, or null while the cache cannot be read (Redis down): the process
-     * then keeps consuming, and adopts the signal it reads once the cache is back.
-     *
-     * @return array{0: mixed}|null
-     */
-    private function restartSignal(Cache $cache): ?array
-    {
-        try {
-            return [$cache->get(RelayOutboxCommand::RESTART_SIGNAL)];
-        } catch (Throwable) {
-            return null;
         }
     }
 }

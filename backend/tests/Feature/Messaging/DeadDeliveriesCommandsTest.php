@@ -133,7 +133,7 @@ it('refuses to return a message that is not dead', function () {
     $exitCode = Artisan::call('events:retry', ['id' => unknownId()]);
 
     expect($exitCode)->toBe(1)
-        ->and(Artisan::output())->toContain('não encontrada')
+        ->and(Artisan::output())->toContain('No dead delivery has the message id')
         ->and(readyMessages('testing.failing_consumer.dead'))->toBe(1)
         ->and(readyMessages('testing.failing_consumer'))->toBe(0);
 });

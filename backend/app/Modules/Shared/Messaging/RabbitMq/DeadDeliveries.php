@@ -78,7 +78,7 @@ class DeadDeliveries
             }
 
             if ($messageId !== null && ! $found) {
-                throw new RuntimeException("Mensagem {$messageId} não encontrada nas filas de mortas.");
+                throw new RuntimeException("No dead delivery has the message id {$messageId}.");
             }
 
             return $returned;
