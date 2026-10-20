@@ -26,7 +26,14 @@ class DeliveryRepository extends BaseRepository
     /** @return bool true when this call created the row, false when the order already had one */
     public function schedule(string $orderId, CarbonInterface $estimatedOn): bool
     {
-        return $this->insertIgnoringExisting($orderId, $estimatedOn->format('Y-m-d'), null);
+        // insertOrIgnore skips the model, so the uuid and the timestamps are set here.
+        return $this->query()->toBase()->insertOrIgnore([
+            'id' => Str::uuid7()->toString(),
+            'order_id' => $orderId,
+            'estimated_delivery_on' => $estimatedOn->format('Y-m-d'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]) === 1;
     }
 
     public function isDelivered(string $orderId): bool
@@ -41,29 +48,5 @@ class DeliveryRepository extends BaseRepository
             ->where('order_id', $orderId)
             ->whereNull('delivered_at')
             ->update(['delivered_at' => $deliveredAt, 'updated_at' => $deliveredAt]) === 1;
-    }
-
-    /**
-     * The row of an order delivered before it was scheduled (a job queued before the deliveries
-     * table existed), written already delivered.
-     *
-     * @return bool true when this call created the row, false when the order already had one
-     */
-    public function recordDelivered(string $orderId, CarbonInterface $deliveredAt): bool
-    {
-        return $this->insertIgnoringExisting($orderId, $deliveredAt->format('Y-m-d'), $deliveredAt);
-    }
-
-    private function insertIgnoringExisting(string $orderId, string $estimatedOn, ?CarbonInterface $deliveredAt): bool
-    {
-        // insertOrIgnore skips the model, so the uuid and the timestamps are set here.
-        return $this->query()->toBase()->insertOrIgnore([
-            'id' => Str::uuid7()->toString(),
-            'order_id' => $orderId,
-            'estimated_delivery_on' => $estimatedOn,
-            'delivered_at' => $deliveredAt,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]) === 1;
     }
 }

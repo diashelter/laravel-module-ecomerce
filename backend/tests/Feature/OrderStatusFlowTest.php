@@ -9,6 +9,7 @@ use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
 use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Fulfillment\Events\DeliveryScheduled;
 use Modules\Fulfillment\Events\OrderDelivered;
+use Modules\Fulfillment\Persistence\Models\Delivery;
 use Modules\Messaging\Contracts\EventOutbox;
 use Modules\Messaging\Contracts\EventSubscriptions;
 use Modules\Messaging\Core\DeliverEvent;
@@ -159,6 +160,7 @@ it('records the estimate of an order already delivered', function () {
 
 it('announces the delivery without changing the order status itself', function () {
     $order = Order::factory()->status(OrderStatus::PaymentApproved)->create();
+    Delivery::factory()->create(['order_id' => $order->id]);
 
     (new DeliverOrder($order->id))->handle();
 

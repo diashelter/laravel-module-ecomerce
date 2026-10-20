@@ -15,7 +15,9 @@ use Modules\Messaging\Contracts\EventOutbox;
  * announces it. Fulfillment never changes the order status itself (see MarkOrderAsDeliveredUseCase).
  *
  * The job is retried and may be queued more than once, so only the run that fills delivered_at
- * announces the delivery, in the same transaction; any other run changes nothing.
+ * announces the delivery, in the same transaction; any other run changes nothing. So does a job for
+ * an order without a delivery row (queued before the deliveries table existed, which only happens in
+ * a development database): writing the row there is left until a real backfill needs it.
  */
 final class DeliverOrderUseCase
 {
@@ -27,8 +29,7 @@ final class DeliverOrderUseCase
     public function execute(string $orderId): void
     {
         $delivered = DB::transaction(function () use ($orderId): bool {
-            // An order paid before the deliveries table existed has a queued job and no row yet.
-            if (! $this->deliveries->markDelivered($orderId, now()) && ! $this->deliveries->recordDelivered($orderId, now())) {
+            if (! $this->deliveries->markDelivered($orderId, now())) {
                 return false;
             }
 

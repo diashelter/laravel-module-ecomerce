@@ -60,14 +60,11 @@ it('rolls back delivered_at when the event cannot be recorded', function () {
         ->and(outboxMessages('fulfillment.order_delivered'))->toHaveCount(1);
 });
 
-it('creates the delivered row for an order that has none', function () {
+it('changes nothing for an order without a delivery row', function () {
     (new DeliverOrder($this->order->id))->handle();
 
-    $delivery = Delivery::query()->where('order_id', $this->order->id)->sole();
-
-    expect($delivery->delivered_at->equalTo(now()))->toBeTrue()
-        ->and($delivery->estimated_delivery_on->toDateString())->toBe('2026-10-07')
-        ->and(outboxMessages('fulfillment.order_delivered'))->toHaveCount(1);
+    expect(Delivery::query()->count())->toBe(0)
+        ->and(DB::table('outbox_messages')->count())->toBe(0);
 });
 
 it('leaves the order row untouched', function () {
