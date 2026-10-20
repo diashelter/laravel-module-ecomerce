@@ -16,4 +16,4 @@
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: helterdias/hel-16-event-idempotency
-**Achados não bloqueantes da verificação**: C21 só exercita o ramo "já entregue"; C14 não distingue fusos (o `DeliverOrder` sem linha grava o dia UTC, o agendamento grava o dia de São Paulo); `.design/event-idempotency.md:133` contradiz a Key decision 2 sobre a contagem de jobs na reentrega
+**Achados não bloqueantes da verificação**: C21 só exercita o ramo "já entregue"; C14 não distinguia fusos e `.design/event-idempotency.md:133` contradizia a Key decision 2; os dois saíram na review do PR #29 (o `DeliverOrder` sem linha não grava nada, e a linha 133 diz que o job pode ser enfileirado de novo)

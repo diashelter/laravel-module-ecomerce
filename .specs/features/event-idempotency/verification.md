@@ -6,6 +6,8 @@
 **Round**: 1 - full
 **Verifier**: independent sub-agent (author != verifier)
 
+> Depois desta verificação, a review do PR #29 mudou o AC 11 e o C14: o `DeliverOrder` de um pedido sem linha não grava mais a linha já entregue nem o `OrderDelivered`, e a prova do C14 passou a ser `changes nothing for an order without a delivery row` (`DeliverOrderTest.php`). As linhas abaixo que citam o C14 descrevem o código de `e4c8a3c`.
+
 Todos os 24 checks (C1..C24) têm prova verde em `e4c8a3c` e uma asserção localizada que mira o valor definido pelo check; os 10 conjuntos do Coverage foram recomputados a partir do código (ou da autoridade do conjunto) sem membro sem prova; os 5 mutantes injetados morreram. O veredito é PASS com achados não bloqueantes (lacunas de precisão e inconsistências de artefato), listados em `## Findings`, que devem virar lições e, onde indicado, ajustes de teste.
 
 ## Binding sources
