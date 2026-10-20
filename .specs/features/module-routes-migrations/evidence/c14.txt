@@ -1,0 +1,4 @@
+vitrine: row=24.1 previous=24.9 diff=3.3%
+POST /api/orders: row=39.2 previous=38.4 diff=2.1%
+order_payable_wait: row=1353.0 previous=1360.0 diff=0.5%
+OK

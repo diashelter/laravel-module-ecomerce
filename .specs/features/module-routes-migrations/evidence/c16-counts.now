@@ -81,6 +81,7 @@ Tests\Unit\Architecture\DomainEventsTest 8
 Tests\Unit\Architecture\HttpAdaptersTest 12
 Tests\Unit\Architecture\IdTypesTest 17
 Tests\Unit\Architecture\ModuleBoundariesTest 793
+Tests\Unit\Architecture\ModuleCachePathTest 2
 Tests\Unit\Architecture\ModuleLayersTest 16
 Tests\Unit\Architecture\ModuleMigrationsTest 14
 Tests\Unit\Architecture\ModulePackagesTest 24

@@ -154,6 +154,7 @@ A HEL-13 mede o mesmo perfil `load` com o relay publicando por cada transporte (
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-18 | 99094d7 | Apple M1, VM do Docker com 8 CPUs e 4 GB | redis | load | 50 VUs | 50.6 | 35.6 | 50.2 | 1382 | 0% | primeira série. Aceita pela regra dos 20%: a rodada anterior do redis, no mesmo commit, teve p95 de 30,4 ms na vitrine, 49,4 ms em `POST /api/orders` e 1.369 ms em `order_payable_wait` |
 | 2026-10-18 | 99094d7 | Apple M1, VM do Docker com 8 CPUs e 4 GB | rabbitmq | load | 50 VUs | 50.1 | 32.3 | 52.2 | 558 | 0% | primeira série. Aceita pela regra dos 20%: a rodada anterior do rabbitmq, no mesmo commit, teve p95 de 29,7 ms na vitrine, 47,5 ms em `POST /api/orders` e 555 ms em `order_payable_wait` |
+| 2026-10-20 | 299af92 | Apple M1, VM do Docker com 8 CPUs e 4 GB | redis | load | 50 VUs | 51.4 | 24.1 | 39.2 | 1353 | 0% | módulos como pacotes do `internachi/modular` (HEL-12), com o cache de módulos da pilha de carga em `/tmp/laravel`. Aceita pela regra dos 20%: a rodada anterior do redis, no mesmo commit, teve p95 de 24,9 ms na vitrine, 38,4 ms em `POST /api/orders` e 1.360 ms em `order_payable_wait`; as duas ficaram dentro dos limites da `lib/baseline.js`. A máquina não estava na condição pedida (carga média de 3 a 4, com o `db`, o `redis` e o `rabbitmq` da pilha de dev no ar). |
 
 - **O que a tabela mostra.** Com a vitrine e `POST /api/orders` iguais dentro do ruído, a espera até pagar do p95 caiu de cerca de 1,4 s no Redis para cerca de 0,56 s no RabbitMQ. A causa não foi medida; a hipótese é o `sleep` de 1 s do supervisor do Horizon quando a fila está vazia, contra a entrega por push do consumidor do RabbitMQ. Nenhum dos dois transportes teve erro inesperado.
 - **Como foram feitas.** Quatro rodadas no commit `99094d7`, com a pilha de dev parada: duas do rabbitmq em sequência (15:43 e 15:50) e duas do redis em sequência (16:17 e 16:24). O código medido não mudou até o commit que grava esta tabela, que só mexe nos documentos.
@@ -162,13 +163,15 @@ A HEL-13 mede o mesmo perfil `load` com o relay publicando por cada transporte (
 
 ### Os módulos como pacotes (HEL-12)
 
-A HEL-12 trocou os módulos de `App\Modules` por pacotes do `internachi/modular`. O `load` no commit `0966d0b`, duas rodadas seguidas, ficou **fora dos limites** da `lib/baseline.js` (a vitrine e o `POST /api/orders`), e o mesmo `load` em `main` (`f1dd960`), medido logo antes na mesma máquina, ficou dentro. Por isso não há linha nova na tabela por transporte: ainda não existe um commit com a medida aprovada.
+A HEL-12 trocou os módulos de `App\Modules` por pacotes do `internachi/modular`. O `load` no commit `0966d0b`, duas rodadas seguidas, ficou **fora dos limites** da `lib/baseline.js` (a vitrine e o `POST /api/orders`), e o mesmo `load` em `main` (`f1dd960`), medido logo antes na mesma máquina, ficou dentro. A causa foi achada e corrigida (abaixo), e a linha do `redis` no commit `299af92` entrou na tabela por transporte, acima.
 
 | Rodada | Commit | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Limites |
 |---|---|---|---|---|---|
 | controle, `main` | f1dd960 | 24.8 | 38.1 | 1352 | dentro |
 | módulos como pacotes, rodada 1 | 0966d0b | 272.8 | 297.2 | 1550.5 | vitrine e `POST /api/orders` acima |
 | módulos como pacotes, rodada 2 | 0966d0b | 275.7 | 274.6 | 1520.0 | vitrine e `POST /api/orders` acima |
+| com o cache de módulos, rodada 1 | 299af92 | 24.9 | 38.4 | 1360.4 | dentro |
+| com o cache de módulos, rodada 2 | 299af92 | 24.1 | 39.2 | 1353.0 | dentro |
 
 As duas rodadas dos pacotes diferem menos de 20% entre si, então o resultado não é ruído da máquina. As quatro rodadas foram feitas com a carga média da máquina entre 4 e 6 e com o `db`, o `redis` e o `rabbitmq` da pilha de dev no ar, o que não é a condição pedida acima; o controle foi medido nas mesmas condições.
 
@@ -186,7 +189,7 @@ Custo de descobrir os módulos a cada boot do `artisan`, como a mediana de 20 ex
 | sem `modules:cache` | 222.2 ms |
 | com `modules:cache` | 190.3 ms |
 
-O CLI mostra só uma parte do custo (cerca de 32 ms), porque o PHP-FPM lê a mesma árvore de dentro de um volume montado do macOS, e o custo se multiplica com 50 VUs. Em produção, sem volume montado, o custo deve ser menor, mas isso não foi medido. O `modules:cache` grava `bootstrap/cache/app-modules.php`, que a pilha de carga não pode escrever (regra do `AGENTS.md`), e a biblioteca não aceita outro caminho: o que fazer com isso está em aberto.
+O CLI mostra só uma parte do custo (cerca de 32 ms), porque o PHP-FPM lê a mesma árvore de dentro de um volume montado do macOS, e o custo se multiplica com 50 VUs. Em produção, sem volume montado, o custo deve ser menor, mas isso não foi medido. **A correção.** O `modules:cache` grava `bootstrap/cache/app-modules.php`, que a pilha de carga não pode escrever (regra do `AGENTS.md`), e a biblioteca não aceita outro caminho. O `AppServiceProvider` religa o `Cache` da biblioteca ao caminho de `APP_MODULES_CACHE` (sem a variável, o caminho continua `bootstrap/cache/app-modules.php`), a pilha de carga define a variável como `/tmp/laravel/app-modules.php`, e o `make load-test` roda o `modules:cache` no container `api`, com os outros caches. Os containers de fila, relay e consumidor definem a variável e não têm o arquivo: descobrem os módulos a cada boot, que acontece uma vez por processo.
 
 ## As provas dos scripts
 
