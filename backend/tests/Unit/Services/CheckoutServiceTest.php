@@ -1,14 +1,14 @@
 <?php
 
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\ValueObjects\CatalogProduct;
-use App\Modules\Catalog\ValueObjects\CatalogProducts;
-use App\Modules\Inventory\ValueObjects\StockQuantities;
-use App\Modules\Ordering\DTOs\CartItemDTO;
-use App\Modules\Ordering\Exceptions\InsufficientStockException;
-use App\Modules\Ordering\Services\CheckoutService;
-use App\Modules\Ordering\Services\PurchaseAvailabilityService;
-use App\Modules\Ordering\ValueObjects\ProductQuantities;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Core\ValueObjects\CatalogProduct;
+use Modules\Catalog\Core\ValueObjects\CatalogProducts;
+use Modules\Inventory\Core\ValueObjects\StockQuantities;
+use Modules\Ordering\Core\DTOs\CartItemDTO;
+use Modules\Ordering\Core\Exceptions\InsufficientStockException;
+use Modules\Ordering\Core\Services\CheckoutService;
+use Modules\Ordering\Core\Services\PurchaseAvailabilityService;
+use Modules\Ordering\Core\ValueObjects\ProductQuantities;
 
 beforeEach(function () {
     $this->service = new CheckoutService(new PurchaseAvailabilityService);

@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Catalog\Contracts\ProductCatalog;
-use App\Modules\Catalog\ValueObjects\CatalogProducts;
-use App\Modules\Catalog\ValueObjects\ProductIds;
-use App\Modules\Inventory\Queries\StockListQuery;
-use App\Modules\Inventory\ValueObjects\StockView;
+use Modules\Catalog\Contracts\ProductCatalog;
+use Modules\Catalog\Core\ValueObjects\CatalogProducts;
+use Modules\Catalog\Core\ValueObjects\ProductIds;
+use Modules\Inventory\Core\ValueObjects\StockView;
+use Modules\Inventory\Persistence\Queries\StockListQuery;
 
 it('paginates stocks by quantity ascending', function () {
     $high = stockOf(productWithStock(30));

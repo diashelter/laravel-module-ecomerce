@@ -1,17 +1,17 @@
 <?php
 
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Payment\DTOs\ChargeResult;
-use App\Modules\Payment\DTOs\PayOrderDTO;
-use App\Modules\Payment\Enums\DeclineReason;
-use App\Modules\Payment\Enums\PaymentStatus;
-use App\Modules\Payment\Exceptions\PaymentDeclinedException;
-use App\Modules\Payment\Models\Payment;
-use App\Modules\Payment\UseCases\PayOrderUseCase;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Payment\Core\DTOs\ChargeResult;
+use Modules\Payment\Core\DTOs\PayOrderDTO;
+use Modules\Payment\Core\Enums\DeclineReason;
+use Modules\Payment\Core\Enums\PaymentStatus;
+use Modules\Payment\Core\Exceptions\PaymentDeclinedException;
+use Modules\Payment\Core\UseCases\PayOrderUseCase;
+use Modules\Payment\Persistence\Models\Payment;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 it('records PaymentApproved for an order awaiting payment', function () {
     $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();

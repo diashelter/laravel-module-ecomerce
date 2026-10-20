@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\ValueObjects\CatalogProduct;
-use App\Modules\Catalog\ValueObjects\ProductAvailability;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Core\ValueObjects\CatalogProduct;
+use Modules\Catalog\Core\ValueObjects\ProductAvailability;
 
 it('decides the availability from the status and the units', function (ProductStatus $status, int $units, bool $available, int $quantity) {
     $availability = new ProductAvailability($status, $units);

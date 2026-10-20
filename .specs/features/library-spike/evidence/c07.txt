@@ -1,0 +1,30 @@
+
+  GET|HEAD   api/admin/orders admin.orders.index › App\Modules\Ordering\Http\Controllers\Admin\OrderController@index
+             ⇂ Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful
+             ⇂ Illuminate\Auth\Middleware\Authenticate:staff
+             ⇂ Illuminate\Routing\Middleware\SubstituteBindings
+  GET|HEAD   api/admin/orders/{order} admin.orders.show › App\Modules\Ordering\Http\Controllers\Admin\OrderController@show
+             ⇂ Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful
+             ⇂ Illuminate\Auth\Middleware\Authenticate:staff
+             ⇂ Illuminate\Routing\Middleware\SubstituteBindings
+  GET|HEAD   api/orders App\Modules\Ordering\Http\Controllers\OrderController@index
+             ⇂ Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful
+             ⇂ Illuminate\Auth\Middleware\Authenticate:customer
+             ⇂ Illuminate\Routing\Middleware\SubstituteBindings
+  POST       api/orders App\Modules\Ordering\Http\Controllers\OrderController@store
+             ⇂ Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful
+             ⇂ Illuminate\Auth\Middleware\Authenticate:customer
+             ⇂ App\Modules\Shared\Http\Middleware\AtomicThrottleRequests:20,1,checkout
+             ⇂ Illuminate\Routing\Middleware\SubstituteBindings
+  GET|HEAD   api/orders/{order} App\Modules\Ordering\Http\Controllers\OrderController@show
+             ⇂ Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful
+             ⇂ Illuminate\Auth\Middleware\Authenticate:customer
+             ⇂ Illuminate\Routing\Middleware\SubstituteBindings
+  POST       api/orders/{order}/payment Modules\Payment\Http\Controllers\PaymentController@store
+             ⇂ Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful
+             ⇂ Illuminate\Auth\Middleware\Authenticate:customer
+             ⇂ App\Modules\Shared\Http\Middleware\AtomicThrottleRequests:20,1,payment
+             ⇂ Illuminate\Routing\Middleware\SubstituteBindings
+
+                                                            Showing [6] routes
+OK

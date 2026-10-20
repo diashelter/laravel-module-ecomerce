@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Models\User;
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Support\Facades\DB;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Identity\Persistence\Models\User;
+use Modules\Ordering\Persistence\Models\Order;
 
 dataset('staff roles', [
     'admin' => [fn () => admin()],

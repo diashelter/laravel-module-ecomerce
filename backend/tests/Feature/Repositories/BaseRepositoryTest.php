@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Shared\Repositories\BaseRepository;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Shared\Repositories\BaseRepository;
 
 beforeEach(function () {
     $this->repository = new class extends BaseRepository

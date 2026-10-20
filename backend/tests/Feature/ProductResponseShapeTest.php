@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
 
 it('renders every product with exactly the keys of today', function (string $method, string $uri, string $path) {
     $this->actingAs(admin());

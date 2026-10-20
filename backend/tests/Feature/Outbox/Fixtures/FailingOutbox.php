@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Messaging\DomainEvent;
-use App\Modules\Shared\Messaging\EventOutbox;
-use App\Modules\Shared\Repositories\OutboxMessageRepository;
+use Modules\Messaging\Contracts\DomainEvent;
+use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Persistence\Repositories\OutboxMessageRepository;
 use RuntimeException;
 
 /**

@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Backoffice\Services\DashboardService;
-use App\Modules\Catalog\ValueObjects\ProductCountsByStatus;
-use App\Modules\Ordering\ValueObjects\OrderCountsByPeriod;
 use Illuminate\Support\Carbon;
+use Modules\Backoffice\Core\Services\DashboardService;
+use Modules\Catalog\Core\ValueObjects\ProductCountsByStatus;
+use Modules\Ordering\Core\ValueObjects\OrderCountsByPeriod;
 
 beforeEach(function () {
     $this->service = new DashboardService;

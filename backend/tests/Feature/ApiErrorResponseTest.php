@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Ordering\Exceptions\InsufficientStockException;
-use App\Modules\Shared\Http\Responses\ApiErrorResponse;
 use Illuminate\Validation\ValidationException;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Ordering\Core\Exceptions\InsufficientStockException;
+use Modules\Shared\Http\Responses\ApiErrorResponse;
 
 it('builds the standard validation error shape', function () {
     $response = ApiErrorResponse::fromValidationException(

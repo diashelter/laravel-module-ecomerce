@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Payment\Persistence\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Modules\Payment\Core\Enums\DeclineReason;
+use Modules\Payment\Core\Enums\PaymentStatus;
+use Modules\Payment\Database\Factories\PaymentFactory;
+
+/**
+ * One attempt to charge an order. Approved and declined are final: the row is never updated.
+ */
+#[Fillable(['order_id', 'amount_cents', 'status', 'decline_reason', 'card_token', 'gateway', 'gateway_transaction_id'])]
+#[UseFactory(PaymentFactory::class)]
+class Payment extends Model
+{
+    /** @use HasFactory<PaymentFactory> */
+    use HasFactory, HasUuids;
+
+    protected function casts(): array
+    {
+        return [
+            'amount_cents' => 'integer',
+            'status' => PaymentStatus::class,
+            'decline_reason' => DeclineReason::class,
+        ];
+    }
+}

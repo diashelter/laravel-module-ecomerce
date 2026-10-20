@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Messaging\DomainEvent;
+use Modules\Messaging\Contracts\DomainEvent;
 
 /**
  * Another event class that claims the name of SampleEvent.

@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\Queries\ProductQuery;
-use App\Modules\Catalog\ValueObjects\ProductView;
+use Modules\Catalog\Core\ValueObjects\ProductView;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Catalog\Persistence\Queries\ProductQuery;
 
 beforeEach(fn () => $this->query = app(ProductQuery::class));
 

@@ -1,24 +1,24 @@
 <?php
 
-use App\Modules\Backoffice\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Modules\Catalog\Http\Controllers\Admin\CategoryController as AdminCategoryController;
-use App\Modules\Catalog\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Modules\Catalog\Http\Controllers\CategoryController;
-use App\Modules\Catalog\Http\Controllers\ProductController;
-use App\Modules\Customers\Http\Controllers\AccountController;
-use App\Modules\Customers\Http\Controllers\Admin\CustomerController as AdminCustomerController;
-use App\Modules\Customers\Http\Controllers\CustomerAddressController;
-use App\Modules\Customers\Http\Controllers\ProfileController;
-use App\Modules\Fulfillment\Http\Controllers\ShippingQuoteController;
-use App\Modules\Identity\Http\Controllers\Admin\StaffAuthController;
-use App\Modules\Identity\Http\Controllers\Admin\StaffMemberController as AdminStaffMemberController;
-use App\Modules\Identity\Http\Controllers\AuthController;
-use App\Modules\Inventory\Http\Controllers\Admin\StockController as AdminStockController;
-use App\Modules\Ordering\Http\Controllers\Admin\OrderController as AdminOrderController;
-use App\Modules\Ordering\Http\Controllers\CartController;
-use App\Modules\Ordering\Http\Controllers\OrderController;
-use App\Modules\Payment\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
+use Modules\Backoffice\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use Modules\Catalog\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use Modules\Catalog\Http\Controllers\Admin\ProductController as AdminProductController;
+use Modules\Catalog\Http\Controllers\CategoryController;
+use Modules\Catalog\Http\Controllers\ProductController;
+use Modules\Customers\Http\Controllers\AccountController;
+use Modules\Customers\Http\Controllers\Admin\CustomerController as AdminCustomerController;
+use Modules\Customers\Http\Controllers\CustomerAddressController;
+use Modules\Customers\Http\Controllers\ProfileController;
+use Modules\Fulfillment\Http\Controllers\ShippingQuoteController;
+use Modules\Identity\Http\Controllers\Admin\StaffAuthController;
+use Modules\Identity\Http\Controllers\Admin\StaffMemberController as AdminStaffMemberController;
+use Modules\Identity\Http\Controllers\AuthController;
+use Modules\Inventory\Http\Controllers\Admin\StockController as AdminStockController;
+use Modules\Ordering\Http\Controllers\Admin\OrderController as AdminOrderController;
+use Modules\Ordering\Http\Controllers\CartController;
+use Modules\Ordering\Http\Controllers\OrderController;
+use Modules\Payment\Http\Controllers\PaymentController;
 
 /*
 | All routes below are prefixed with /api (see bootstrap/app.php).

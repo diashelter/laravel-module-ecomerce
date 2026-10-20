@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Identity\Repositories\CustomerAccountRepository;
+use Modules\Identity\Persistence\Repositories\CustomerAccountRepository;
 
 beforeEach(fn () => $this->repository = app(CustomerAccountRepository::class));
 

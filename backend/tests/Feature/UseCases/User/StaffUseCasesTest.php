@@ -1,14 +1,14 @@
 <?php
 
-use App\Modules\Identity\DTOs\UpdateStaffMemberDTO;
-use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Models\User;
-use App\Modules\Identity\UseCases\DeleteStaffMemberUseCase;
-use App\Modules\Identity\UseCases\UpdateStaffMemberUseCase;
-use App\Modules\Identity\ValueObjects\Email;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Modules\Identity\Core\DTOs\UpdateStaffMemberDTO;
+use Modules\Identity\Core\DTOs\UpdateUserProfileDTO;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Core\UseCases\DeleteStaffMemberUseCase;
+use Modules\Identity\Core\UseCases\UpdateStaffMemberUseCase;
+use Modules\Identity\Core\ValueObjects\Email;
+use Modules\Identity\Persistence\Models\User;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 function staffUpdate(User $member, string $name, UserRole $role): UpdateStaffMemberDTO
 {

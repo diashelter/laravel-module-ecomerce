@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Repositories\UserRepository;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Persistence\Repositories\UserRepository;
 
 beforeEach(fn () => $this->repository = app(UserRepository::class));
 

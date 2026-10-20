@@ -1,0 +1,22 @@
+{
+    "name": "modules/inventory",
+    "description": "The Inventory module.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Inventory\\": "src/",
+            "Modules\\Inventory\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Inventory\\Providers\\InventoryServiceProvider"
+            ]
+        }
+    }
+}

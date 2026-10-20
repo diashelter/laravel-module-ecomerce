@@ -1,11 +1,11 @@
 <?php
 
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\Models\OrderItem;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Ordering\Persistence\Models\OrderItem;
 
 dataset('money columns', [
     'products.price_cents' => ['products', 'price_cents'],

@@ -1,13 +1,13 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\Models\OrderItem;
-use App\Modules\Payment\Models\Payment;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Ordering\Persistence\Models\OrderItem;
+use Modules\Payment\Persistence\Models\Payment;
 
 /** The 15 routes of the staff and the showcase that point to a record: [method, uri, kind of record]. */
 dataset('staff and showcase routes', [

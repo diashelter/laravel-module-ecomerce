@@ -2,9 +2,9 @@
 
 namespace Tests;
 
-use App\Modules\Identity\Models\CustomerAccount;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Modules\Identity\Persistence\Models\CustomerAccount;
 
 abstract class TestCase extends BaseTestCase
 {

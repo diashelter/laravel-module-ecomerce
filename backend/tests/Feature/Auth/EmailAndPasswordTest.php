@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Identity\Models\CustomerAccount;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
+use Modules\Identity\Persistence\Models\CustomerAccount;
 
 // Sanctum only starts a session for "stateful" requests coming from the SPA domain.
 beforeEach(fn () => $this->withHeader('Origin', 'http://localhost'));

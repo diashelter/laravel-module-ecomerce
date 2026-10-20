@@ -1,11 +1,5 @@
 <?php
 
-use App\Modules\Shared\Messaging\DeliverEvent;
-use App\Modules\Shared\Messaging\EventEnvelope;
-use App\Modules\Shared\Messaging\EventOutbox;
-use App\Modules\Shared\Messaging\EventSubscriptions;
-use App\Modules\Shared\Messaging\QueueEventTransport;
-use App\Modules\Shared\Models\OutboxMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
@@ -14,6 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\ServiceProvider;
+use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Messaging\Core\DeliverEvent;
+use Modules\Messaging\Core\EventEnvelope;
+use Modules\Messaging\Core\QueueEventTransport;
+use Modules\Messaging\Persistence\Models\OutboxMessage;
 use Tests\Feature\Outbox\Fixtures\FailingConsumer;
 use Tests\Feature\Outbox\Fixtures\SampleEvent;
 use Tests\Feature\Outbox\Fixtures\SampleEventTwin;
@@ -22,6 +22,7 @@ use Tests\Feature\Outbox\Fixtures\SpyConsumer;
 use Tests\Feature\Outbox\Fixtures\TwinConsumer;
 use Tests\Feature\Outbox\Fixtures\UnmarkedConsumer;
 use Tests\Feature\Outbox\Fixtures\WrongEventConsumer;
+use Tests\Unit\Architecture\Support\ModuleLayout;
 
 /** An envelope of the test event, as the relay would build it. */
 function sampleEnvelope(array $overrides = []): EventEnvelope
@@ -224,8 +225,8 @@ it('delivers an envelope whose message was already pruned', function () {
 
 it('registers no laravel listener for the module events', function () {
     $events = array_map(
-        fn (string $file) => 'App\\Modules\\'.basename(dirname($file, 2)).'\\Events\\'.basename($file, '.php'),
-        glob(app_path('Modules/*/Events/*.php')),
+        ModuleLayout::classOf(...),
+        ModuleLayout::filesMatching('Events/*.php'),
     );
 
     expect($events)->toHaveCount(5);

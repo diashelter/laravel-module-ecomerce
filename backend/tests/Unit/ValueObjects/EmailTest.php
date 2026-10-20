@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Identity\ValueObjects\Email;
+use Modules\Identity\Core\ValueObjects\Email;
 
 it('normalizes the email', function (string $input, string $expected) {
     expect((new Email($input))->value())->toBe($expected);

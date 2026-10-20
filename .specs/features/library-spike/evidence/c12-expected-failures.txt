@@ -1,0 +1,6 @@
+# Test files that fail after only the Payment module moved to app-modules/payment (namespace Modules\Payment).
+# Every one reads the folder app/Modules or the namespace App\Modules\Payment; none is a behaviour failure.
+DomainEventsTest - globs app/Modules/*/Events: the Payment event is no longer found (1 dataset row lost)
+ModuleBoundariesTest - MODULES_PATH is app/Modules and the rules name App\Modules\Payment: the Payment folders, contracts and vocabulary are not found (74 dataset rows lost)
+OrderCodeBoundariesTest - scans app/Modules for contracts, events and routes: 5 files found where 6 are expected
+EventDeliveryTest - globs app/Modules/*/Events/*.php: 4 event classes found where 5 are expected

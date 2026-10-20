@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Messaging\DomainEvent;
+use Modules\Messaging\Contracts\DomainEvent;
 
 /**
  * An event other than SampleEvent, to type a consumer that takes the wrong one.

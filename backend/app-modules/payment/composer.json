@@ -1,0 +1,22 @@
+{
+    "name": "modules/payment",
+    "description": "The Payment module.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Payment\\": "src/",
+            "Modules\\Payment\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Payment\\Providers\\PaymentServiceProvider"
+            ]
+        }
+    }
+}

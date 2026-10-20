@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Identity\Enums\UserRole;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Modules\Identity\Core\Enums\UserRole;
 
 // Sanctum only starts a session for "stateful" requests coming from the SPA domain.
 beforeEach(fn () => $this->withHeader('Origin', 'http://localhost'));

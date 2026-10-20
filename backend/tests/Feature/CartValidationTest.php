@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Catalog\Models\Product;
+use Modules\Catalog\Persistence\Models\Product;
 
 it('recalculates the cart in cents from database prices', function () {
     $product = productWithStock(10, ['price_cents' => 1990, 'name' => 'Teclado mecânico', 'image_url' => 'https://example.com/teclado.png']);

@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Inventory\Contracts\StockMetrics;
+use Modules\Inventory\Contracts\StockMetrics;
 
 it('counts products in stock and the total units', function () {
     productWithStock(10);

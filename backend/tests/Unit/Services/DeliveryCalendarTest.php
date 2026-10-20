@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Fulfillment\Services\DeliveryCalendar;
 use Carbon\CarbonImmutable;
+use Modules\Fulfillment\Core\Services\DeliveryCalendar;
 
 it('counts the delivery estimate in business days in Sao Paulo time', function (string $paidAt, string $timezone, int $businessDays, string $expected) {
     $estimate = (new DeliveryCalendar)->estimate(CarbonImmutable::parse($paidAt, $timezone), $businessDays);

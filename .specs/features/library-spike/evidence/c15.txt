@@ -1,0 +1,3 @@
+symlink after the entrypoint ran: absent
+ANSWER: no - INSTALL_DEPENDENCIES only installs when vendor/autoload.php is missing; an existing checkout needs a manual composer install
+OK

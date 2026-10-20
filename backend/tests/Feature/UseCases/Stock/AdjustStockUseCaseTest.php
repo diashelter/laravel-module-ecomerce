@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Inventory\DTOs\AdjustStockDTO;
-use App\Modules\Inventory\Enums\StockOperation;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Inventory\UseCases\AdjustStockUseCase;
-use App\Modules\Inventory\ValueObjects\StockRecord;
+use Modules\Inventory\Core\DTOs\AdjustStockDTO;
+use Modules\Inventory\Core\Enums\StockOperation;
+use Modules\Inventory\Core\UseCases\AdjustStockUseCase;
+use Modules\Inventory\Core\ValueObjects\StockRecord;
+use Modules\Inventory\Persistence\Models\Stock;
 
 it('returns the written stock row from the adjustment', function () {
     $product = productWithStock(5);

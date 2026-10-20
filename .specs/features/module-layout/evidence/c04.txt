@@ -1,0 +1,4 @@
+changed outside app-modules/sample:
+backend/composer.json
+backend/composer.lock
+OK

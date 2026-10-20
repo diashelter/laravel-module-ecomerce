@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Customers\Models\CustomerAddress;
+use Modules\Customers\Persistence\Models\CustomerAddress;
 
 const ADDRESS_KEYS = ['id', 'recipient_name', 'postal_code', 'street', 'number', 'complement', 'district', 'city', 'state', 'created_at'];
 

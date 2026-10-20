@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Repositories\OutboxMessageRepository;
+use Modules\Messaging\Persistence\Repositories\OutboxMessageRepository;
 use RuntimeException;
 
 /**

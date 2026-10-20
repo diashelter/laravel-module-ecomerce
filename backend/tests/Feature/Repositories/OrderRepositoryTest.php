@@ -1,20 +1,20 @@
 <?php
 
-use App\Modules\Ordering\Contracts\CustomerOrderHistory;
-use App\Modules\Ordering\Contracts\PayableOrders;
-use App\Modules\Ordering\Enums\BrazilianState;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\Models\OrderItem;
-use App\Modules\Ordering\Repositories\OrderRepository;
-use App\Modules\Ordering\ValueObjects\CustomerIds;
-use App\Modules\Ordering\ValueObjects\DeliveryAddress;
-use App\Modules\Ordering\ValueObjects\OrderForPayment;
-use App\Modules\Ordering\ValueObjects\OrderLine;
-use App\Modules\Ordering\ValueObjects\OrderLines;
-use App\Modules\Ordering\ValueObjects\OrderSummaries;
-use App\Modules\Ordering\ValueObjects\OrderSummary;
-use App\Modules\Ordering\ValueObjects\ShippingQuote;
+use Modules\Ordering\Contracts\CustomerOrderHistory;
+use Modules\Ordering\Contracts\PayableOrders;
+use Modules\Ordering\Core\Enums\BrazilianState;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Core\ValueObjects\CustomerIds;
+use Modules\Ordering\Core\ValueObjects\DeliveryAddress;
+use Modules\Ordering\Core\ValueObjects\OrderForPayment;
+use Modules\Ordering\Core\ValueObjects\OrderLine;
+use Modules\Ordering\Core\ValueObjects\OrderLines;
+use Modules\Ordering\Core\ValueObjects\OrderSummaries;
+use Modules\Ordering\Core\ValueObjects\OrderSummary;
+use Modules\Ordering\Core\ValueObjects\ShippingQuote;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Ordering\Persistence\Models\OrderItem;
+use Modules\Ordering\Persistence\Repositories\OrderRepository;
 
 beforeEach(fn () => $this->repository = app(OrderRepository::class));
 

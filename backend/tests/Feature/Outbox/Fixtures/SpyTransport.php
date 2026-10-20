@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Messaging\EventEnvelope;
-use App\Modules\Shared\Messaging\EventTransport;
 use Closure;
+use Modules\Messaging\Core\EventEnvelope;
+use Modules\Messaging\Core\EventTransport;
 use RuntimeException;
 
 /**

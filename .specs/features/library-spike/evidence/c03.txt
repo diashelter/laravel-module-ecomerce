@@ -1,0 +1,4 @@
+Module cache cleared!
+Modules cached successfully!
+CACHE_PATH: /Users/helterdias/Documents/POC/laravel-module-ecomerce/.claude/worktrees/spike-hel-12-library/backend/bootstrap/cache/app-modules.php
+OK

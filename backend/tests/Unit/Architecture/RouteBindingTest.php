@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Shared\Support\RecordId;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
+use Modules\Shared\Support\RecordId;
 
 /**
  * No route of the API resolves a record: it carries ids, and the use case or the repository finds

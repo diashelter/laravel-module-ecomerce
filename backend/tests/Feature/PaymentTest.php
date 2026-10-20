@@ -1,16 +1,16 @@
 <?php
 
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Payment\DTOs\ChargeRequest;
-use App\Modules\Payment\DTOs\ChargeResult;
-use App\Modules\Payment\Enums\PaymentStatus;
-use App\Modules\Payment\Models\Payment;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Payment\Core\DTOs\ChargeRequest;
+use Modules\Payment\Core\DTOs\ChargeResult;
+use Modules\Payment\Core\Enums\PaymentStatus;
+use Modules\Payment\Persistence\Models\Payment;
 
 function orderAwaitingPayment(CustomerAccount $customer, int $totalCents = 12345): Order
 {

@@ -1,0 +1,22 @@
+{
+    "name": "modules/identity",
+    "description": "The Identity module.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Identity\\": "src/",
+            "Modules\\Identity\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Identity\\Providers\\IdentityServiceProvider"
+            ]
+        }
+    }
+}

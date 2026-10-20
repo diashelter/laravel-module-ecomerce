@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Catalog\Contracts\ProductCatalog;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\ValueObjects\CatalogProducts;
-use App\Modules\Catalog\ValueObjects\ProductIds;
+use Modules\Catalog\Contracts\ProductCatalog;
+use Modules\Catalog\Core\ValueObjects\CatalogProducts;
+use Modules\Catalog\Core\ValueObjects\ProductIds;
+use Modules\Catalog\Persistence\Models\Product;
 
 beforeEach(fn () => $this->actingAs(admin()));
 

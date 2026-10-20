@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Repositories\ProductRepository;
-use App\Modules\Catalog\ValueObjects\CategoryIds;
+use Modules\Catalog\Core\ValueObjects\CategoryIds;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Repositories\ProductRepository;
 
 beforeEach(fn () => $this->repository = app(ProductRepository::class));
 

@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\Models\OrderItem;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Ordering\Persistence\Models\OrderItem;
 
 beforeEach(fn () => $this->actingAs(admin()));
 

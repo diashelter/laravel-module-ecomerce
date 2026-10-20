@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Ordering\Contracts\ShippingQuoter;
-use App\Modules\Ordering\Enums\BrazilianState;
+use Modules\Ordering\Contracts\ShippingQuoter;
+use Modules\Ordering\Core\Enums\BrazilianState;
 
 it('quotes the shipping for a state without a session', function () {
     $expected = ['state' => 'BA', 'price_cents' => 3800, 'delivery_business_days' => 8];
@@ -57,7 +57,7 @@ it('resolves the shipping quoter to the fulfillment rate table', function (strin
     $route = $this->getJson("/api/shipping/quote?state={$state}")->assertOk()->json('data');
     $quote = $quoter->quote(BrazilianState::from($state));
 
-    expect($quoter::class)->toStartWith('App\Modules\Fulfillment\\')
+    expect($quoter::class)->toStartWith('Modules\Fulfillment\\')
         ->and($quote->priceCents)->toBe($route['price_cents'])
         ->and($quote->deliveryBusinessDays)->toBe($route['delivery_business_days']);
 })->with(array_map(fn (BrazilianState $state) => $state->value, BrazilianState::cases()));

@@ -1,14 +1,14 @@
 <?php
 
-use App\Modules\Shared\Messaging\QueueEventTransport;
-use App\Modules\Shared\Messaging\RabbitMq\RabbitMqEventTransport;
-use App\Modules\Shared\Models\OutboxMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Pennant\Feature;
+use Modules\Messaging\Core\QueueEventTransport;
+use Modules\Messaging\Core\RabbitMq\RabbitMqEventTransport;
+use Modules\Messaging\Persistence\Models\OutboxMessage;
 use Tests\Feature\Outbox\Fixtures\SpyTransport;
 
 /** The rows of the flag in the Pennant table. */

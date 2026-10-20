@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Modules\Catalog\Models\Category;
 use Illuminate\Database\Seeder;
+use Modules\Catalog\Persistence\Models\Category;
 
 class CategorySeeder extends Seeder
 {

@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Fulfillment\Services\DeliveryCalendar;
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Ordering\Contracts\ShippingQuoter;
-use App\Modules\Ordering\Enums\BrazilianState;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Services\OrderCodeGenerator;
-use App\Modules\Payment\Enums\PaymentStatus;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Fulfillment\Core\Services\DeliveryCalendar;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Database\Factories\UserFactory;
+use Modules\Ordering\Contracts\ShippingQuoter;
+use Modules\Ordering\Core\Enums\BrazilianState;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Core\Services\OrderCodeGenerator;
+use Modules\Payment\Core\Enums\PaymentStatus;
 
 /**
  * The dataset of the load test stack (load-tests/, HEL-14). The DatabaseSeeder never calls it: it runs only

@@ -7,11 +7,22 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "internachi/modular": "^3.0",
         "laravel/framework": "^13.17",
         "laravel/horizon": "^5.50",
         "laravel/pennant": "^1.26",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "modules/backoffice": "*",
+        "modules/catalog": "*",
+        "modules/customers": "*",
+        "modules/fulfillment": "*",
+        "modules/identity": "*",
+        "modules/inventory": "*",
+        "modules/messaging": "*",
+        "modules/ordering": "*",
+        "modules/payment": "*",
+        "modules/shared": "*",
         "php-amqplib/php-amqplib": "^3.7"
     },
     "require-dev": {
@@ -88,5 +99,13 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [{
+        "name": "modules",
+        "type": "path",
+        "url": "app-modules/*",
+        "options": {
+            "symlink": true
+        }
+    }]
 }

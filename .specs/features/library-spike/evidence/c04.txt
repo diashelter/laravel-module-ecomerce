@@ -1,0 +1,5 @@
+library source: 55:			$this->app->bootstrapPath('cache/app-modules.php')
+ls: /tmp/laravel/app-modules.php: No such file or directory
+-rw-r--r--    1 root     root          1530 Oct 19 22:09 bootstrap/cache/app-modules.php
+ANSWER: no - the path is bootstrapPath('cache/app-modules.php') with no environment variable; only modules:cache and optimize write it, and it holds module paths, not configuration
+OK

@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Identity\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Http\Request;
+use Modules\Identity\Http\Middleware\EnsureUserIsAdmin;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 

@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
 
 it('lists active and inactive products with availability', function () {
     $available = productWithStock(10);

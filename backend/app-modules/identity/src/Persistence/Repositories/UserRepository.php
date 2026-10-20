@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Identity\Persistence\Repositories;
+
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Persistence\Models\User;
+use Modules\Shared\Repositories\BaseRepository;
+
+/**
+ * @extends BaseRepository<User>
+ */
+class UserRepository extends BaseRepository
+{
+    protected function model(): string
+    {
+        return User::class;
+    }
+
+    /**
+     * `role` is not fillable, so it is assigned explicitly instead of through mass assignment.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function createWithRole(array $attributes, UserRole $role): User
+    {
+        $user = new User($attributes);
+        $user->role = $role;
+        $user->save();
+
+        return $user;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateWithRole(User $user, array $attributes, UserRole $role): User
+    {
+        $user->fill($attributes);
+        $user->role = $role;
+        $user->save();
+
+        return $user;
+    }
+
+    /** @return LengthAwarePaginator<int, User> */
+    public function paginateNewestFirst(int $perPage): LengthAwarePaginator
+    {
+        return $this->query()
+            ->latest()
+            ->latest('id')
+            ->paginate($perPage);
+    }
+}

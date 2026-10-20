@@ -1,17 +1,17 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Customers\Models\CustomerAddress;
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Models\User;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Ordering\Contracts\ShippingQuoter;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Models\Order;
 use Database\Seeders\UserSeeder;
 use Illuminate\Support\Facades\Hash;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Customers\Persistence\Models\CustomerAddress;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Identity\Persistence\Models\User;
+use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Ordering\Contracts\ShippingQuoter;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Persistence\Models\Order;
 
 it('seeds a complete demo environment', function () {
     $this->seed();

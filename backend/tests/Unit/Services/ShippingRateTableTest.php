@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Fulfillment\Services\ShippingRateTable;
-use App\Modules\Ordering\Enums\BrazilianState;
+use Modules\Fulfillment\Core\Services\ShippingRateTable;
+use Modules\Ordering\Core\Enums\BrazilianState;
 
 /** The rate of every state, as the business set it: [price in cents, business days]. */
 function expectedRates(): array

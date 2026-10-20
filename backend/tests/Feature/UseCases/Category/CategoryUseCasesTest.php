@@ -1,12 +1,12 @@
 <?php
 
-use App\Modules\Catalog\DTOs\CategoryDTO;
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\UseCases\CreateCategoryUseCase;
-use App\Modules\Catalog\UseCases\DeleteCategoryUseCase;
-use App\Modules\Catalog\UseCases\UpdateCategoryUseCase;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Modules\Catalog\Core\DTOs\CategoryDTO;
+use Modules\Catalog\Core\UseCases\CreateCategoryUseCase;
+use Modules\Catalog\Core\UseCases\DeleteCategoryUseCase;
+use Modules\Catalog\Core\UseCases\UpdateCategoryUseCase;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 it('creates a category with the product count loaded', function () {
     $category = app(CreateCategoryUseCase::class)->execute(new CategoryDTO('Eletrônicos'));

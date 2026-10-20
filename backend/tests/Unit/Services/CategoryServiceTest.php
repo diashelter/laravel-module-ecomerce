@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Catalog\Services\CategoryService;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Modules\Catalog\Core\Services\CategoryService;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 it('allows deleting empty categories', function () {
     (new CategoryService)->ensureCanBeDeleted(false);

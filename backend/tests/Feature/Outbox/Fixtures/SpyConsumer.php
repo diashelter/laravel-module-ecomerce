@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Messaging\EventConsumer;
 use Closure;
 use Illuminate\Support\Facades\Context;
+use Modules\Messaging\Contracts\EventConsumer;
 
 /**
  * Keeps every event it receives and the Context request_id at the moment of the call. Bind the

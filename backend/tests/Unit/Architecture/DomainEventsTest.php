@@ -1,6 +1,7 @@
 <?php
 
-use App\Modules\Shared\Messaging\DomainEvent;
+use Illuminate\Support\Str;
+use Modules\Messaging\Contracts\DomainEvent;
 
 /*
  * Every event goes through the outbox (EventOutbox::record, in the transaction of the change it
@@ -9,13 +10,13 @@ use App\Modules\Shared\Messaging\DomainEvent;
  */
 
 $modulesWithEvents = array_map(
-    fn (string $directory) => basename(dirname($directory)),
-    glob(__DIR__.'/../../../app/Modules/*/Events', GLOB_ONLYDIR),
+    fn (string $directory) => Str::studly(basename(dirname($directory, 2))),
+    glob(__DIR__.'/../../../app-modules/*/src/Events', GLOB_ONLYDIR),
 );
 
 foreach ($modulesWithEvents as $module) {
     arch("implements DomainEvent in every module event: {$module}")
-        ->expect("App\\Modules\\{$module}\\Events")
+        ->expect("Modules\\{$module}\\Events")
         ->toImplement(DomainEvent::class);
 }
 
@@ -30,6 +31,6 @@ foreach ([
     'event',
 ] as $dispatching) {
     arch("uses no laravel event dispatching in the modules: {$dispatching}")
-        ->expect('App\Modules')
+        ->expect('Modules')
         ->not->toUse($dispatching);
 }

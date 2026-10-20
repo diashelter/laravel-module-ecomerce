@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Persistence\Models\Order;
 
 /** The 4 routes of the customer that point to a record: [method, uri, kind of record, expected status for the owner]. */
 dataset('customer record routes', [

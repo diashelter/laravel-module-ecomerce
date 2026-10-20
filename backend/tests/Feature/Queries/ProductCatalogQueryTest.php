@@ -1,11 +1,11 @@
 <?php
 
-use App\Modules\Catalog\Contracts\ProductCatalog;
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\ValueObjects\CatalogProduct;
-use App\Modules\Catalog\ValueObjects\CatalogProducts;
-use App\Modules\Catalog\ValueObjects\ProductIds;
+use Modules\Catalog\Contracts\ProductCatalog;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Core\ValueObjects\CatalogProduct;
+use Modules\Catalog\Core\ValueObjects\CatalogProducts;
+use Modules\Catalog\Core\ValueObjects\ProductIds;
+use Modules\Catalog\Persistence\Models\Product;
 
 it('finds catalog products by id for other modules', function () {
     $active = productWithStock(3, ['name' => 'Teclado', 'price_cents' => 15990, 'image_url' => 'https://example.com/teclado.png']);
