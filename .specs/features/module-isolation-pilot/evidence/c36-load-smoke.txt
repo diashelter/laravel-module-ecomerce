@@ -1,0 +1,269 @@
+CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml down --volumes --remove-orphans
+ Container ecommerce-load-queue-worker-1 Stopping 
+ Container ecommerce-load-nginx-1 Stopping 
+ Container ecommerce-load-event-consumer-1 Stopping 
+ Container ecommerce-load-outbox-relay-1 Stopping 
+ Container ecommerce-load-nginx-1 Stopped 
+ Container ecommerce-load-nginx-1 Removing 
+ Container ecommerce-load-nginx-1 Removed 
+ Container ecommerce-load-api-1 Stopping 
+ Container ecommerce-load-api-1 Stopped 
+ Container ecommerce-load-api-1 Removing 
+ Container ecommerce-load-api-1 Removed 
+ Container ecommerce-load-outbox-relay-1 Stopped 
+ Container ecommerce-load-outbox-relay-1 Removing 
+ Container ecommerce-load-queue-worker-1 Stopped 
+ Container ecommerce-load-queue-worker-1 Removing 
+ Container ecommerce-load-outbox-relay-1 Removed 
+ Container ecommerce-load-event-consumer-1 Stopped 
+ Container ecommerce-load-event-consumer-1 Removing 
+ Container ecommerce-load-queue-worker-1 Removed 
+ Container ecommerce-load-event-consumer-1 Removed 
+ Container ecommerce-load-redis-1 Stopping 
+ Container ecommerce-load-db-1 Stopping 
+ Container ecommerce-load-rabbitmq-1 Stopping 
+ Container ecommerce-load-redis-1 Stopped 
+ Container ecommerce-load-redis-1 Removing 
+ Container ecommerce-load-redis-1 Removed 
+ Container ecommerce-load-db-1 Stopped 
+ Container ecommerce-load-db-1 Removing 
+ Container ecommerce-load-db-1 Removed 
+ Container ecommerce-load-rabbitmq-1 Stopped 
+ Container ecommerce-load-rabbitmq-1 Removing 
+ Container ecommerce-load-rabbitmq-1 Removed 
+ Volume ecommerce-load_db_data Removing 
+ Network ecommerce-load_default Removing 
+ Network ecommerce-load_default Removed 
+ Volume ecommerce-load_db_data Removed 
+CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml up -d --wait db redis rabbitmq || { echo "Subindo o rabbitmq de novo."; CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml up -d --wait db redis rabbitmq; }
+ Volume ecommerce-load_db_data Creating 
+ Network ecommerce-load_default Creating 
+ Volume ecommerce-load_db_data Creating 
+ Network ecommerce-load_default Creating 
+ Volume ecommerce-load_db_data Created 
+ Volume ecommerce-load_db_data Created 
+ Network ecommerce-load_default Created 
+ Network ecommerce-load_default Created 
+ Container ecommerce-load-redis-1 Creating 
+ Container ecommerce-load-rabbitmq-1 Creating 
+ Container ecommerce-load-db-1 Creating 
+ Container ecommerce-load-redis-1 Created 
+ Container ecommerce-load-db-1 Created 
+ Container ecommerce-load-rabbitmq-1 Created 
+ Container ecommerce-load-redis-1 Starting 
+ Container ecommerce-load-db-1 Starting 
+ Container ecommerce-load-rabbitmq-1 Starting 
+ Container ecommerce-load-redis-1 Started 
+ Container ecommerce-load-db-1 Started 
+ Container ecommerce-load-rabbitmq-1 Started 
+ Container ecommerce-load-redis-1 Waiting 
+ Container ecommerce-load-db-1 Waiting 
+ Container ecommerce-load-rabbitmq-1 Waiting 
+ Container ecommerce-load-redis-1 Healthy 
+ Container ecommerce-load-db-1 Healthy 
+ Container ecommerce-load-rabbitmq-1 Healthy 
+CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml up -d api
+ Container ecommerce-load-redis-1 Running 
+ Container ecommerce-load-rabbitmq-1 Running 
+ Container ecommerce-load-db-1 Running 
+ Container ecommerce-load-api-1 Creating 
+ Container ecommerce-load-api-1 Created 
+ Container ecommerce-load-redis-1 Waiting 
+ Container ecommerce-load-rabbitmq-1 Waiting 
+ Container ecommerce-load-db-1 Waiting 
+ Container ecommerce-load-db-1 Healthy 
+ Container ecommerce-load-redis-1 Healthy 
+ Container ecommerce-load-rabbitmq-1 Healthy 
+ Container ecommerce-load-api-1 Starting 
+ Container ecommerce-load-api-1 Started 
+
+   INFO  Preparing database.  
+
+  Creating migration table ...................................... 28.45ms DONE
+
+   INFO  Running migrations.  
+
+  0001_01_01_000000_create_users_table .......................... 45.04ms DONE
+  0001_01_01_000001_create_cache_table .......................... 11.95ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 33.30ms DONE
+  2026_10_05_000000_create_customers_table ...................... 12.70ms DONE
+  2026_10_05_000001_create_categories_table ...................... 9.11ms DONE
+  2026_10_05_000002_create_products_table ........................ 8.35ms DONE
+  2026_10_05_000003_create_stocks_table ......................... 22.04ms DONE
+  2026_10_05_000004_create_category_product_table ................ 8.96ms DONE
+  2026_10_05_000005_create_orders_table ......................... 18.61ms DONE
+  2026_10_05_000006_create_order_items_table ..................... 9.72ms DONE
+  2026_10_06_000001_create_payments_table ........................ 7.04ms DONE
+  2026_10_07_000001_create_customer_addresses_table ............. 22.70ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................ 13.16ms DONE
+  2026_10_18_170032_create_features_table ........................ 6.66ms DONE
+  2026_10_20_000001_create_deliveries_table ...................... 6.47ms DONE
+  2026_10_21_000001_drop_payments_order_id_foreign ............... 0.93ms DONE
+
+
+   INFO  Seeding database.  
+
+  Database\Seeders\LoadTestSeeder .................................... RUNNING  
+  Database\Seeders\CategorySeeder .................................... RUNNING  
+  Database\Seeders\CategorySeeder ................................. 81 ms DONE  
+
+  Database\Seeders\LoadTestSeeder .............................. 5,974 ms DONE  
+
+CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache && php artisan modules:cache'
+
+   INFO  Configuration cached successfully.  
+
+
+   INFO  Routes cached successfully.  
+
+
+   INFO  Events cached successfully.  
+
+Module cache cleared!
+Modules cached successfully!
+CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml exec -T api php artisan events:transport redis --by=helterdias
+O transporte já é redis.
+CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml up -d queue-worker outbox-relay event-consumer nginx
+ Container ecommerce-load-rabbitmq-1 Running 
+ Container ecommerce-load-db-1 Running 
+ Container ecommerce-load-api-1 Running 
+ Container ecommerce-load-redis-1 Running 
+ Container ecommerce-load-nginx-1 Creating 
+ Container ecommerce-load-event-consumer-1 Creating 
+ Container ecommerce-load-queue-worker-1 Creating 
+ Container ecommerce-load-outbox-relay-1 Creating 
+ Container ecommerce-load-nginx-1 Created 
+ Container ecommerce-load-event-consumer-1 Created 
+ Container ecommerce-load-queue-worker-1 Created 
+ Container ecommerce-load-outbox-relay-1 Created 
+ Container ecommerce-load-redis-1 Waiting 
+ Container ecommerce-load-rabbitmq-1 Waiting 
+ Container ecommerce-load-db-1 Waiting 
+ Container ecommerce-load-rabbitmq-1 Waiting 
+ Container ecommerce-load-redis-1 Waiting 
+ Container ecommerce-load-rabbitmq-1 Waiting 
+ Container ecommerce-load-db-1 Waiting 
+ Container ecommerce-load-redis-1 Waiting 
+ Container ecommerce-load-db-1 Waiting 
+ Container ecommerce-load-redis-1 Waiting 
+ Container ecommerce-load-rabbitmq-1 Waiting 
+ Container ecommerce-load-db-1 Waiting 
+ Container ecommerce-load-db-1 Healthy 
+ Container ecommerce-load-db-1 Healthy 
+ Container ecommerce-load-redis-1 Healthy 
+ Container ecommerce-load-rabbitmq-1 Healthy 
+ Container ecommerce-load-redis-1 Healthy 
+ Container ecommerce-load-db-1 Healthy 
+ Container ecommerce-load-db-1 Healthy 
+ Container ecommerce-load-redis-1 Healthy 
+ Container ecommerce-load-nginx-1 Starting 
+ Container ecommerce-load-redis-1 Healthy 
+ Container ecommerce-load-rabbitmq-1 Healthy 
+ Container ecommerce-load-queue-worker-1 Starting 
+ Container ecommerce-load-rabbitmq-1 Healthy 
+ Container ecommerce-load-event-consumer-1 Starting 
+ Container ecommerce-load-rabbitmq-1 Healthy 
+ Container ecommerce-load-outbox-relay-1 Starting 
+ Container ecommerce-load-nginx-1 Started 
+ Container ecommerce-load-queue-worker-1 Started 
+ Container ecommerce-load-event-consumer-1 Started 
+ Container ecommerce-load-outbox-relay-1 Started 
+CACHE_LIMITER= docker compose -f load-tests/docker-compose.yml run --rm \
+		-e PROFILE=smoke -e RUN_STAMP=20261020-171558 \
+		-e K6_WEB_DASHBOARD=true -e K6_WEB_DASHBOARD_PERIOD=2s \
+		-e K6_WEB_DASHBOARD_EXPORT=results/smoke-20261020-171558.html \
+		k6 run main.js
+ Container ecommerce-load-k6-run-60f5dbf4e815 Creating 
+ Container ecommerce-load-k6-run-60f5dbf4e815 Created 
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: main.js
+ web dashboard: http://127.0.0.1:5665
+        output: -
+
+     scenarios: (100.00%) 3 scenarios, 3 max VUs, 5m30s max duration (incl. graceful stop):
+              * backoffice: 1 iterations for each of 1 VUs (maxDuration: 5m0s, exec: backoffice, gracefulStop: 30s)
+              * checkout: 1 iterations for each of 1 VUs (maxDuration: 5m0s, exec: checkout, gracefulStop: 30s)
+              * storefront: 1 iterations for each of 1 VUs (maxDuration: 5m0s, exec: storefront, gracefulStop: 30s)
+
+
+Run          [ 100% ] setup()
+backoffice   [   0% ]
+checkout     [   0% ]
+storefront   [   0% ]
+
+Run          [ 100% ] setup()
+backoffice   [   0% ]
+checkout     [   0% ]
+storefront   [   0% ]
+
+Run          [ 100% ] setup()
+backoffice   [   0% ]
+checkout     [   0% ]
+storefront   [   0% ]
+
+running (0m04.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+backoffice   [   0% ] 1 VUs  0m00.5s/5m0s  0/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m00.5s/5m0s  0/1 iters, 1 per VU
+storefront   [   0% ] 1 VUs  0m00.5s/5m0s  0/1 iters, 1 per VU
+
+running (0m05.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+backoffice   [   0% ] 1 VUs  0m01.5s/5m0s  0/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m01.5s/5m0s  0/1 iters, 1 per VU
+storefront   [   0% ] 1 VUs  0m01.5s/5m0s  0/1 iters, 1 per VU
+
+running (0m06.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+backoffice   [   0% ] 1 VUs  0m02.5s/5m0s  0/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m02.5s/5m0s  0/1 iters, 1 per VU
+storefront   [   0% ] 1 VUs  0m02.5s/5m0s  0/1 iters, 1 per VU
+
+running (0m07.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+backoffice   [   0% ] 1 VUs  0m03.5s/5m0s  0/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m03.5s/5m0s  0/1 iters, 1 per VU
+storefront   [   0% ] 1 VUs  0m03.5s/5m0s  0/1 iters, 1 per VU
+
+running (0m08.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+backoffice   [   0% ] 1 VUs  0m04.5s/5m0s  0/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m04.5s/5m0s  0/1 iters, 1 per VU
+storefront   [   0% ] 1 VUs  0m04.5s/5m0s  0/1 iters, 1 per VU
+
+running (0m09.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+backoffice   [   0% ] 1 VUs  0m05.5s/5m0s  0/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m05.5s/5m0s  0/1 iters, 1 per VU
+storefront   [   0% ] 1 VUs  0m05.5s/5m0s  0/1 iters, 1 per VU
+
+running (0m10.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+backoffice   [   0% ] 1 VUs  0m06.5s/5m0s  0/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m06.5s/5m0s  0/1 iters, 1 per VU
+storefront   [   0% ] 1 VUs  0m06.5s/5m0s  0/1 iters, 1 per VU
+
+running (0m11.0s), 1/3 VUs, 2 complete and 0 interrupted iterations
+backoffice ✓ [ 100% ] 1 VUs  0m07.2s/5m0s  1/1 iters, 1 per VU
+checkout     [   0% ] 1 VUs  0m07.5s/5m0s  0/1 iters, 1 per VU
+storefront ✓ [ 100% ] 1 VUs  0m06.9s/5m0s  1/1 iters, 1 per VU
+
+k6 · perfil smoke · 11.24 s
+
+Limites de aprovação:
+  ok    unexpected_errors: rate==0
+  ok    checks: rate==1
+
+Checks: 48 de 48 sem falha
+
+Métricas:
+  http_reqs: count=93.00 rate=8.28
+  http_req_duration: p(90)=146.19 p(95)=392.22 p(99)=563.23 count=93.00 avg=83.62 min=5.29 med=35.84 max=1013.84
+  unexpected_errors: rate=0.00 passes=0.00 fails=93.00
+  order_payable_wait: count=2.00 avg=734.00 min=579.00 med=734.00 max=889.00 p(90)=858.00 p(95)=873.50 p(99)=885.90
+
+running (0m11.2s), 0/3 VUs, 3 complete and 0 interrupted iterations
+backoffice ✓ [ 100% ] 1 VUs  0m07.2s/5m0s  1/1 iters, 1 per VU
+checkout   ✓ [ 100% ] 1 VUs  0m07.7s/5m0s  1/1 iters, 1 per VU
+storefront ✓ [ 100% ] 1 VUs  0m06.9s/5m0s  1/1 iters, 1 per VU

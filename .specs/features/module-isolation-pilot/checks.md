@@ -219,3 +219,8 @@ Progresso do builder:
 - Renegociado com diashelter em 2026-10-20: o Inventory saiu de C1 e C6 (27 arquivos, 5 módulos), porque a prova C6 mostrou que o `migrate:fresh` dele falha sem o Catalog (chave `stocks.product_id`); o `StockServiceTest` voltou para `backend/tests` (assunção 8 do plano). A prova C6 também achou um caso de composição no `EventDeliveryTest` do Messaging, que voltou para `tests/Feature/Outbox/ModuleEventsListenersTest.php`
 - C6 verde para `payment`, `identity`, `messaging`, `shared` e `catalog` (evidência em `evidence/c06-<módulo>.txt`)
 - C1, C4, C5, C9, C21 (a segunda prova), C27 e C29 verdes pelos scripts de `proofs/`; o C9 foi corrigido para a contagem real da base (628) e passou a conferir cada caso pelo nome
+- C2, C33, C34, C35 e C36 verdes no `HEAD` final (`make test`: 2254 testes; o smoke de carga com as 3 jornadas); C6 de novo verde para os 5 módulos
+
+- **Boundary:** C1 a C38 fechados no commit `test(module-isolation): record the final proofs of the pilot`
+- **Settled mid-build:** diashelter tirou o Inventory de C1 e C6 (o `StockServiceTest` ficou na raiz, assunção 8); o C9 passou a usar a contagem real da base (628) e a conferir cada caso pelo nome, com as duas renomeações que o C11 e o C28 pedem; a linha `payments.order_id restricts` do `UuidKeysTest` saiu pela Key decision 5; o caso de listeners do `EventDeliveryTest` voltou para a composição (`Outbox/ModuleEventsListenersTest`), e a regra do C8 passou a acusar também o apoio da suíte da raiz
+- **Abandoned:** trocar o `foreignUuid('order_id')` por `uuid('order_id')` na migration editada; voltou ao literal aprovado na porta 5 (só sai o `->constrained()->restrictOnDelete()`)

@@ -1,8 +1,8 @@
-Preparing worktree (detached HEAD 441e377)
-HEAD is now at 441e377 test(messaging): keep the module events listener check in the composition suite
+Preparing worktree (detached HEAD 25d37f4)
+HEAD is now at 25d37f4 docs(module-isolation): describe the integration package and the module tests
 removal copy messaging-alone without: backoffice catalog customers fulfillment identity inventory ordering payment
- Container ecommerce-api-run-4ee9ee331751 Creating 
- Container ecommerce-api-run-4ee9ee331751 Created 
+ Container ecommerce-api-run-9c645fa20c87 Creating 
+ Container ecommerce-api-run-9c645fa20c87 Created 
 ./composer.json has been updated
 Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/identity modules/inventory modules/ordering modules/payment
 Loading composer repositories with package information
@@ -61,102 +61,100 @@ Use the `composer fund` command to find out more!
 No security vulnerability advisories found.
 Banco de testes: ecommerce_testing_removal_messaging_alone (vhost do RabbitMQ: ecommerce_testing_removal_messaging_alone)
 packages left: integration messaging shared 
- Container ecommerce-api-run-d56fe0da7232 Creating 
- Container ecommerce-api-run-d56fe0da7232 Created 
-
-  Dropping all tables ........................................... 35.37ms DONE
+ Container ecommerce-api-run-f10512ce97a1 Creating 
+ Container ecommerce-api-run-f10512ce97a1 Created 
 
    INFO  Preparing database.  
 
-  Creating migration table ....................................... 8.92ms DONE
+  Creating migration table ...................................... 25.18ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000001_create_cache_table ........................... 8.10ms DONE
-  0001_01_01_000002_create_jobs_table ............................ 9.55ms DONE
-  2026_10_15_000001_create_outbox_messages_table ................. 4.30ms DONE
-  2026_10_18_170032_create_features_table ........................ 3.24ms DONE
+  0001_01_01_000001_create_cache_table .......................... 18.90ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 21.67ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................ 10.11ms DONE
+  2026_10_18_170032_create_features_table ........................ 6.84ms DONE
 
 migrate:fresh: ok
- Container ecommerce-api-run-72a0f875c3d2 Creating 
- Container ecommerce-api-run-72a0f875c3d2 Created 
+ Container ecommerce-api-run-ac863d1bba3f Creating 
+ Container ecommerce-api-run-ac863d1bba3f Created 
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\BrokerIsolationTest
-  ✓ it connects to the checkout vhost                                    0.49s  
-  ✓ it starts every broker test on an empty vhost @ repetition 1 of 2    0.07s  
-  ✓ it starts every broker test on an empty vhost @ repetition 2 of 2    0.06s  
+  ✓ it connects to the checkout vhost                                    0.87s  
+  ✓ it starts every broker test on an empty vhost @ repetition 1 of 2    0.10s  
+  ✓ it starts every broker test on an empty vhost @ repetition 2 of 2    0.11s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\DeadDeliveriesCommandsTest
-  ✓ it reports no dead delivery                                          0.23s  
-  ✓ it lists every dead delivery without taking it from the queue        0.31s  
-  ✓ it returns every dead delivery to its own consumer queue             0.19s  
-  ✓ it returns only the dead deliveries of the given message             0.24s  
-  ✓ it refuses to return a message that is not dead                      0.18s  
-  ✓ it keeps every dead delivery somewhere when the retry stops halfway  0.49s  
-  ✓ it sends a returned delivery back to the dead queue after three mor… 1.25s  
-  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.14s  
-  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.03s  
+  ✓ it reports no dead delivery                                          0.35s  
+  ✓ it lists every dead delivery without taking it from the queue        0.80s  
+  ✓ it returns every dead delivery to its own consumer queue             0.49s  
+  ✓ it returns only the dead deliveries of the given message             0.51s  
+  ✓ it refuses to return a message that is not dead                      0.32s  
+  ✓ it keeps every dead delivery somewhere when the retry stops halfway  0.41s  
+  ✓ it sends a returned delivery back to the dead queue after three mor… 1.35s  
+  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.44s  
+  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.29s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\EventTransportFlagTest
-  ✓ it resolves the event transport to redis when nothing is stored      0.04s  
-  ✓ it shows the current event transport                                 0.04s  
-  ✓ it switches the event transport to rabbitmq                          0.03s  
-  ✓ it refuses an unknown event transport with ('bogus')                 0.03s  
-  ✓ it refuses an unknown event transport with ('Redis')                 0.03s  
-  ✓ it refuses an unknown event transport with ('kafka')                 0.03s  
-  ✓ it changes nothing when the event transport already has the given v… 0.05s  
-  ✓ it logs who changed the event transport                              0.04s  
-  ✓ it changes the event transport with redis unreachable                0.04s  
-  ✓ it hands the envelope to the transport of the flag with dataset "re… 0.08s  
-  ✓ it hands the envelope to the transport of the flag with dataset "ra… 0.04s  
-  ✓ it publishes through the new transport on the next relay cycle       0.06s  
-  ✓ it logs each transport change once                                   0.06s  
+  ✓ it resolves the event transport to redis when nothing is stored      0.12s  
+  ✓ it shows the current event transport                                 0.09s  
+  ✓ it switches the event transport to rabbitmq                          0.09s  
+  ✓ it refuses an unknown event transport with ('bogus')                 0.08s  
+  ✓ it refuses an unknown event transport with ('Redis')                 0.07s  
+  ✓ it refuses an unknown event transport with ('kafka')                 0.07s  
+  ✓ it changes nothing when the event transport already has the given v… 0.12s  
+  ✓ it logs who changed the event transport                              0.16s  
+  ✓ it changes the event transport with redis unreachable                0.18s  
+  ✓ it hands the envelope to the transport of the flag with dataset "re… 0.27s  
+  ✓ it hands the envelope to the transport of the flag with dataset "ra… 0.07s  
+  ✓ it publishes through the new transport on the next relay cycle       0.09s  
+  ✓ it logs each transport change once                                   0.11s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\MessagingModuleTest
-  ✓ it exposes exactly four messaging contracts                          0.03s  
-  ✓ it registers the five event commands from its own provider           0.06s  
+  ✓ it exposes exactly four messaging contracts                          0.07s  
+  ✓ it registers the five event commands from its own provider           0.18s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\RabbitMqEventTransportTest
-  ✓ it declares the topology before the first message                    0.14s  
-  ✓ it publishes one persistent message with the envelope as json        0.16s  
-  ✓ it copies the message once into each consumer queue                  0.17s  
-  ✓ it publishes an event with no consumer without error                 0.14s  
-  ✓ it marks the message published once the broker confirms              0.16s  
-  ✓ it keeps the message pending when the broker is unreachable          0.08s  
-  ✓ it keeps the message pending when the broker refuses it              0.11s  
-  ✓ it throws when the broker does not confirm in five seconds           0.10s  
+  ✓ it declares the topology before the first message                    0.62s  
+  ✓ it publishes one persistent message with the envelope as json        0.47s  
+  ✓ it copies the message once into each consumer queue                  0.47s  
+  ✓ it publishes an event with no consumer without error                 0.36s  
+  ✓ it marks the message published once the broker confirms              0.34s  
+  ✓ it keeps the message pending when the broker is unreachable          0.15s  
+  ✓ it keeps the message pending when the broker refuses it              0.19s  
+  ✓ it throws when the broker does not confirm in five seconds           0.19s  
 
    PASS  Appmodules\messaging\tests\Feature\Outbox\EventDeliveryTest
-  ✓ it pushes one delivery per subscribed consumer with the whole envel… 0.06s  
-  ✓ it publishes an envelope with no subscribed consumer without pushin… 0.04s  
-  ✓ it rebuilds the event and calls the consumer once                    0.04s  
-  ✓ it restores the envelope request id while the consumer runs          0.03s  
-  ✓ it clears a stale request id when the envelope has none              0.05s  
-  ✓ it refuses an envelope version the event does not declare            0.06s  
-  ✓ it retries only the failing consumer three times and fails it alone  3.11s  
+  ✓ it pushes one delivery per subscribed consumer with the whole envel… 0.08s  
+  ✓ it publishes an envelope with no subscribed consumer without pushin… 0.06s  
+  ✓ it rebuilds the event and calls the consumer once                    0.05s  
+  ✓ it restores the envelope request id while the consumer runs          0.04s  
+  ✓ it clears a stale request id when the envelope has none              0.04s  
+  ✓ it refuses an envelope version the event does not declare            0.04s  
+  ✓ it retries only the failing consumer three times and fails it alone  3.14s  
   ✓ it refuses a consumer that does not match the subscribed event with… 0.05s  
   ✓ it refuses a consumer that does not match the subscribed event with… 0.03s  
-  ✓ it refuses two event classes under the same name                     0.02s  
-  ✓ it delivers an envelope whose message was already pruned             0.03s  
+  ✓ it refuses two event classes under the same name                     0.03s  
+  ✓ it delivers an envelope whose message was already pruned             0.05s  
 
    PASS  Appmodules\messaging\tests\Feature\Outbox\OutboxRelayTest
-  ✓ it publishes every pending message in order with once                0.04s  
-  ✓ it stops at the first transport failure and keeps the rest pending   0.03s  
-  ✓ it exits with 1 when the transport fails with once                   0.03s  
-  ✓ it claims the pending messages with for update skip locked           0.03s  
-  ✓ it hands the transport an envelope built from every column of the r… 0.03s  
-  ✓ it claims publishes and marks the messages in one transaction        0.03s  
-  ✓ it hands a message again when the relay stops before the commit      0.03s  
-  ✓ it waits 500 ms after a cycle with no pending message                0.03s  
-  ✓ it waits 5 seconds after a transport failure                         0.03s  
-  ✓ it prunes published messages older than 7 days and keeps pending on… 0.03s  
-  ✓ it prunes again only after an hour                                   0.06s  
-  ✓ it exits after the cycle when the queue restart signal changes       0.03s  
-  ✓ it prints one warning line when the transport refuses a message      0.03s  
-  ✓ it keeps relaying while the cache with the restart signal is unreac… 0.03s  
+  ✓ it publishes every pending message in order with once                0.07s  
+  ✓ it stops at the first transport failure and keeps the rest pending   0.08s  
+  ✓ it exits with 1 when the transport fails with once                   0.09s  
+  ✓ it claims the pending messages with for update skip locked           0.07s  
+  ✓ it hands the transport an envelope built from every column of the r… 0.07s  
+  ✓ it claims publishes and marks the messages in one transaction        0.07s  
+  ✓ it hands a message again when the relay stops before the commit      0.09s  
+  ✓ it waits 500 ms after a cycle with no pending message                0.10s  
+  ✓ it waits 5 seconds after a transport failure                         0.09s  
+  ✓ it prunes published messages older than 7 days and keeps pending on… 0.08s  
+  ✓ it prunes again only after an hour                                   0.16s  
+  ✓ it exits after the cycle when the queue restart signal changes       0.08s  
+  ✓ it prints one warning line when the transport refuses a message      0.08s  
+  ✓ it keeps relaying while the cache with the restart signal is unreac… 0.07s  
 
   Tests:    60 passed (322 assertions)
-  Duration: 9.62s
+  Duration: 15.86s
 
 pest app-modules/messaging/tests:   Tests:    60 passed (322 assertions) (exit 0)
 PASS: the tests of messaging pass with only messaging, shared, messaging and integration installed
