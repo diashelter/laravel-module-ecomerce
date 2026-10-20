@@ -1,4 +1,1 @@
-R100 renames: 11
-other changes in migration folders: 0
-root: 0001_01_01_000001_create_cache_table.php 0001_01_01_000002_create_jobs_table.php 2026_10_18_170032_create_features_table.php 
-OK - 11 migrations moved byte for byte to their owners; 3 framework migrations stay
+FAIL: no byte-identical rename for 2026_10_05_000003_create_stocks_table -> catalog
