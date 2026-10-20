@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/event-idempotency/plan.md`
 
-23 checks em 3 slices · 4 one-way doors (a chave de "já agendei", o estado "entregue", o padrão do produtor, o nome da migration) · 0 open
+24 checks em 3 slices · 4 one-way doors (a chave de "já agendei", o estado "entregue", o padrão do produtor, o nome da migration) · 0 open
 
 Notação das provas. `make test-filter FILTER="<regex>"` roda no checkout da construção (no worktree, o Makefile já usa o código e o banco de testes dele) e passa no `--filter` do Pest o trecho do nome do teste. Os testes novos nomeados abaixo são escritos antes do código que os satisfaz e a partir deste texto, nunca lendo a implementação. As provas de comando são scripts em `.specs/features/event-idempotency/proofs/`, que saem com 0 só quando a afirmação vale e gravam a saída em `.specs/features/event-idempotency/evidence/c<NN>.txt`. Nos testes de reentrega, "entregar duas vezes" é chamar o `EventDelivery` duas vezes com o mesmo `EventEnvelope`, como o `DeliverEvent` e o `events:consume` fazem, e nunca o `handle()` direto.
 
