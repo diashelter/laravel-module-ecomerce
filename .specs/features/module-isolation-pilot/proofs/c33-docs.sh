@@ -22,7 +22,9 @@ stale = [r'congela os 15', r'\b15 nomes', r'continuam em `backend/tests`', r'`pa
          r'Ordering \(lido pelo Payment\)', r'OrderForPayment`, para o Payment',
          r'^\| Tentativas de pagamento presas ao pedido por `restrictOnDelete`',
          # found by the second round: payments named as restricted, and the vocabulary count before OrderToPay
-         r'como `payments`\)', r'Hoje são 29 tipos públicos']
+         r'como `payments`\)', r'Hoje são 29 tipos públicos',
+         # found by the third round: the vocabulary count in any phrasing (30 public types since OrderToPay)
+         r'\bsão 29 (tipos públicos|e 28)\b']
 # any other line that still describes payments as restricted on delete, unless it says the key is gone
 GONE = re.compile(r'saiu|sem chave|isola|Resolvida|perdeu|não tem|nenhuma|drop_payments|era até|tirar')
 bad = 0
