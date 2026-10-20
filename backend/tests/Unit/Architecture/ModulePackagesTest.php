@@ -82,6 +82,11 @@ it('gives every module the manifest of the design', function (string $module) {
     $manifest = json_decode((string) file_get_contents(dirname(ModuleLayout::srcOf($module)).'/composer.json'), true, flags: JSON_THROW_ON_ERROR);
     $expected = ["Modules\\{$module}\\" => 'src/'];
 
+    // The tests of a module are autoloaded by the module itself (Composer ignores the autoload-dev of a dependency).
+    if (is_dir(dirname(ModuleLayout::srcOf($module)).'/tests')) {
+        $expected["Modules\\{$module}\\Tests\\"] = 'tests/';
+    }
+
     if (is_dir(dirname(ModuleLayout::srcOf($module)).'/database/factories')) {
         $expected["Modules\\{$module}\\Database\\Factories\\"] = 'database/factories/';
     }
@@ -90,3 +95,13 @@ it('gives every module the manifest of the design', function (string $module) {
         ->and($manifest['autoload']['psr-4'])->toBe($expected)
         ->and($manifest['extra']['laravel']['providers'])->toBe(["Modules\\{$module}\\Providers\\{$module}ServiceProvider"]);
 })->with(ModuleLayout::modules());
+
+it('maps no module test namespace in the root composer', function () {
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, flags: JSON_THROW_ON_ERROR);
+    $namespaces = [
+        ...array_keys($composer['autoload']['psr-4'] ?? []),
+        ...array_keys($composer['autoload-dev']['psr-4'] ?? []),
+    ];
+
+    expect(array_filter($namespaces, fn (string $namespace) => str_starts_with($namespace, 'Modules\\')))->toBe([]);
+});

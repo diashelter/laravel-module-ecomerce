@@ -2,14 +2,14 @@
 
 use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
 use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Messaging\Tests\Fixtures\OtherEvent;
+use Modules\Messaging\Tests\Fixtures\OtherEventConsumer;
+use Modules\Messaging\Tests\Fixtures\SampleEvent;
+use Modules\Messaging\Tests\Fixtures\SpyConsumer;
 use Modules\Ordering\Core\Consumers\MarkOrderAsAwaitingPayment;
 use Modules\Ordering\Core\Consumers\MarkOrderAsDelivered;
 use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
 use Modules\Ordering\Core\Consumers\RecordEstimatedDelivery;
-use Tests\Feature\Outbox\Fixtures\OtherEvent;
-use Tests\Feature\Outbox\Fixtures\OtherEventConsumer;
-use Tests\Feature\Outbox\Fixtures\SampleEvent;
-use Tests\Feature\Outbox\Fixtures\SpyConsumer;
 
 /** Everything the subscriptions hold for the consumers, to compare before and after a refused one. */
 function subscriptionsSnapshot(EventSubscriptions $subscriptions): array

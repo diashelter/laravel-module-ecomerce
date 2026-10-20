@@ -6,10 +6,10 @@ use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
 use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Fulfillment\Persistence\Models\Delivery;
 use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Tests\Fixtures\FailingOutbox;
 use Modules\Ordering\Core\Enums\OrderStatus;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Persistence\Models\Order;
-use Tests\Feature\Outbox\Fixtures\FailingOutbox;
 
 /**
  * DeliverOrder is a queue job, so it runs again on a retry and may be queued twice: only the first

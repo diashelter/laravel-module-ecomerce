@@ -4,8 +4,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Tests\Fixtures\SampleEvent;
 use Modules\Ordering\Events\OrderPlaced;
-use Tests\Feature\Outbox\Fixtures\SampleEvent;
 
 /** Records the event through the bound outbox, inside a transaction of its own. */
 function recordInTransaction(object $event): void

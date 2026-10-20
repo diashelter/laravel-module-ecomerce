@@ -212,3 +212,7 @@ Tamanho em tokens, pela conta `wc -c` dividida por quatro, sobre o que cada slic
   - os scripts de prova, ≈ 40 KB.
 - **Total ≈ 92k**, abaixo do budget de 150k: um builder, sem pergunta.
 - **Mechanism:** one builder.
+
+Progresso do builder:
+
+- C3, C7 e C10 verdes no `make test` do commit `test(modules): move the isolated tests into their modules` (2106 testes); os 28 arquivos já estão nos módulos, e o C1 fecha quando a sua prova rodar

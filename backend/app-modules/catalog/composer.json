@@ -8,6 +8,7 @@
     "autoload": {
         "psr-4": {
             "Modules\\Catalog\\": "src/",
+            "Modules\\Catalog\\Tests\\": "tests/",
             "Modules\\Catalog\\Database\\Factories\\": "database/factories/"
         }
     },

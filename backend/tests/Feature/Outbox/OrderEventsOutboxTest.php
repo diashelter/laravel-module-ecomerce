@@ -6,12 +6,12 @@ use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
 use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Messaging\Contracts\EventOutbox;
 use Modules\Messaging\Core\EventTransport;
+use Modules\Messaging\Tests\Fixtures\FailingOutbox;
 use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
 use Modules\Ordering\Core\Enums\OrderStatus;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Persistence\Models\Order;
 use Modules\Payment\Events\PaymentApproved;
-use Tests\Feature\Outbox\Fixtures\FailingOutbox;
 
 /*
  * The order events and the change they announce commit together, and the three windows of the
