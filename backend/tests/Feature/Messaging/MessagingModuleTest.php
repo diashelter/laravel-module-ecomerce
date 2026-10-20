@@ -40,6 +40,10 @@ it('registers the five event commands from its own provider', function () {
         expect($wired)->not->toContain($contract);
     }
 
-    expect(file_get_contents((new ReflectionClass(AppServiceProvider::class))->getFileName()))
-        ->not->toContain('RelayOutboxCommand', 'EventTransportSelector', 'EventTransport::class', 'EventOutbox', 'EventSubscription', 'OutboxMessageRepository');
+    // One expectation per needle: Pest negates a list of needles as "not all of them", which a single stray word passes.
+    $source = (string) file_get_contents((new ReflectionClass(AppServiceProvider::class))->getFileName());
+
+    foreach (['RelayOutboxCommand', 'EventTransportSelector', 'EventTransport::class', 'EventOutbox', 'EventSubscription', 'OutboxMessageRepository'] as $needle) {
+        expect($source)->not->toContain($needle);
+    }
 });
