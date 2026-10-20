@@ -163,7 +163,7 @@ A HEL-13 mede o mesmo perfil `load` com o relay publicando por cada transporte (
 
 ### Os módulos como pacotes (HEL-12)
 
-A HEL-12 trocou os módulos de `App\Modules` por pacotes do `internachi/modular`. O `load` no commit `0966d0b`, duas rodadas seguidas, ficou **fora dos limites** da `lib/baseline.js` (a vitrine e o `POST /api/orders`), e o mesmo `load` em `main` (`f1dd960`), medido logo antes na mesma máquina, ficou dentro. A causa foi achada e corrigida (abaixo), e a linha do `redis` no commit `299af92` entrou na tabela por transporte, acima.
+A HEL-12 trocou os módulos de uma pasta do pacote da aplicação por pacotes do `internachi/modular`. O `load` no commit `0966d0b`, duas rodadas seguidas, ficou **fora dos limites** da `lib/baseline.js` (a vitrine e o `POST /api/orders`), e o mesmo `load` em `main` (`f1dd960`), medido logo antes na mesma máquina, ficou dentro. A causa foi achada e corrigida (abaixo), e a linha do `redis` no commit `299af92` entrou na tabela por transporte, acima.
 
 | Rodada | Commit | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Limites |
 |---|---|---|---|---|---|
