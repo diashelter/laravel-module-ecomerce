@@ -14,6 +14,8 @@ x-php-environment: &php-environment
   APP_CONFIG_CACHE: /tmp/laravel/config.php
   APP_ROUTES_CACHE: /tmp/laravel/routes-v7.php
   APP_EVENTS_CACHE: /tmp/laravel/events.php
+  # The module library has no setting for its cache path: the app binds it to this variable (AppServiceProvider).
+  APP_MODULES_CACHE: /tmp/laravel/app-modules.php
   # Every value that separates the two stacks is set here: an environment variable wins over backend/.env.
   DB_CONNECTION: pgsql
   DB_HOST: db

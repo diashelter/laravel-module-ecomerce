@@ -54,6 +54,7 @@ Load Baseline: `make load-test` (exists) -> `lib/baseline.js` (exists) -> tabela
 | o dono do padrão de UUID | `Route::pattern('<parâmetro>', RecordId::PATTERN)` no `register()` do `<Módulo>ServiceProvider` dono (`product` e `category` no Catalog, `stock` no Inventory, `user` no Identity, `customer` e `address` no Customers, `order` no Ordering) | no `boot()`: o spike mostrou que a rota copia os padrões globais ao ser criada e a biblioteca a cria antes do `boot()` (14 testes falharam). Na lista do `AppServiceProvider`: some a vantagem de o módulo ser dono do que declara |
 
 Key placement (as 11 migrations que se movem, por tabela): `users`, `password_reset_tokens`, `sessions` e `customers` no Identity; `categories`, `products`, `category_product` no Catalog; `stocks` no Inventory; `orders`, `order_items` no Ordering; `payments` no Payment; `customer_addresses` no Customers; `outbox_messages` no Messaging. Ficam na raiz `cache`, `jobs` e `features`.
+| o caminho do cache de módulos | o `AppServiceProvider::register()` religa o `InterNACHI\Modular\Support\Cache` com o caminho `APP_MODULES_CACHE` quando a variável existe, e `bootstrap/cache/app-modules.php` quando não existe (o mesmo critério do `APP_CONFIG_CACHE` do framework); a pilha de carga define `APP_MODULES_CACHE=/tmp/laravel/app-modules.php` e roda `modules:cache` | rodar `modules:cache` sem desviar o caminho: grava `bootstrap/cache/app-modules.php`, que a API de dev também lê, e um módulo novo sumiria do dev até alguém limpar o cache. Tirar a descoberta do caminho quente por outro meio (opcache preload, classmap): não corta o `Finder` do filesystem a cada boot, e não foi medido. Ganha o cache sem desvio se o dev também rodasse `modules:cache` a cada troca de branch, o que o `AGENTS.md` não pede. *Porta acrescentada na rodada 2 (2026-10-20), depois do Load Baseline reprovar (ver `load-tests/README.md`).* |
 
 - Nada mais nesta entrega é difícil de reverter
 
@@ -96,6 +97,9 @@ Onze arquivos em `app-modules/<módulo>/database/migrations`, três na raiz, o b
 13. WHEN `make load-test TYPE=load` roda no commit final THEN ele SHALL terminar com exit 0, o que exige p95 da vitrine até 40 ms, de `POST /api/orders` até 70 ms, da `order_payable_wait` até 2.450 ms e 0% de erro inesperado
 14. The `load-tests/README.md` SHALL ganhar na tabela "Linha de base por transporte" uma linha `redis`, `load`, do commit final, só com duas rodadas seguidas cujo p95 difere menos de 20% sobre o menor, e a coluna "Mudou desde a série anterior" SHALL nomear a HEL-12
 15. The `load-tests/README.md` SHALL registrar o custo de descobrir os módulos a cada boot sem o cache de módulos, como a mediana em ms de 20 execuções de `php artisan --version` sem `modules:cache` e com ele, medidas num worktree descartável
+21. The system SHALL ler o caminho do cache de módulos de `APP_MODULES_CACHE` quando a variável existe e de `bootstrap/cache/app-modules.php` quando não existe, e `modules:cache` com a variável definida SHALL gravar o arquivo nesse caminho e nenhum arquivo em `bootstrap/cache`
+22. WHILE a pilha de carga está de pé, o `Compose` de carga SHALL definir `APP_MODULES_CACHE=/tmp/laravel/app-modules.php` nos 4 serviços PHP e o `make load-test` SHALL rodar `modules:cache` no container `api` antes do k6
+
 
 **Independent test:** `make load-test TYPE=load` duas vezes seguidas e comparar com a linha de `99094d7`.
 
@@ -119,7 +123,7 @@ Onze arquivos em `app-modules/<módulo>/database/migrations`, três na raiz, o b
 | seeders por módulo | o `DatabaseSeeder` e os seeders ficam na raiz (decisão do design) |
 | dividir o arquivo da `users` para tirar `sessions` do Identity | mudaria uma migration já executada; o README anota que `sessions` mora no Identity só por causa do arquivo |
 | medir `load` com `TRANSPORT=rabbitmq` de novo | a mudança desta entrega não toca o transporte; a linha do rabbitmq de `99094d7` continua valendo |
-| `modules:cache` no `make optimize` ou na pilha de carga | o `AGENTS.md` proíbe na pilha de carga, e o ganho é uma otimização que a medida do AC 15 vai dizer se vale |
+| `modules:cache` no `make optimize` | o ganho é uma otimização que a medida do AC 15 vai dizer se vale. (Na pilha de carga ele entrou na rodada 2, 2026-10-20, pela porta 4 da Landing: o Load Baseline reprovou sem ele.) |
 | mesclar a branch da PR 27 ou fechar a HEL-12 no Linear | o merge e o estado da issue são do dono, depois da revisão |
 | mover os testes para dentro dos módulos | o Pest separa por tipo (Out do design) |
 

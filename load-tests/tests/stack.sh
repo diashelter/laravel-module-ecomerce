@@ -77,6 +77,7 @@ case "$CASE" in
             expect_eq "$service APP_CONFIG_CACHE" "$(env_of $service APP_CONFIG_CACHE)" /tmp/laravel/config.php
             expect_eq "$service APP_ROUTES_CACHE" "$(env_of $service APP_ROUTES_CACHE)" /tmp/laravel/routes-v7.php
             expect_eq "$service APP_EVENTS_CACHE" "$(env_of $service APP_EVENTS_CACHE)" /tmp/laravel/events.php
+            expect_eq "$service APP_MODULES_CACHE" "$(env_of $service APP_MODULES_CACHE)" /tmp/laravel/app-modules.php
             expect_eq "$service LOG_CHANNEL" "$(env_of $service LOG_CHANNEL)" stderr
             expect_eq "$service LOG_LEVEL" "$(env_of $service LOG_LEVEL)" warning
         done

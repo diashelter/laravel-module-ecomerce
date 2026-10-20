@@ -43,10 +43,10 @@ O projeto `ecommerce-load` (`load-tests/docker-compose.yml`) roda ao lado da pil
   - `APP_ENV=production` e `APP_DEBUG=false`;
   - logs de `warning` para cima na saída padrão;
   - opcache sem revalidação de arquivos;
-  - config, rotas e eventos em cache;
+  - config, rotas, eventos e módulos em cache;
   - PHP-FPM com `pm = static` e 16 workers (o de dev tem 5 dinâmicos);
   - bcrypt com custo 12, como em dev.
-- **Nada gravado na árvore que a pilha de dev lê.** Os caches ficam em `/tmp/laravel` dentro do container, e os logs vão para a saída padrão. Nunca rode `php artisan optimize` no container de carga: o cache de configuração iria para `backend/bootstrap/cache`, e a API de dev passaria a ler o banco de carga.
+- **Nada gravado na árvore que a pilha de dev lê.** Os caches ficam em `/tmp/laravel` dentro do container, e os logs vão para a saída padrão. Nunca rode `php artisan optimize` no container de carga: o cache de configuração iria para `backend/bootstrap/cache`, e a API de dev passaria a ler o banco de carga. O cache de módulos (`modules:cache`, que o `make load-test` roda) também fica em `/tmp/laravel`, pela variável `APP_MODULES_CACHE`, que o `AppServiceProvider` liga ao cache da biblioteca de módulos.
 - **Sem porta no host.** O k6 fala com o Nginx de carga pela rede do Compose.
 - **Autenticação como a do SPA.** O k6 usa o cookie de CSRF, a sessão por cookie e o `Origin` de um domínio stateful (`nginx`). Não há token nem rota só de teste, e o k6 descobre os ids pela API, nunca pelo banco.
 

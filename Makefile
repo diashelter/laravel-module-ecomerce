@@ -224,7 +224,7 @@ load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYP
 	@until $(LOAD) exec -T api test -f vendor/autoload.php 2>/dev/null; do sleep 2; done
 	@$(LOAD) exec -T api sh -c 'php artisan migrate:fresh --force && php artisan db:seed --class=LoadTestSeeder --force' \
 		|| { echo "A pilha de carga não subiu. Logs da api de carga:"; $(LOAD) logs --no-color api; exit 1; }
-	$(LOAD) exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache'
+	$(LOAD) exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache && php artisan modules:cache'
 	$(LOAD) exec -T api php artisan events:transport $(TRANSPORT) --by=$(USER)
 	$(LOAD) up -d queue-worker outbox-relay event-consumer nginx
 	@mkdir -p load-tests/results && chmod a+rwx load-tests/results

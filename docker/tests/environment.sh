@@ -158,7 +158,7 @@ PY
             expect_eq "o comando" "$(service "$compose" event-consumer 's["command"]')" "['php', 'artisan', 'events:consume']"
             expect_eq "restart" "$(service "$compose" event-consumer 's["restart"]')" "unless-stopped"
         done
-        for variable in APP_CONFIG_CACHE APP_ROUTES_CACHE APP_EVENTS_CACHE LOG_CHANNEL LOG_LEVEL; do
+        for variable in APP_CONFIG_CACHE APP_ROUTES_CACHE APP_EVENTS_CACHE APP_MODULES_CACHE LOG_CHANNEL LOG_LEVEL; do
             expect_eq "$variable na pilha de carga" "$(service "$LOAD" event-consumer "s['environment']['$variable']")" "$(service "$LOAD" api "s['environment']['$variable']")"
         done
         ;;

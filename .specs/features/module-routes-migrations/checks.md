@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/module-routes-migrations/plan.md`
 
-20 checks in 4 slices · 3 one-way doors (arquivo de rotas do módulo, lugar e nome das migrations, dono do padrão de UUID) · 0 open
+22 checks in 4 slices · 4 one-way doors (arquivo de rotas do módulo, lugar e nome das migrations, dono do padrão de UUID, caminho do cache de módulos) · 0 open
 
 Notação das provas. `BUILD` é o worktree `.claude/worktrees/hel-12-routes-migrations`, na branch `helterdias/hel-12-module-routes-migrations`, criada em `7c530e4` (o HEAD da PR 27, `BASE` em `proofs/lib.sh`). `make -C <BUILD> test-filter FILTER="<regex>"` roda em `BUILD` e usa o banco `ecommerce_testing_hel_12_routes_migrations`. `P` é `.specs/features/module-routes-migrations/proofs`, `T` é `backend/tests`, `E` é `.specs/features/module-routes-migrations/evidence`. A linha de base de rotas é `E/route-list.base.json`, gravada com `route:list --json` em `7c530e4` antes da primeira edição de código, e a de contagem de testes é `E/baseline-make-test.txt` (o `make test` desse mesmo commit). Cada `P/cNN-*.sh` sai com 0 só quando a afirmação vale.
 
@@ -79,6 +79,12 @@ Proof: `bash .specs/features/module-routes-migrations/proofs/c19-agents-rules.sh
 **C20** - A `docs/domain-analysis.md` marca Module Routes, Module Migrations e Load Baseline como concluídos com a data, troca a decisão "Rotas centralizadas", e a linha "Última atualização" tem a data de hoje (AC 20)
 Proof: `bash .specs/features/module-routes-migrations/proofs/c20-domain-analysis.sh`
 
+**C21** - O cache de módulos lê o caminho de `APP_MODULES_CACHE` quando a variável existe e de `bootstrap/cache/app-modules.php` quando não existe, e gravar com a variável definida cria o arquivo no caminho dela e nenhum em `bootstrap/cache` (AC 21, porta 4)
+Proof: `make -C .claude/worktrees/hel-12-routes-migrations test-filter FILTER="takes the module cache path from APP_MODULES_CACHE|defaults the module cache path to bootstrap cache"` - `tests/Unit/Architecture/ModuleCachePathTest.php`
+
+**C22** - A pilha de carga define `APP_MODULES_CACHE=/tmp/laravel/app-modules.php` nos serviços `api`, `queue-worker`, `outbox-relay` e `event-consumer`, e o `make load-test` roda `modules:cache` no container `api` antes do k6 (AC 22, porta 4)
+Proof: `bash .specs/features/module-routes-migrations/proofs/c22-load-modules-cache.sh`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -90,8 +96,8 @@ Proof: `bash .specs/features/module-routes-migrations/proofs/c20-domain-analysis
 | migrations que ficam na raiz (3) | `cache` C8 · `jobs` C8 · `features` C8 | - |
 | nomes de migration congelados (14) | `create_users_table` C11 · `create_cache_table` C11 · `create_jobs_table` C11 · `create_customers_table` C11 · `create_categories_table` C11 · `create_products_table` C11 · `create_stocks_table` C11 · `create_category_product_table` C11 · `create_orders_table` C11 · `create_order_items_table` C11 · `create_payments_table` C11 · `create_customer_addresses_table` C11 · `create_outbox_messages_table` C11 · `create_features_table` C11, o dataset congelado de C11, os 14 `Ran` em C9 e em ordem em C10 | - |
 | chaves estrangeiras entre módulos (5) | `orders.customer_id` C10 · `order_items.product_id` C10 · `stocks.product_id` C10 · `payments.order_id` C10 · `customer_addresses.customer_id` C10 | - |
-| portas de mão única da Landing (3) | arquivo de rotas do módulo C3 · lugar e nome das migrations C8 e C11 · dono do padrão de UUID C6 | - |
-| startup configuration: descoberta das rotas e das migrations (3 assemblies) | CLI do `artisan` C1, C9 e C10 · app do Pest C5, C6 e C7 · pilha de carga servida pelo nginx com `route:cache` C12 e C13 | - |
+| portas de mão única da Landing (4) | arquivo de rotas do módulo C3 · lugar e nome das migrations C8 e C11 · dono do padrão de UUID C6 · caminho do cache de módulos C21 e C22 | - |
+| startup configuration: descoberta das rotas, das migrations e do cache de módulos (3 assemblies) | CLI do `artisan` C1, C9 e C10 · app do Pest C5, C6, C7 e C21 · pilha de carga servida pelo nginx com `route:cache` e `modules:cache` C12, C13 e C22 | - |
 | p95 do `load` (3) | vitrine C13 e C14 · `POST /api/orders` C13 e C14 · `order_payable_wait` C13 e C14 | - |
 | documentos que mudam (4) | `README.md` C18 · `AGENTS.md` C18 e C19 · `docs/domain-analysis.md` C18 e C20 · `load-tests/README.md` C14 e C15 | - |
 | menções a `routes/api.php` nos 5 lugares (5) | `README.md` C18 · `AGENTS.md` C18 · `docs/domain-analysis.md` C18 · `load-tests/` C18 · `backend/` C18 | - |
