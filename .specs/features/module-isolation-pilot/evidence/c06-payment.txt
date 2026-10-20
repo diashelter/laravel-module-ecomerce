@@ -1,0 +1,144 @@
+Preparing worktree (detached HEAD 73399e3)
+HEAD is now at 73399e3 feat(payment): read the order through a port of the payment module
+removal copy payment-alone without: backoffice catalog customers fulfillment identity inventory ordering
+ Container ecommerce-api-run-421719987426 Creating 
+ Container ecommerce-api-run-421719987426 Created 
+./composer.json has been updated
+Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/identity modules/inventory modules/ordering
+Loading composer repositories with package information
+Updating dependencies
+Lock file operations: 0 installs, 0 updates, 7 removals
+  - Removing modules/backoffice (1.0)
+  - Removing modules/catalog (1.0)
+  - Removing modules/customers (1.0)
+  - Removing modules/fulfillment (1.0)
+  - Removing modules/identity (1.0)
+  - Removing modules/inventory (1.0)
+  - Removing modules/ordering (1.0)
+Writing lock file
+Installing dependencies from lock file (including require-dev)
+Nothing to install, update or remove
+Generating optimized autoload files
+Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Allowed located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/Consumers/Allowed.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/UseCases/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\InfrastructureUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/infrastructure-uses-business/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\ModuleTestUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/module-test-uses-business/tests/Feature/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\SharedUsesMessaging\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/shared-uses-messaging/src/Support/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\FolderOutside\Stray located in ./tests/Unit/Architecture/Fixtures/Layout/folder-outside/src/Controllers/Stray.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\CoreUsesHttp\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/core-uses-http/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Isolation\OrderingNamesPayment\Offender located in ./tests/Unit/Architecture/Fixtures/Isolation/ordering-names-payment/ordering/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Isolation\PaymentNamesOrdering\Offender located in ./tests/Unit/Architecture/Fixtures/Isolation/payment-names-ordering/payment/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Isolation\IntegrationNamesBoth\Adapter located in ./tests/Unit/Architecture/Fixtures/Isolation/integration-names-both/integration/src/Payment/Adapter.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+> Illuminate\Foundation\ComposerScripts::postAutoloadDump
+> @php artisan package:discover --ansi
+
+  [37;44m INFO [39;49m Discovering packages.  
+
+  internachi/modular [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/horizon [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/pail [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/pao [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/pennant [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/sanctum [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/sentinel [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/tinker [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/integration [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/messaging [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/payment [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/shared [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nesbot/carbon [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nunomaduro/collision [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nunomaduro/termwind [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  pestphp/pest-plugin-laravel [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+
+101 packages you are using are looking for funding.
+Use the `composer fund` command to find out more!
+> @php artisan vendor:publish --tag=laravel-assets --ansi --force
+
+  [37;44m INFO [39;49m No publishable resources for tag [1m[laravel-assets][22m.  
+
+No security vulnerability advisories found.
+Banco de testes: ecommerce_testing_removal_payment_alone (vhost do RabbitMQ: ecommerce_testing_removal_payment_alone)
+packages left: integration messaging payment shared 
+ Container ecommerce-api-run-990e24cc5808 Creating 
+ Container ecommerce-api-run-990e24cc5808 Created 
+
+   INFO  Preparing database.  
+
+  Creating migration table ...................................... 10.91ms DONE
+
+   INFO  Running migrations.  
+
+  0001_01_01_000001_create_cache_table ........................... 9.17ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 10.24ms DONE
+  2026_10_06_000001_create_payments_table ........................ 5.40ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 3.34ms DONE
+  2026_10_18_170032_create_features_table ........................ 3.03ms DONE
+  2026_10_21_000001_drop_payments_order_id_foreign ............... 0.90ms DONE
+
+migrate:fresh: ok
+ Container ecommerce-api-run-5c8513bfdd2d Creating 
+ Container ecommerce-api-run-5c8513bfdd2d Created 
+
+   PASS  Appmodules\payment\tests\Feature\PaymentTest
+  ✓ it approves the payment of an order awaiting payment                 0.44s  
+  ✓ it answers the payment attempt without card data                     0.03s  
+  ✓ it answers 404 to the payment of an unknown order                    0.03s  
+  ✓ it records the approved payment and announces it once                0.04s  
+  ✓ it keeps no approved payment when the event cannot be recorded       0.04s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.03s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.04s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.04s  
+  ✓ it approves a new attempt after a declined one                       0.04s  
+  ✓ it rejects an invalid card token without charging with dataset "mis… 0.04s  
+  ✓ it rejects an invalid card token without charging with dataset "not… 0.04s  
+  ✓ it rejects an invalid card token without charging with dataset "65…  0.04s  
+  ✓ it accepts a card token of exactly 64 characters                     0.04s  
+  ✓ it rejects payment for orders that are not awaiting payment          0.04s  
+  ✓ it rejects a second payment while the queue has not moved the order  0.06s  
+  ✓ it loses the race to a concurrent approval with 409                  0.05s  
+  ✓ it charges the order total and ignores amounts in the request        0.03s  
+  ✓ it forbids paying an order of another customer                       0.03s  
+  ✓ it asks the order port with the signed-in customer                   0.03s  
+  ✓ it validates the payment body before checking the order owner        0.03s  
+  ✓ it validates the body before an unavailable order port               0.03s  
+  ✓ it answers 503 when the order port is unavailable                    0.03s  
+  ✓ it requires a signed-in customer to pay                              0.03s  
+  ✓ it allows only one approved payment per order in the database        0.03s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
+  ✓ it creates a payment without creating an order                       0.03s  
+  ✓ it logs each payment attempt without the card token with ('fake_car… 0.04s  
+  ✓ it logs each payment attempt without the card token with ('fake_car… 0.03s  
+  ✓ it throttles payment attempts after 20 per minute                    0.07s  
+
+   PASS  Appmodules\payment\tests\Feature\UseCases\Payment\PayOrderUseCaseTest
+  ✓ it records PaymentApproved for an order awaiting payment             0.04s  
+  ✓ it records no PaymentApproved for orders that are not awaiting paym… 0.03s  
+  ✓ it keeps the declined payment after raising the decline              0.03s  
+  ✓ it raises a conflict when a concurrent approval wins the race        0.03s  
+  ✓ it refuses another customer order before checking its status         0.03s  
+
+   PASS  Appmodules\payment\tests\Unit\Gateways\FakePaymentGatewayTest
+  ✓ it approves the fake approved card                                   0.02s  
+  ✓ it declines each fake card with its reason with dataset "insufficie… 0.02s  
+  ✓ it declines each fake card with its reason with dataset "declined b… 0.02s  
+  ✓ it declines each fake card with its reason with dataset "unknown to… 0.02s  
+  ✓ it declines each fake card with its reason with dataset "empty toke… 0.02s  
+  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.02s  
+  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.02s  
+
+   PASS  Appmodules\payment\tests\Unit\Services\PaymentServiceTest
+  ✓ it accepts orders awaiting payment                                   0.03s  
+  ✓ it rejects orders that are not awaiting payment                      0.02s  
+  ✓ it decides whether an order can be paid with dataset "awaiting paym… 0.02s  
+  ✓ it decides whether an order can be paid with dataset "awaiting paym… 0.02s  
+  ✓ it decides whether an order can be paid with dataset "not awaiting…  0.02s  
+  ✓ it decides whether an order can be paid with dataset "not awaiting…  0.02s  
+
+  Tests:    49 passed (192 assertions)
+  Duration: 2.11s
+
+pest app-modules/payment/tests:   Tests:    49 passed (192 assertions) (exit 0)
+PASS: the tests of payment pass with only payment, shared, messaging and integration installed

@@ -65,5 +65,6 @@ it('fails on a deliberate violation', function (string $fixture, Closure $detect
     'an infrastructure module using a business module' => ['infrastructure-uses-business', fn (string $src) => ModuleLayout::infrastructureViolations($src, 'Messaging')],
     'Shared using Messaging' => ['shared-uses-messaging', fn (string $src) => ModuleLayout::infrastructureViolations($src, 'Shared')],
     'a module test naming another business module' => ['module-test-uses-business', fn (string $src) => ModuleLayout::testsViolations(dirname($src).'/tests', 'Payment')],
+    'a module test naming the composition suite' => ['module-test-uses-composition', fn (string $src) => ModuleLayout::testsViolations(dirname($src).'/tests', 'Messaging')],
     'a use case naming an inbound event' => ['inbound-event-outside-consumers', fn (string $src) => ModuleLayout::inboundEventViolations(dirname($src).'/packages')],
 ]);

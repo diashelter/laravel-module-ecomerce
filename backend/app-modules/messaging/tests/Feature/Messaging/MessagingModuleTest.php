@@ -7,10 +7,9 @@ use Modules\Messaging\Contracts\EventConsumer;
 use Modules\Messaging\Contracts\EventOutbox;
 use Modules\Messaging\Contracts\EventSubscriptions;
 use Modules\Messaging\Providers\MessagingServiceProvider;
-use Tests\Unit\Architecture\Support\ModuleLayout;
 
 it('exposes exactly four messaging contracts', function () {
-    $contracts = array_map(fn (string $file) => basename($file, '.php'), glob(ModuleLayout::srcOf('Messaging').'/Contracts/*.php'));
+    $contracts = array_map(fn (string $file) => basename($file, '.php'), glob(base_path('app-modules/messaging/src/Contracts/*.php')));
     sort($contracts);
 
     expect($contracts)->toBe(['DomainEvent', 'EventConsumer', 'EventOutbox', 'EventSubscriptions']);

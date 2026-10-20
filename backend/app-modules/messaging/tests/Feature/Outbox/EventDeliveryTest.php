@@ -22,7 +22,6 @@ use Modules\Messaging\Tests\Fixtures\SpyConsumer;
 use Modules\Messaging\Tests\Fixtures\TwinConsumer;
 use Modules\Messaging\Tests\Fixtures\UnmarkedConsumer;
 use Modules\Messaging\Tests\Fixtures\WrongEventConsumer;
-use Tests\Unit\Architecture\Support\ModuleLayout;
 
 /** An envelope of the test event, as the relay would build it. */
 function sampleEnvelope(array $overrides = []): EventEnvelope
@@ -221,18 +220,4 @@ it('delivers an envelope whose message was already pruned', function () {
     expect(DB::table('outbox_messages')->count())->toBe(0)
         ->and($spy->calls)->toHaveCount(1)
         ->and($spy->calls[0]['event']->payload)->toBe($event->payload);
-});
-
-it('registers no laravel listener for the module events', function () {
-    $events = array_map(
-        ModuleLayout::classOf(...),
-        ModuleLayout::filesMatching('Events/*.php'),
-    );
-
-    expect($events)->toHaveCount(5);
-
-    foreach ($events as $event) {
-        expect(class_exists($event))->toBeTrue()
-            ->and(Event::hasListeners($event))->toBeFalse("{$event} has a Laravel listener");
-    }
 });

@@ -142,8 +142,9 @@ final class ModuleLayout
     }
 
     /**
-     * Files of a module's tests that name another business module or the composition package: the tests of
-     * a module run with only that module, Shared and Messaging installed.
+     * Files of a module's tests that name another business module, the composition package or the support of
+     * the composition suite (backend/tests, but its TestCase): the tests of a module run with only that
+     * module, Shared and Messaging installed.
      *
      * @return list<string>
      */
@@ -156,6 +157,12 @@ final class ModuleLayout
                 if ($referencedModule !== $module && in_array($referencedModule, [...self::BUSINESS, ...self::COMPOSITION], true)) {
                     $violations[] = substr($file, strlen($tests) + 1).' -> '.$referencedModule;
                 }
+            }
+
+            preg_match_all('/(?<![\\\\\w])Tests\\\\{1,2}([A-Z][A-Za-z]*)/', (string) file_get_contents($file), $matches);
+
+            foreach (array_diff($matches[1], ['TestCase']) as $support) {
+                $violations[] = substr($file, strlen($tests) + 1).' -> Tests\\'.$support;
             }
         }
 

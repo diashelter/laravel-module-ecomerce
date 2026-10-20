@@ -1,0 +1,162 @@
+Preparing worktree (detached HEAD 73399e3)
+HEAD is now at 73399e3 feat(payment): read the order through a port of the payment module
+removal copy identity-alone without: backoffice catalog customers fulfillment inventory ordering payment
+ Container ecommerce-api-run-0d4ccf4b5522 Creating 
+ Container ecommerce-api-run-0d4ccf4b5522 Created 
+./composer.json has been updated
+Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/inventory modules/ordering modules/payment
+Loading composer repositories with package information
+Updating dependencies
+Lock file operations: 0 installs, 0 updates, 7 removals
+  - Removing modules/backoffice (1.0)
+  - Removing modules/catalog (1.0)
+  - Removing modules/customers (1.0)
+  - Removing modules/fulfillment (1.0)
+  - Removing modules/inventory (1.0)
+  - Removing modules/ordering (1.0)
+  - Removing modules/payment (1.0)
+Writing lock file
+Installing dependencies from lock file (including require-dev)
+Nothing to install, update or remove
+Generating optimized autoload files
+Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Allowed located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/Consumers/Allowed.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/UseCases/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\InfrastructureUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/infrastructure-uses-business/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\ModuleTestUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/module-test-uses-business/tests/Feature/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\SharedUsesMessaging\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/shared-uses-messaging/src/Support/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\FolderOutside\Stray located in ./tests/Unit/Architecture/Fixtures/Layout/folder-outside/src/Controllers/Stray.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\CoreUsesHttp\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/core-uses-http/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Isolation\OrderingNamesPayment\Offender located in ./tests/Unit/Architecture/Fixtures/Isolation/ordering-names-payment/ordering/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Isolation\PaymentNamesOrdering\Offender located in ./tests/Unit/Architecture/Fixtures/Isolation/payment-names-ordering/payment/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Isolation\IntegrationNamesBoth\Adapter located in ./tests/Unit/Architecture/Fixtures/Isolation/integration-names-both/integration/src/Payment/Adapter.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+> Illuminate\Foundation\ComposerScripts::postAutoloadDump
+> @php artisan package:discover --ansi
+
+  [37;44m INFO [39;49m Discovering packages.  
+
+  internachi/modular [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/horizon [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/pail [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/pao [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/pennant [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/sanctum [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/sentinel [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/tinker [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/identity [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/integration [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/messaging [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/shared [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nesbot/carbon [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nunomaduro/collision [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nunomaduro/termwind [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  pestphp/pest-plugin-laravel [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+
+101 packages you are using are looking for funding.
+Use the `composer fund` command to find out more!
+> @php artisan vendor:publish --tag=laravel-assets --ansi --force
+
+  [37;44m INFO [39;49m No publishable resources for tag [1m[laravel-assets][22m.  
+
+No security vulnerability advisories found.
+Banco de testes: ecommerce_testing_removal_identity_alone (vhost do RabbitMQ: ecommerce_testing_removal_identity_alone)
+packages left: identity integration messaging shared 
+ Container ecommerce-api-run-31880c03ac29 Creating 
+ Container ecommerce-api-run-31880c03ac29 Created 
+
+   INFO  Preparing database.  
+
+  Creating migration table ...................................... 13.34ms DONE
+
+   INFO  Running migrations.  
+
+  0001_01_01_000000_create_users_table .......................... 14.66ms DONE
+  0001_01_01_000001_create_cache_table ........................... 5.08ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 12.51ms DONE
+  2026_10_05_000000_create_customers_table ....................... 3.41ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 4.04ms DONE
+  2026_10_18_170032_create_features_table ........................ 3.58ms DONE
+
+migrate:fresh: ok
+ Container ecommerce-api-run-46ddbce0826c Creating 
+ Container ecommerce-api-run-46ddbce0826c Created 
+
+   PASS  Appmodules\identity\tests\Feature\Auth\AuthTest
+  ✓ it registers a customer account in the customers table               0.46s  
+  ✓ it registers a customer with an e-mail used by a staff member        0.07s  
+  ✓ it rejects registering an e-mail already used by a customer          0.04s  
+  ✓ it validates registration data                                       0.03s  
+  ✓ it logs a customer in with the customer data only                    0.04s  
+  ✓ it refuses staff credentials on the store login                      0.23s  
+  ✓ it rejects invalid credentials                                       0.27s  
+  ✓ it returns the authenticated customer                                0.16s  
+  ✓ it returns 401 for guests on /me                                     0.18s  
+  ✓ it logs out                                                          0.10s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.08s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.07s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.07s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.06s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.04s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.04s  
+
+   PASS  Appmodules\identity\tests\Feature\Auth\StaffAuthTest
+  ✓ it logs a staff member into the admin with dataset "admin"           0.05s  
+  ✓ it logs a staff member into the admin with dataset "support"         0.04s  
+  ✓ it refuses customer credentials on the admin login                   0.25s  
+  ✓ it refuses a wrong password on the admin login                       0.25s  
+  ✓ it logs a staff member out of the admin                              0.04s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.03s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.03s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.03s  
+
+   PASS  Appmodules\identity\tests\Feature\Middleware\EnsureUserIsAdminTest
+  ✓ it lets only the admin role through the admin-only middleware        0.03s  
+
+   PASS  Appmodules\identity\tests\Feature\Queries\CustomerMetricsQueryTest
+  ✓ it counts only customer accounts for the dashboard                   0.05s  
+
+   PASS  Appmodules\identity\tests\Feature\Repositories\CustomerAccountRepositoryTest
+  ✓ it paginates customer accounts newest first                          0.03s  
+
+   PASS  Appmodules\identity\tests\Feature\Repositories\UserRepositoryTest
+  ✓ it creates a user with an explicit role with (Modules\Identity\Core… 0.03s  
+  ✓ it creates a user with an explicit role with (Modules\Identity\Core… 0.03s  
+  ✓ it updates a user together with the role                             0.03s  
+  ✓ it paginates users newest first                                      0.03s  
+
+   PASS  Appmodules\identity\tests\Feature\UseCases\User\StaffUseCasesTest
+  ✓ it decides when a staff update may change the role with dataset "ow… 0.03s  
+  ✓ it decides when a staff update may change the role with dataset "ow… 0.03s  
+  ✓ it decides when a staff update may change the role with dataset "ot… 0.03s  
+  ✓ it decides when a staff member may be removed                        0.03s  
+  ✓ it deletes a staff member by id and refuses an unknown one           0.03s  
+  ✓ it refuses to update an unknown staff member                         0.03s  
+
+   PASS  Appmodules\identity\tests\Unit\DTOs\UpdateUserProfileDTOTest
+  ✓ it keeps the password out of the changes when none is sent           0.02s  
+  ✓ it includes the password when a new one is sent                      0.02s  
+
+   PASS  Appmodules\identity\tests\Unit\ValueObjects\EmailTest
+  ✓ it normalizes the email with dataset "non ascii capital"             0.02s  
+  ✓ it normalizes the email with dataset "spaces and capitals"           0.02s  
+  ✓ it normalizes the email with dataset "domain without dot"            0.02s  
+  ✓ it refuses an invalid email with dataset "no at sign"                0.02s  
+  ✓ it refuses an invalid email with dataset "two at signs"              0.02s  
+  ✓ it refuses an invalid email with dataset "too long"                  0.02s  
+
+   PASS  Appmodules\identity\tests\Unit\ValueObjects\PasswordTest
+  ✓ it refuses a short password without echoing it                       0.02s  
+  ✓ it accepts the minimum length and reveals the text explicitly        0.02s  
+  ✓ it never reveals the plain password with ('json_encode')             0.02s  
+  ✓ it never reveals the plain password with ('serialize')               0.02s  
+  ✓ it never reveals the plain password with ('var_export')              0.02s  
+  ✓ it never reveals the plain password with ('print_r')                 0.02s  
+  ✓ it never reveals the plain password with ('var_dump')                0.02s  
+  ✓ it never reveals the plain password with ('string cast')             0.04s  
+  ✓ it keeps the plain password out of exception traces                  0.04s  
+  ✓ it keeps the plain password out of exception traces when the constr… 0.02s  
+
+  Tests:    55 passed (202 assertions)
+  Duration: 3.65s
+
+pest app-modules/identity/tests:   Tests:    55 passed (202 assertions) (exit 0)
+PASS: the tests of identity pass with only identity, shared, messaging and integration installed
