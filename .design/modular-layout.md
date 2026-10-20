@@ -81,7 +81,7 @@ Derivable from the repository, left to the plan: namespaces de factory e seeder,
 | Payment | Supporting | fica, não funde com o Fulfillment | 514 e 369 linhas, nenhum import entre os dois; linguagens diferentes |
 | Fulfillment | Supporting | fica | ver acima |
 | Backoffice | Read model | fica | 3 arquivos, 159 linhas, nenhuma tabela, lê 4 contratos; fundir em qualquer dono inverteria a dependência |
-| Shared | kernel | encolhe para 12 arquivos | 26 dos 38 arquivos são de mensageria (ver Messaging) |
+| Shared | kernel | encolhe para 13 arquivos (12 do kernel mais o `SharedServiceProvider`) | 26 dos 38 arquivos são de mensageria (ver Messaging) |
 | Messaging | infraestrutura | novo | 26 arquivos, a tabela `outbox_messages` e 5 comandos, com ciclo de mudança próprio (HEL-9 e HEL-13) |
 
 Acoplamento medido (imports entre módulos, 2026-10-19): quase tudo é por contrato; o único acoplamento intrusivo é a projeção `Customer` do Ordering sobre `customers` (somente leitura, documentada, mantida). O acoplamento funcional entre Ordering e Inventory (reserva na mesma transação) é necessário. Os ciclos de import (Catalog e Inventory; Ordering com Fulfillment e com Payment, estes por eventos) atravessam só `Contracts` e `Events`.
@@ -92,7 +92,7 @@ Acoplamento medido (imports entre módulos, 2026-10-19): quase tudo é por contr
 
 **Resposta 1 - cache de módulos.**
 Comando: `modules:cache`, e `modules:cache` com `APP_MODULES_CACHE=/tmp/laravel/app-modules.php`.
-Resultado: grava `bootstrap/cache/app-modules.php` com `bootstrapPath('cache/app-modules.php')` fixo no pacote; nenhuma variável de ambiente o desvia (o arquivo não aparece em `/tmp/laravel`). Só o `modules:cache` e o `optimize` o gravam, e sem ele a biblioteca descobre os módulos no filesystem a cada boot.
+Resultado: grava `bootstrap/cache/app-modules.php` com `bootstrapPath('cache/app-modules.php')` fixo no pacote; nenhuma variável de ambiente o desvia (o arquivo não aparece em `/tmp/laravel`). Só o `modules:cache` o grava (o `optimize` não o escreve: depois dele, `bootstrap/cache` tem config, events, packages, routes e services, e nenhum `app-modules.php`), e sem ele a biblioteca descobre os módulos no filesystem a cada boot.
 Efeito: confirma o `AGENTS.md` (a pilha de carga não roda `optimize`) e adiciona uma medida à Load Baseline: o custo da descoberta a cada boot sem o cache. Veredito: confirma.
 
 **Resposta 2 - rotas do módulo.**

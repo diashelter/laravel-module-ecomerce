@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/lib.sh"; start c18
-clone=${SPIKE_CLONE_DIR:-/private/tmp/claude-501/-Users-helterdias-Documents-POC-laravel-module-ecomerce/afb4558a-fb34-4ffd-933d-00ead1b9878e/scratchpad/spike-clone}
+clone=${SPIKE_CLONE_DIR:-${TMPDIR:-/tmp}/spike-clone}
 if [ -d "$SPIKE" ]; then
   make -C "$SPIKE" test-db-drop >/dev/null 2>&1 || say "note: test database drop failed or was not needed"
   git -C "$ROOT" worktree remove --force "$SPIKE" || fail "could not remove the worktree"

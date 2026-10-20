@@ -1,6 +1,6 @@
 # Shared helpers for the Module Layout proofs. Source it; every proof exits 0 only when its claim holds.
 set -uo pipefail
-ROOT=/Users/helterdias/Documents/POC/laravel-module-ecomerce
+ROOT=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=absolute --git-common-dir | sed "s|/.git$||")
 BUILD=$ROOT/.claude/worktrees/hel-12-module-layout
 FEAT=$ROOT/.specs/features/module-layout
 EVID=$FEAT/evidence

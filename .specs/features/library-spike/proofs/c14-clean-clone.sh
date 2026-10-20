@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/lib.sh"; start c14
-clone=${SPIKE_CLONE_DIR:-/private/tmp/claude-501/-Users-helterdias-Documents-POC-laravel-module-ecomerce/afb4558a-fb34-4ffd-933d-00ead1b9878e/scratchpad/spike-clone}
+clone=${SPIKE_CLONE_DIR:-${TMPDIR:-/tmp}/spike-clone}
 rm -rf "$clone"; git clone -q --branch spike/hel-12-library "$ROOT" "$clone" || fail "clone failed"
 [ ! -d "$clone/backend/vendor" ] || fail "the clone already has vendor/"
 cp "$ROOT/backend/.env" "$clone/backend/.env"

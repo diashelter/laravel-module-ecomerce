@@ -1,6 +1,6 @@
 # Shared helpers for the Library Spike proofs. Source it; every proof exits 0 only when its claim holds.
 set -uo pipefail
-ROOT=/Users/helterdias/Documents/POC/laravel-module-ecomerce
+ROOT=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=absolute --git-common-dir | sed "s|/.git$||")
 SPIKE=$ROOT/.claude/worktrees/spike-hel-12-library
 FEAT=$ROOT/.specs/features/library-spike
 EVID=$FEAT/evidence

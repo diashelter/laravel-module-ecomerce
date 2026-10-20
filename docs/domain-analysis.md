@@ -80,7 +80,7 @@ Score = (
 
  Payment e Fulfillment não se conhecem: só o Ordering muda o status do pedido.
 
- Todo evento atravessa pelo outbox transacional do Shared: gravado na transação da
+ Todo evento atravessa pelo outbox transacional do Messaging: gravado na transação da
  mudança, publicado pelo relay e entregue a cada consumidor inscrito pelo módulo que consome.
 
  Ordering define os contratos DeliveryAddressBook (implementado pelo Customers) e
@@ -557,7 +557,7 @@ A camada de eventos (HEL-9, problema 14, e HEL-13, problema 16) é o módulo [`M
   - **O [`event-consumer`](../backend/app-modules/messaging/src/Console/ConsumeEventsCommand.php)** lê as filas e chama as mesmas regras de entrega do job, agora na classe [`EventDelivery`](../backend/app-modules/messaging/src/Core/EventDelivery.php) que o `DeliverEvent` e o consumidor usam. Uma entrega que falha 3 vezes vai para `<consumidor>.dead`, e o `make events-failed` e o `make events-retry` a listam e a devolvem.
   - **O Horizon** substitui o `queue:work` no container `queue-worker` (mesmos parâmetros), com o painel em `/horizon` fechado pelo alias `admin`, e o container `scheduler` roda o `horizon:snapshot`.
   - **A medição**: a espera até pagar do k6 passou a ler o pedido a cada 250 ms, e o `make load-test` aceita `TRANSPORT=rabbitmq`, com uma segunda tabela de linha de base por transporte.
-- **Fronteira verificada:** o `ModuleBoundariesTest` passou sem nenhuma regra nova nem exceção: o Shared continua sem depender de módulo de negócio, e as classes novas do RabbitMQ ficam dentro dele. Os cinco consumidores só ganharam o terceiro argumento da inscrição (nos service providers do Ordering e do Fulfillment).
+- **Fronteira verificada:** o `ModuleBoundariesTest` passou sem nenhuma regra nova nem exceção: o módulo de eventos (na época o Shared, hoje o Messaging) continua sem depender de módulo de negócio, e as classes novas do RabbitMQ ficam dentro dele. Os cinco consumidores só ganharam o terceiro argumento da inscrição (nos service providers do Ordering e do Fulfillment).
 - **Desvios do plano:** o plano esperava que a `occurred_at` do corpo da mensagem carregasse milissegundos (`.715000` num teste com o relógio congelado); a coluna do outbox guarda segundos (decisão da HEL-9), então pelo relay o corpo sempre sai com `.000000`, e o formato com microssegundos é provado no transporte, com um envelope montado no teste.
 - **Ficou de fora:** uma flag por evento, por cliente ou por porcentagem, uma tela para virar a flag, levar o `DeliverOrder` para o RabbitMQ (ele precisa de delay), um consumidor fora do PHP, inbox, espera crescente entre tentativas e um processo por consumidor, remover sozinho a fila de um consumidor que saiu do código, e o trace e as métricas do `event-consumer` (HEL-8).
 - **Testes:** `Messaging/BrokerIsolationTest`, `Messaging/EventTransportFlagTest`, `Messaging/ConsumerNamesTest`, `Messaging/RabbitMqEventTransportTest`, `Messaging/ConsumeEventsCommandTest`, `Messaging/DeadDeliveriesCommandsTest` e `HorizonTest`, mais as provas do ambiente (`docker/tests/environment.sh`) e as da pilha de carga (`load-tests/tests`).
@@ -658,10 +658,10 @@ A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`, o primeir
 | Cliente (`Customer`) | Ordering | Quem fez o pedido: identificado pelo id da conta (`customer_id`), conhecido só por nome e e-mail |
 | Resumo do cliente (`CustomerSummaryDTO`) | Customers | A conta junto com o histórico de pedidos, na tela "Clientes" do admin |
 | Evento (`DomainEvent`) | o módulo que publica | Um fato de um módulo, com nome `<módulo>.<evento>` e versão próprios, gravado no outbox na transação da mudança que ele anuncia |
-| Mensagem do outbox (`outbox_messages`) | Shared | Um evento gravado e ainda não publicado (pendente) ou já entregue ao transporte (publicado, apagado depois de 7 dias) |
-| Envelope (`EventEnvelope`) | Shared | A mensagem como viaja: id, nome, versão, payload, instante e `request_id` |
+| Mensagem do outbox (`outbox_messages`) | Messaging | Um evento gravado e ainda não publicado (pendente) ou já entregue ao transporte (publicado, apagado depois de 7 dias) |
+| Envelope (`EventEnvelope`) | Messaging | A mensagem como viaja: id, nome, versão, payload, instante e `request_id` |
 | Consumidor (`EventConsumer`) | o módulo que consome | A classe que reage a um evento, inscrita pelo próprio módulo; recebe cada mensagem ao menos uma vez, então é idempotente |
-| Entrega (`DeliverEvent`) | Shared | Uma mensagem para um consumidor: repetida sozinha quando o consumidor falha |
+| Entrega (`DeliverEvent`) | Messaging | Uma mensagem para um consumidor: repetida sozinha quando o consumidor falha |
 
 ---
 

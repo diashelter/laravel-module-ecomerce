@@ -49,6 +49,13 @@ jobs:
       - name: Generate the application key
         run: docker compose exec -T api php artisan key:generate --force
 
+      # The module tests run in the api container, which mounts backend/ only: load-tests/ and .github/ are checked here.
+      - name: No old module namespace outside backend/
+        run: |
+          if grep -rIlE 'App.{1,2}Modules' load-tests .github --exclude-dir=results; then
+            echo "the old module namespace is still named in the files above"; exit 1
+          fi
+
       - name: Code style (Pint)
         run: make pint
 
