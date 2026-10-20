@@ -216,3 +216,4 @@ Tamanho em tokens, pela conta `wc -c` dividida por quatro, sobre o que cada slic
 Progresso do builder:
 
 - C3, C7 e C10 verdes no `make test` do commit `test(modules): move the isolated tests into their modules` (2106 testes); os 28 arquivos já estão nos módulos, e o C1 fecha quando a sua prova rodar
+- C8, C11 a C20, C21 (a primeira prova), C22 a C26, C28, C30, C31, C32, C37 e C38 verdes no `make test` do commit `feat(payment): read the order through a port of the payment module` (2253 testes); a linha `payments.order_id restricts` do `UuidKeysTest` saiu pela Key decision 5 do design, como o `Impact` do plano registra

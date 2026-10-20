@@ -10,11 +10,11 @@ use Tests\Unit\Architecture\Support\ModuleLayout;
  * The modules are packages in app-modules, discovered by internachi/modular (see .design/modular-layout.md).
  */
 
-it('lists exactly the ten module packages', function () {
+it('lists exactly the eleven module packages', function () {
     $modules = app(ModuleRegistry::class)->modules();
 
     expect($modules->keys()->sort()->values()->all())
-        ->toBe(['backoffice', 'catalog', 'customers', 'fulfillment', 'identity', 'inventory', 'messaging', 'ordering', 'payment', 'shared']);
+        ->toBe(['backoffice', 'catalog', 'customers', 'fulfillment', 'identity', 'integration', 'inventory', 'messaging', 'ordering', 'payment', 'shared']);
 
     foreach ($modules as $name => $module) {
         expect($module->namespace())->toBe('Modules\\'.ucfirst($name).'\\');
@@ -104,4 +104,11 @@ it('maps no module test namespace in the root composer', function () {
     ];
 
     expect(array_filter($namespaces, fn (string $namespace) => str_starts_with($namespace, 'Modules\\')))->toBe([]);
+});
+
+it('classifies the integration package as composition', function () {
+    expect(ModuleLayout::COMPOSITION)->toBe(['Integration'])
+        ->and(ModuleLayout::BUSINESS)->not->toContain('Integration')
+        ->and(ModuleLayout::INFRASTRUCTURE)->not->toContain('Integration')
+        ->and(ModuleLayout::modules())->toContain('Integration');
 });

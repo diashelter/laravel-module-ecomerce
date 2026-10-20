@@ -67,7 +67,7 @@ Caminho de um teste de módulo (door 6):
 | domain | design: a linha de factories da slice Module Tests do `.design/module-isolation.md` é corrigida (assunção 2) |
 | tests | 28 arquivos mudam para `app-modules/<módulo>/tests`; os helpers do `Pest.php` que são de um módulo vão para o `tests/Helpers.php` dele, e as fixtures do Messaging vão com os testes do Messaging |
 | tests | testes de arquitetura que mudam de forma: `ModulePackagesTest` (11 pacotes; o manifesto ganha o namespace `Tests`), `ModuleMigrationsTest` (16 nomes), `ModuleMigrationsForeignKeyTest` (5 chaves entre módulos, e nenhuma em `payments.order_id`) e `ModuleBoundariesTest` (o Payment isolado, o `Integration` como a única exceção) |
-| tests | o caso `ties payments to existing orders and keeps orders that have payments` deixa de valer por decisão (Key decision 5 do design) e é substituído pelo critério 21 |
+| tests | o caso `ties payments to existing orders and keeps orders that have payments` e a linha `payments.order_id restricts` do `UuidKeysTest` deixam de valer por decisão (Key decision 5 do design) e são substituídos pelo critério 21 |
 | stored data | a chave `payments_order_id_foreign` sai dos bancos já migrados pela migration nova; nenhuma linha muda, e um banco novo nunca cria a chave |
 | build | `composer install` em cada checkout e worktree depois de puxar o pacote novo (como na HEL-12); `make test`, `make test-filter` e o CI rodam com os mesmos comandos |
 

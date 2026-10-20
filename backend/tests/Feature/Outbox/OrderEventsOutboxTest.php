@@ -9,9 +9,9 @@ use Modules\Messaging\Core\EventTransport;
 use Modules\Messaging\Tests\Fixtures\FailingOutbox;
 use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
 use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Core\InboundEvents\PaymentApproved;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Persistence\Models\Order;
-use Modules\Payment\Events\PaymentApproved;
 
 /*
  * The order events and the change they announce commit together, and the three windows of the

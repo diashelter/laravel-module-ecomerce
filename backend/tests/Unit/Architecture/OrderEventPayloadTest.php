@@ -6,9 +6,12 @@ use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Fulfillment\Events\DeliveryScheduled;
 use Modules\Fulfillment\Events\OrderDelivered;
 use Modules\Messaging\Contracts\DomainEvent;
+use Modules\Messaging\Core\EventSubscriptionRegistry;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Events\OrderPlaced;
 use Modules\Payment\Events\PaymentApproved;
+use Tests\Unit\Architecture\Fixtures\DisagreeingReader;
+use Tests\Unit\Architecture\Support\ModuleLayout;
 
 /*
  * The order events and the delivery job cross module boundaries (and the events are stored in the
@@ -88,3 +91,82 @@ it('maps every order event payload and rebuilds it', function (Closure $make, ar
     ],
     'OrderDelivered' => [fn () => new OrderDelivered(PAYLOAD_ORDER_ID), ['order_id' => PAYLOAD_ORDER_ID]],
 ]);
+
+/*
+ * A module reads another module's event with a class of its own: the published format is the name, the
+ * version and the payload keys, so no compiler ties a reader to its producer. These tests do.
+ */
+
+/** The producer of an event name: the class of some module's Events that declares it. */
+function producerOf(string $name): ?string
+{
+    foreach (ModuleLayout::filesMatching('Events/*.php') as $file) {
+        $class = ModuleLayout::classOf($file);
+
+        if (is_subclass_of($class, DomainEvent::class) && $class::eventName() === $name) {
+            return $class;
+        }
+    }
+
+    return null;
+}
+
+/** A sample of each producer, the same the payload test above maps. */
+function sampleOf(string $producer): DomainEvent
+{
+    return match ($producer) {
+        OrderPaid::class => new OrderPaid(PAYLOAD_ORDER_ID, 3),
+        DeliveryScheduled::class => new DeliveryScheduled(PAYLOAD_ORDER_ID, CarbonImmutable::parse('2026-10-09 03:00:00', 'UTC')),
+        default => new $producer(PAYLOAD_ORDER_ID),
+    };
+}
+
+/**
+ * Where a reader disagrees with its producer: the name, the version, or the payload a sample of the
+ * producer writes, read by the reader and written back. Empty when they agree.
+ *
+ * @return list<string>
+ */
+function disagreements(string $producer, string $reader, DomainEvent $sample): array
+{
+    $problems = [];
+
+    if ($reader::eventName() !== $producer::eventName()) {
+        $problems[] = 'name';
+    }
+
+    if ($reader::eventVersion() !== $producer::eventVersion()) {
+        $problems[] = 'version';
+    }
+
+    try {
+        $readBack = $reader::fromPayload($sample->toPayload())->toPayload();
+    } catch (Throwable) {
+        $readBack = null;
+    }
+
+    if ($readBack !== $sample->toPayload()) {
+        $problems[] = 'payload';
+    }
+
+    return $problems;
+}
+
+it('reads every subscribed event from the payload its producer writes', function () {
+    $subscriptions = app(EventSubscriptionRegistry::class);
+    $names = array_keys($subscriptions->all());
+
+    expect($names)->toEqualCanonicalizing(['ordering.order_placed', 'payment.payment_approved', 'ordering.order_paid', 'fulfillment.delivery_scheduled', 'fulfillment.order_delivered']);
+
+    foreach ($names as $name) {
+        $producer = producerOf($name);
+        $reader = $subscriptions->eventOf($name);
+
+        expect($producer)->not->toBeNull("No module event declares {$name}.")
+            ->and(disagreements($producer, $reader, sampleOf($producer)))->toBe([], "{$reader} disagrees with {$producer}.");
+    }
+});
+
+it('detects a reader that disagrees with its producer', function () {
+    expect(disagreements(PaymentApproved::class, DisagreeingReader::class, new PaymentApproved(PAYLOAD_ORDER_ID)))->toBe(['payload']);
+});

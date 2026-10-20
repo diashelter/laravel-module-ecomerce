@@ -71,7 +71,9 @@ use Tests\Unit\Architecture\Support\ModuleLayout;
  * so the last test makes sure every module named here still exists.
  */
 
-const MODULES = ['Backoffice', 'Catalog', 'Customers', 'Fulfillment', 'Identity', 'Inventory', 'Messaging', 'Ordering', 'Payment', 'Shared'];
+// Integration is the composition package (see .design/module-isolation.md): the rules below hold it to the
+// facades of the business modules, like every other source, and keep its own folders private.
+const MODULES = ['Backoffice', 'Catalog', 'Customers', 'Fulfillment', 'Identity', 'Integration', 'Inventory', 'Messaging', 'Ordering', 'Payment', 'Shared'];
 
 /** The source folder of a module package: app-modules/<kebab>/src. */
 function moduleSrc(string $module): string
@@ -233,7 +235,7 @@ it('generates the private directory rules from the folders that exist', function
         ->and($private)->not->toContain('Core/ValueObjects');
 
     // Every pair of modules gets the Http rule: each business module has its own Http folder.
-    foreach (array_diff(MODULES, ['Shared', 'Messaging']) as $module) {
+    foreach (array_diff(MODULES, ['Shared', 'Messaging', 'Integration']) as $module) {
         expect(privateDirectoriesOf($module))->toContain('Http');
     }
 });
@@ -576,6 +578,29 @@ it('resolves the inventory contracts to the stock repository', function (string 
 
 it('resolves the payment gateway to the fake gateway', function () {
     expect(app(PaymentGateway::class))->toBeInstanceOf(FakePaymentGateway::class);
+});
+
+// The adapters of the integration package translate one module's contract into another's port: every
+// business class they name is in the facade of its module or in the vocabulary that facade reaches.
+it('keeps the integration package on the module facades', function () {
+    $named = [];
+
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(moduleSrc('Integration'), FilesystemIterator::SKIP_DOTS)) as $file) {
+        preg_match_all('/^use (Modules\\\\([A-Z][A-Za-z]*)\\\\[A-Za-z\\\\]+);/m', (string) file_get_contents($file->getPathname()), $matches, PREG_SET_ORDER);
+
+        foreach ($matches as [, $class, $module]) {
+            if (! in_array($module, ['Integration', 'Shared'], true)) {
+                $named[$class] = $module;
+            }
+        }
+    }
+
+    expect($named)->not->toBeEmpty();
+
+    foreach ($named as $class => $module) {
+        expect(in_array($class, [...facadeOf($module), ...vocabularyOf($module)], true))
+            ->toBeTrue("The integration package names {$class}, outside the facade of {$module}.");
+    }
 });
 
 it('keeps every module named by these rules', function (string $module) {

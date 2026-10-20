@@ -67,7 +67,7 @@ it('keeps the delete rule of every foreign key', function (string $table, string
 })->with([
     'orders.customer_id restricts' => ['orders', 'customer_id', 'r'],
     'order_items.product_id restricts' => ['order_items', 'product_id', 'r'],
-    'payments.order_id restricts' => ['payments', 'order_id', 'r'],
+    // payments.order_id has no foreign key since the module isolation: ModuleMigrationsForeignKeyTest proves it.
     'deliveries.order_id restricts' => ['deliveries', 'order_id', 'r'],
     'stocks.product_id cascades' => ['stocks', 'product_id', 'c'],
     'category_product.product_id cascades' => ['category_product', 'product_id', 'c'],

@@ -13,6 +13,8 @@ use Modules\Ordering\Contracts\PayableOrders;
 use Modules\Ordering\Core\ValueObjects\OrderForPayment;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Events\OrderPlaced;
+use Modules\Payment\Contracts\OrdersToPay;
+use Modules\Payment\Core\ValueObjects\OrderToPay;
 use Modules\Payment\Events\PaymentApproved;
 use Tests\Unit\Architecture\Support\ModuleLayout;
 
@@ -45,6 +47,7 @@ it('types every id of the contracts as a string', function (string $contract, st
     [CustomerOrderHistory::class, 'recentForCustomer'],
     [DeliveryAddressBook::class, 'find'],
     [PayableOrders::class, 'findForPayment'],
+    [OrdersToPay::class, 'findForPayment'],
 ]);
 
 it('declares the owner in the payable orders contract', function () {
@@ -53,6 +56,23 @@ it('declares the owner in the payable orders contract', function () {
 
     expect($parameters)->toBe([['customerId', 'string'], ['orderId', 'string']])
         ->and((string) $method->getReturnType())->toBe('?'.OrderForPayment::class);
+});
+
+// The port of the payment module (door 2): what payment needs of an order, in its own vocabulary.
+it('declares the order port of the payment module', function () {
+    $port = new ReflectionClass(OrdersToPay::class);
+    $method = $port->getMethod('findForPayment');
+    $signature = fn (ReflectionMethod $method) => array_map(
+        fn (ReflectionParameter $parameter) => [$parameter->getName(), (string) $parameter->getType()],
+        $method->getParameters(),
+    );
+
+    expect($port->isInterface())->toBeTrue()
+        ->and(array_map(fn (ReflectionMethod $method) => $method->getName(), $port->getMethods()))->toBe(['findForPayment'])
+        ->and($signature($method))->toBe([['customerId', 'string'], ['orderId', 'string']])
+        ->and((string) $method->getReturnType())->toBe('?'.OrderToPay::class)
+        ->and($signature(new ReflectionMethod(OrderToPay::class, '__construct')))
+        ->toBe([['id', 'string'], ['customerId', 'string'], ['totalCents', 'int'], ['awaitingPayment', 'bool']]);
 });
 
 it('carries the order id as a string in the order events and the delivery job', function (string $class) {

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9eaa0945e189ae5f57226573346846cd",
+    "content-hash": "3f540f3a5b05d3117f87ae62360c4b7e",
     "packages": [
         {
             "name": "brick/math",
@@ -3338,6 +3338,36 @@
                 "proprietary"
             ],
             "description": "The Identity module.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "modules/integration",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/integration",
+                "reference": "3d96f3d317e146fcb78610726a7274903c423b51"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Modules\\Integration\\Providers\\IntegrationServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Modules\\Integration\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "The Integration package: binds the port of one module to the contract of another.",
             "transport-options": {
                 "symlink": true,
                 "relative": true

@@ -19,10 +19,10 @@ use Modules\Ordering\Core\Consumers\MarkOrderAsDelivered;
 use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
 use Modules\Ordering\Core\Consumers\RecordEstimatedDelivery;
 use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Core\InboundEvents\PaymentApproved;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Events\OrderPlaced;
 use Modules\Ordering\Persistence\Models\Order;
-use Modules\Payment\Events\PaymentApproved;
 
 it('subscribes exactly the five order consumers', function () {
     $pairs = [];

@@ -18,11 +18,26 @@ final class ModuleLayout
     /** Infrastructure modules: they serve the business modules and never use one. */
     public const INFRASTRUCTURE = ['Shared', 'Messaging'];
 
+    /** The composition package: the only one that names more than one business module, and only by their facades. */
+    public const COMPOSITION = ['Integration'];
+
+    /**
+     * The business modules already isolated (see .design/module-isolation.md): each names no other business
+     * module, and no package but the composition one names it. The list grows slice by slice.
+     */
+    public const ISOLATED = ['Payment'];
+
     private const LAYERS = ['Contracts', 'Events', 'Core', 'Persistence', 'Http', 'Providers'];
 
     public static function modules(): array
     {
-        return [...self::BUSINESS, ...self::INFRASTRUCTURE];
+        return [...self::BUSINESS, ...self::INFRASTRUCTURE, ...self::COMPOSITION];
+    }
+
+    /** The package folder of a module: app-modules/<kebab>. */
+    public static function packageOf(string $module): string
+    {
+        return base_path('app-modules/'.Str::kebab($module));
     }
 
     public static function srcOf(string $module): string
@@ -67,6 +82,8 @@ final class ModuleLayout
             'Shared' => ['Cache', 'Enums', 'Exceptions', 'Http', 'Providers', 'Repositories', 'Support'],
             'Payment' => [...self::LAYERS, 'Gateways'],
             'Messaging' => [...self::LAYERS, 'Console'],
+            // One folder per consumer module, with the adapters of its ports, and the provider that binds them.
+            'Integration' => ['Providers', ...self::BUSINESS],
             default => self::LAYERS,
         };
     }
@@ -117,6 +134,90 @@ final class ModuleLayout
 
                 if ($forbidden) {
                     $violations[] = basename($file).' -> '.$referencedModule;
+                }
+            }
+        }
+
+        return array_values(array_unique($violations));
+    }
+
+    /**
+     * Files of a module's tests that name another business module or the composition package: the tests of
+     * a module run with only that module, Shared and Messaging installed.
+     *
+     * @return list<string>
+     */
+    public static function testsViolations(string $tests, string $module): array
+    {
+        $violations = [];
+
+        foreach (self::phpFilesIn($tests) as $file) {
+            foreach (self::referencesIn($file) as [$referencedModule]) {
+                if ($referencedModule !== $module && in_array($referencedModule, [...self::BUSINESS, ...self::COMPOSITION], true)) {
+                    $violations[] = substr($file, strlen($tests) + 1).' -> '.$referencedModule;
+                }
+            }
+        }
+
+        return array_values(array_unique($violations));
+    }
+
+    /**
+     * Files that break the isolation of a module: in its own package, a name of another business module; in
+     * any other package but the composition one, a name of the module.
+     *
+     * @return list<string>
+     */
+    public static function isolationViolations(string $packages, string $module): array
+    {
+        $violations = [];
+
+        foreach (glob("{$packages}/*", GLOB_ONLYDIR) ?: [] as $package) {
+            $owner = Str::studly(basename($package));
+
+            if (in_array($owner, self::COMPOSITION, true)) {
+                continue;
+            }
+
+            foreach (self::phpFilesIn($package) as $file) {
+                foreach (self::referencesIn($file) as [$referencedModule]) {
+                    $outgoing = $owner === $module && $referencedModule !== $module && in_array($referencedModule, self::BUSINESS, true);
+                    $incoming = $owner !== $module && $referencedModule === $module;
+
+                    if ($outgoing || $incoming) {
+                        $violations[] = substr($file, strlen($packages) + 1).' -> '.$referencedModule;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($violations));
+    }
+
+    /**
+     * Source files that name a module's inbound events (the classes it reads another module's events with)
+     * outside its consumers, its provider and the inbound events themselves: only the producer records an event.
+     *
+     * @return list<string>
+     */
+    public static function inboundEventViolations(string $packages): array
+    {
+        $violations = [];
+
+        foreach (glob("{$packages}/*/src", GLOB_ONLYDIR) ?: [] as $src) {
+            foreach (self::phpFilesIn($src) as $file) {
+                preg_match_all('/\bModules\\\\{1,2}([A-Z][A-Za-z]*)\\\\{1,2}Core\\\\{1,2}InboundEvents\b/', (string) file_get_contents($file), $matches);
+
+                foreach (array_unique($matches[1]) as $owner) {
+                    $ownSrc = "{$packages}/".Str::kebab($owner).'/src/';
+                    $allowed = array_filter(
+                        ['Core/Consumers/', 'Providers/', 'Core/InboundEvents/'],
+                        fn (string $folder) => str_starts_with($file, $ownSrc.$folder),
+                    );
+
+                    if ($allowed === []) {
+                        $violations[] = substr($file, strlen($packages) + 1).' -> '.$owner;
+                    }
                 }
             }
         }

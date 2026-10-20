@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Payment\Core\Services;
 
-use Modules\Ordering\Core\Enums\OrderStatus;
-use Modules\Ordering\Core\ValueObjects\OrderForPayment;
+use Modules\Payment\Core\ValueObjects\OrderToPay;
 use Modules\Shared\Exceptions\BusinessRuleException;
 
 /**
@@ -17,9 +16,9 @@ class PaymentService
     /**
      * @throws BusinessRuleException
      */
-    public function ensureCanBePaid(OrderForPayment $order, bool $hasApprovedPayment): void
+    public function ensureCanBePaid(OrderToPay $order, bool $hasApprovedPayment): void
     {
-        if ($order->status !== OrderStatus::AwaitingPayment || $hasApprovedPayment) {
+        if (! $order->awaitingPayment || $hasApprovedPayment) {
             throw $this->notPayable();
         }
     }

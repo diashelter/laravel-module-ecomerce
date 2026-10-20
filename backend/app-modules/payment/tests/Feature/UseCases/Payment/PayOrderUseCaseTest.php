@@ -2,8 +2,6 @@
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
-use Modules\Ordering\Core\Enums\OrderStatus;
-use Modules\Ordering\Persistence\Models\Order;
 use Modules\Payment\Core\DTOs\ChargeResult;
 use Modules\Payment\Core\DTOs\PayOrderDTO;
 use Modules\Payment\Core\Enums\DeclineReason;
@@ -14,9 +12,10 @@ use Modules\Payment\Persistence\Models\Payment;
 use Modules\Shared\Exceptions\BusinessRuleException;
 
 it('records PaymentApproved for an order awaiting payment', function () {
-    $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create();
+    $order = orderToPay(unknownId());
+    fakeOrdersToPay($order);
 
-    $result = app(PayOrderUseCase::class)->execute($order->customer_id, $order->id, new PayOrderDTO('fake_card_approved'));
+    $result = app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_approved'));
 
     expect($result)->toBeInstanceOf(Payment::class)
         ->and($result->order_id)->toBe($order->id)
@@ -25,22 +24,24 @@ it('records PaymentApproved for an order awaiting payment', function () {
         ->and(outboxMessages('payment.payment_approved')->sole()->payload)->toBe(['order_id' => $order->id]);
 });
 
-it('records no PaymentApproved for orders that are not awaiting payment', function (OrderStatus $status) {
-    $order = Order::factory()->status($status)->create();
+it('records no PaymentApproved for orders that are not awaiting payment', function () {
+    $order = orderToPay(unknownId(), awaitingPayment: false);
+    fakeOrdersToPay($order);
 
-    expect(fn () => app(PayOrderUseCase::class)->execute($order->customer_id, $order->id, new PayOrderDTO('fake_card_approved')))
+    expect(fn () => app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_approved')))
         ->toThrow(BusinessRuleException::class, 'Este pedido não está aguardando pagamento.');
 
     expect(outboxMessages('payment.payment_approved'))->toBeEmpty();
-})->with([OrderStatus::Placed, OrderStatus::PaymentApproved, OrderStatus::Delivered]);
+});
 
 it('keeps the declined payment after raising the decline', function () {
-    $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 5000]);
+    $order = orderToPay(unknownId(), 5000);
+    fakeOrdersToPay($order);
     spyPaymentGateway(fn () => new ChargeResult(PaymentStatus::Declined, DeclineReason::CardDeclined, 'fake_declined', 'fake'));
 
     $declined = null;
     try {
-        app(PayOrderUseCase::class)->execute($order->customer_id, $order->id, new PayOrderDTO('fake_card_declined'));
+        app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_declined'));
     } catch (PaymentDeclinedException $e) {
         $declined = $e;
     }
@@ -56,14 +57,15 @@ it('keeps the declined payment after raising the decline', function () {
 });
 
 it('raises a conflict when a concurrent approval wins the race', function () {
-    $order = Order::factory()->status(OrderStatus::AwaitingPayment)->create(['total_cents' => 5000]);
+    $order = orderToPay(unknownId(), 5000);
+    fakeOrdersToPay($order);
     spyPaymentGateway(function () use ($order): ChargeResult {
         Payment::factory()->approved()->create(['order_id' => $order->id]);
 
         return new ChargeResult(PaymentStatus::Approved, null, 'fake_loser', 'fake');
     });
 
-    expect(fn () => app(PayOrderUseCase::class)->execute($order->customer_id, $order->id, new PayOrderDTO('fake_card_approved')))
+    expect(fn () => app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_approved')))
         ->toThrow(BusinessRuleException::class, 'Este pedido não está aguardando pagamento.');
 
     expect(DB::table('payments')->where('order_id', $order->id)->where('status', 'approved')->count())->toBe(1)
@@ -71,10 +73,11 @@ it('raises a conflict when a concurrent approval wins the race', function () {
 });
 
 it('refuses another customer order before checking its status', function () {
-    $order = Order::factory()->status(OrderStatus::PaymentApproved)->create();
+    $order = orderToPay(unknownId(), awaitingPayment: false);
+    fakeOrdersToPay($order);
     $gateway = spyPaymentGateway();
 
-    expect(fn () => app(PayOrderUseCase::class)->execute(customer()->id, $order->id, new PayOrderDTO('fake_card_approved')))
+    expect(fn () => app(PayOrderUseCase::class)->execute(unknownId(), $order->id, new PayOrderDTO('fake_card_approved')))
         ->toThrow(ModelNotFoundException::class);
 
     expect($gateway->charges)->toBeEmpty()
