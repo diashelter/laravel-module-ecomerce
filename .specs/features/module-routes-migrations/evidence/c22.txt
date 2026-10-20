@@ -1,0 +1,5 @@
+api APP_MODULES_CACHE=/tmp/laravel/app-modules.php
+queue-worker APP_MODULES_CACHE=/tmp/laravel/app-modules.php
+outbox-relay APP_MODULES_CACHE=/tmp/laravel/app-modules.php
+event-consumer APP_MODULES_CACHE=/tmp/laravel/app-modules.php
+OK - 4 services set APP_MODULES_CACHE, the api container holds the cache file, and bootstrap/cache has none

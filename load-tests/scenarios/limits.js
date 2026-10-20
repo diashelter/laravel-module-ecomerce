@@ -1,6 +1,6 @@
 // The `limits` profile (plan S6), with the real rate limits: every limited route refuses the request after its
 // limit, from the same client within one minute. The bodies are invalid or the password is wrong, so nothing is
-// written. Each limit has its own counter per route (the per-route keys of routes/api.php).
+// written. Each limit has its own counter per route (the per-route keys of the module route files, app-modules/<module>/routes/api.php).
 import http from 'k6/http';
 import { check } from 'k6';
 import { Counter } from 'k6/metrics';

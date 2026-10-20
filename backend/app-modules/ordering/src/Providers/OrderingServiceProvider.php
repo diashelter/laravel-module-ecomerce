@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ordering\Providers;
 
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Modules\Catalog\Contracts\ProductOrderHistory;
 use Modules\Fulfillment\Events\DeliveryScheduled;
@@ -20,6 +21,7 @@ use Modules\Ordering\Events\OrderPlaced;
 use Modules\Ordering\Persistence\Queries\OrderMetricsQuery;
 use Modules\Ordering\Persistence\Repositories\OrderRepository;
 use Modules\Payment\Events\PaymentApproved;
+use Modules\Shared\Support\RecordId;
 
 /**
  * Wires the contracts the ordering module publishes, and those other modules define and the
@@ -34,6 +36,14 @@ class OrderingServiceProvider extends ServiceProvider
         PayableOrders::class => OrderRepository::class,
         ProductOrderHistory::class => OrderRepository::class,
     ];
+
+    public function register(): void
+    {
+        // The route parameters this module owns are canonical UUIDs (see CatalogServiceProvider::register()).
+        foreach (['order'] as $parameter) {
+            Route::pattern($parameter, RecordId::PATTERN);
+        }
+    }
 
     public function boot(EventSubscriptions $subscriptions): void
     {

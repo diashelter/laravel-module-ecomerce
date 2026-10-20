@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Route;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Env;
 use Illuminate\Support\ServiceProvider;
-use Modules\Shared\Support\RecordId;
+use InterNACHI\Modular\Support\Cache;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Route parameters are canonical UUIDs: "/api/products/abc" returns 404 before any query,
-        // instead of a database error (PostgreSQL refuses a non-UUID compared with a `uuid` column).
-        // They are set here and not in boot(): a route copies the global patterns when it is created, and the
-        // routes of a module are created while the module library boots, before the boot() of this provider.
-        foreach (['product', 'category', 'stock', 'user', 'customer', 'order', 'address'] as $parameter) {
-            Route::pattern($parameter, RecordId::PATTERN);
-        }
+        // The module library caches the module list in bootstrap/cache/app-modules.php and has no setting for the
+        // path. Without the cache every request scans the app-modules folders (about 38 ms on a bind mount), so the
+        // path follows APP_MODULES_CACHE, like the framework's APP_CONFIG_CACHE: the load stack caches the modules
+        // inside its container instead of in the tree that the development API also reads.
+        $this->app->singleton(Cache::class, fn (Application $app) => new Cache(
+            $app->make(Filesystem::class),
+            Env::get('APP_MODULES_CACHE') ?: $app->bootstrapPath('cache/app-modules.php'),
+        ));
     }
 
     public function boot(): void
