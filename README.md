@@ -88,7 +88,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 ```
 
 - **Frontend e backend no mesmo host** (`localhost:8080`): o Nginx encaminha `/api/*`, `/sanctum/*` e `/horizon/*` (o painel da fila) para o Laravel e o restante para o Vite. Isso permite autenticação por cookie de sessão sem CORS.
-- **Backend em Laravel organizado em módulos** (`app/Modules/<Módulo>`), um por contexto de negócio. Continua sendo **um monólito**, com um único banco e um único deploy, sem microsserviços. A separação entre leitura e escrita vale só para as leituras que cruzam módulos, que são consultas (camada `Queries/`, abaixo), e nada é projetado: a leitura é sempre exata. Os contextos e as fronteiras entre eles estão em [docs/domain-analysis.md](docs/domain-analysis.md).
+- **Backend em Laravel organizado em módulos** (`app-modules/<módulo>`, um pacote Composer por contexto de negócio, descoberto pelo `internachi/modular`). Continua sendo **um monólito**, com um único banco e um único deploy, sem microsserviços. A separação entre leitura e escrita vale só para as leituras que cruzam módulos, que são consultas (camada `Queries/`, abaixo), e nada é projetado: a leitura é sempre exata. Os contextos e as fronteiras entre eles estão em [docs/domain-analysis.md](docs/domain-analysis.md).
 - **A facade de cada módulo é o seu `Contracts` mais os seus `Events`** (HEL-7, design em [.design/module-facades.md](.design/module-facades.md)). Um módulo usa outro só por interfaces de `Contracts/`, injetadas no construtor e ligadas, no service provider do módulo dono, a uma consulta dele (um contrato que só lê) ou a um repositório dele (um contrato que grava ou trava), e pelos eventos dele. Contratos e eventos falam em dados (ids, value objects, enums), nunca em models do Eloquent. Todas as outras pastas são privadas, inclusive uma pasta nova e o `Http`. De `DTOs`, `ValueObjects` e `Enums`, só é público o **vocabulário** do módulo (HEL-10, design em [.design/module-vocabulary.md](.design/module-vocabulary.md)): as classes dele que os tipos nativos das assinaturas dos seus `Contracts` e `Events` alcançam (parâmetros, retornos e propriedades públicas, o construtor incluído), de forma transitiva. O vocabulário é calculado a cada execução do teste, sem lista guardada: um tipo citado só em docblock não conta, e o contrato de um módulo não torna público um tipo interno de outro. Desde a HEL-6 o teste não declara nenhuma exceção.
 - **Dentro de cada módulo, as mesmas camadas**: validação em Form Requests e respostas com API Resources.
   - **Controllers** (`Http/Controllers`): só HTTP (request, autorização, resposta). Leituras simples, que não cruzam módulo, chamam um repository direto.
@@ -108,22 +108,21 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 ```
 /
 ├── backend/                         Laravel 13 (API only)
-│   ├── app/
-│   │   ├── Modules/
-│   │   │   ├── Catalog/             produtos e categorias (vitrine e cadastro); Queries/ (leituras que servem as rotas e os contratos); publica Contracts/ (ProductCatalog, CatalogMetrics) e define ProductOrderHistory; dono do ProductAvailability; CatalogServiceProvider
-│   │   │   ├── Inventory/           estoque; Queries/ (StockLevels, StockMetrics e a lista de estoque); publica Contracts/ (StockInitializer, StockLevels, StockMetrics, StockReservation) e InventoryServiceProvider
-│   │   │   ├── Ordering/            carrinho, checkout, pedidos, Customer (comprador, somente leitura) — núcleo do negócio; define Contracts/ (DeliveryAddressBook, ShippingQuoter), publica PayableOrders, CustomerOrderHistory e OrderMetrics (este por uma consulta), e guarda o vocabulário que eles trocam
-│   │   │   ├── Payment/             lê o pedido do cliente pelo PayableOrders, cobra pela porta PaymentGateway (gateway fake), grava as tentativas e publica PaymentApproved
-│   │   │   ├── Fulfillment/         tabela de frete por UF (ShippingRateTable), calendário de dias úteis, entrega fake: agenda o DeliverOrder e publica DeliveryScheduled e OrderDelivered; FulfillmentServiceProvider
-│   │   │   ├── Identity/            as duas contas (User = equipe, CustomerAccount = comprador), papéis, logins (Sanctum, um guard por área), Email e Password (ValueObjects), EnsureUserIsAdmin; publica Contracts/ (CustomerAccounts, CustomerMetrics) e IdentityServiceProvider
-│   │   │   ├── Customers/           "Minha conta", o caderno de endereços (`customer_addresses`) e a tela Clientes do admin (CustomerSummaryDTO), pelas contas do CustomerAccounts e pelo histórico do CustomerOrderHistory, com os próprios adaptadores HTTP de e-mail, senha, UF e conta; CustomersServiceProvider
-│   │   │   ├── Backoffice/          dashboard do admin (DashboardQuery, que lê os quatro contratos de métricas: CatalogMetrics, StockMetrics, CustomerMetrics e OrderMetrics)
-│   │   │   └── Shared/              infraestrutura comum: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID, o `throttle` que conta antes de decidir (Http/Middleware/AtomicThrottleRequests, Cache/AtomicRateLimiter) o outbox transacional e os transportes de evento (Messaging/: DomainEvent, EventOutbox, EventTransport, EventTransportFlag, EventTransportSelector, QueueEventTransport, EventSubscriptions, EventDelivery, DeliverEvent, OutboxRelay; Messaging/RabbitMq/: RabbitMqEventTransport, RabbitMqTopology, RabbitMqEnvelope, RabbitMqConnector, DeadDeliveries; Console/: outbox:relay, events:transport, events:consume, events:failed, events:retry)
-│   │   └── Providers/               AppServiceProvider (configurações globais, a ligação do EventOutbox, do EventTransport e das inscrições, a definição da flag `event-transport`, e o AtomicRateLimiter no lugar do RateLimiter do framework) e HorizonServiceProvider (o painel `/horizon`, aberto só à equipe `admin`)
+│   ├── app/Providers/               AppServiceProvider (os padrões de UUID dos parâmetros de rota e a trava de lazy loading) e HorizonServiceProvider (o painel `/horizon`, aberto só à equipe `admin`)
+│   ├── app-modules/                 um pacote Composer por módulo, descoberto pelo `internachi/modular`; cada `src/` tem a fachada (Contracts/, Events/) e as camadas Core/, Persistence/ e Http/, mais Providers/
+│   │   ├── catalog/             produtos e categorias (vitrine e cadastro); Queries/ (leituras que servem as rotas e os contratos); publica Contracts/ (ProductCatalog, CatalogMetrics) e define ProductOrderHistory; dono do ProductAvailability; CatalogServiceProvider
+│   │   ├── inventory/           estoque; Queries/ (StockLevels, StockMetrics e a lista de estoque); publica Contracts/ (StockInitializer, StockLevels, StockMetrics, StockReservation) e InventoryServiceProvider
+│   │   ├── messaging/           eventos: o outbox transacional, o relay, a porta EventTransport (fila do Laravel e RabbitMQ), a flag `event-transport` e os comandos outbox:relay, events:transport, events:consume, events:failed e events:retry; publica Contracts/ (DomainEvent, EventOutbox, EventConsumer, EventSubscriptions); MessagingServiceProvider
+│   │   ├── ordering/            carrinho, checkout, pedidos, Customer (comprador, somente leitura) — núcleo do negócio; define Contracts/ (DeliveryAddressBook, ShippingQuoter), publica PayableOrders, CustomerOrderHistory e OrderMetrics (este por uma consulta), e guarda o vocabulário que eles trocam
+│   │   ├── payment/             lê o pedido do cliente pelo PayableOrders, cobra pela porta PaymentGateway (gateway fake), grava as tentativas e publica PaymentApproved
+│   │   ├── fulfillment/         tabela de frete por UF (ShippingRateTable), calendário de dias úteis, entrega fake: agenda o DeliverOrder e publica DeliveryScheduled e OrderDelivered; FulfillmentServiceProvider
+│   │   ├── identity/            as duas contas (User = equipe, CustomerAccount = comprador), papéis, logins (Sanctum, um guard por área), Email e Password (ValueObjects), EnsureUserIsAdmin; publica Contracts/ (CustomerAccounts, CustomerMetrics) e IdentityServiceProvider
+│   │   ├── customers/           "Minha conta", o caderno de endereços (`customer_addresses`) e a tela Clientes do admin (CustomerSummaryDTO), pelas contas do CustomerAccounts e pelo histórico do CustomerOrderHistory, com os próprios adaptadores HTTP de e-mail, senha, UF e conta; CustomersServiceProvider
+│   │   ├── backoffice/          dashboard do admin (DashboardQuery, que lê os quatro contratos de métricas: CatalogMetrics, StockMetrics, CustomerMetrics e OrderMetrics)
+│   │   └── shared/              kernel de infraestrutura, sem camadas: erros da API, ApiFormRequest, BaseRepository, Controller, X-Request-ID, RecordId e o `throttle` que conta antes de decidir (Http/Middleware/AtomicThrottleRequests, Cache/AtomicRateLimiter); SharedServiceProvider
 │   ├── config/shop.php              configurações da loja (delay da entrega, paginação, tabela de frete por UF)
 │   ├── config/horizon.php, pennant.php, rabbitmq.php   o supervisor do Horizon, o driver das feature flags e a conexão com o RabbitMQ
 │   ├── database/
-│   │   ├── factories/
 │   │   ├── migrations/
 │   │   └── seeders/
 │   ├── lang/pt_BR/validation.php    mensagens de validação em português
@@ -434,7 +433,7 @@ Respostas: `201` (pedido criado, com o `code`), `409` (estoque insuficiente / pr
 
 ## Transação e concorrência de estoque
 
-Trecho central de `backend/app/Modules/Ordering/UseCases/PlaceOrderUseCase.php`:
+Trecho central de `backend/app-modules/ordering/src/Core/UseCases/PlaceOrderUseCase.php`:
 
 ```php
 DB::transaction(function () use ($customerId, $quantities) {
@@ -517,38 +516,38 @@ POST /api/orders/{order}/payment {card_token}
 
 | Classe | Parte | Tipo | O que faz |
 | --- | --- | --- | --- |
-| `App\Modules\Ordering\Events\OrderPlaced` | Pedidos | Evento `ordering.order_placed` (v1) | Gravado na transação do checkout |
-| `App\Modules\Ordering\Consumers\MarkOrderAsAwaitingPayment` | Pedidos | Consumidor | Move o pedido para `awaiting_payment` (`MarkOrderAsAwaitingPaymentUseCase`) |
-| `App\Modules\Payment\Events\PaymentApproved` | Pagamento | Evento `payment.payment_approved` (v1) | Gravado pelo `PayOrderUseCase` na mesma transação da tentativa aprovada |
-| `App\Modules\Ordering\Consumers\MarkOrderAsPaid` | Pedidos | Consumidor | Move para `payment_approved` e grava `OrderPaid` na mesma transação (`MarkOrderAsPaidUseCase`) |
-| `App\Modules\Ordering\Events\OrderPaid` | Pedidos | Evento `ordering.order_paid` (v1) | Gravado só pela transição que de fato marcou o pedido como pago |
-| `App\Modules\Fulfillment\Consumers\ScheduleOrderDelivery` | Entrega | Consumidor | Calcula a data prevista (`DeliveryCalendar`), registra no log, grava `DeliveryScheduled` numa transação só dele e, depois do commit, agenda o job de entrega (`ScheduleDeliveryUseCase`) |
-| `App\Modules\Fulfillment\Events\DeliveryScheduled` | Entrega | Evento `fulfillment.delivery_scheduled` (v1) | Carrega o id do pedido e a data prevista |
-| `App\Modules\Ordering\Consumers\RecordEstimatedDelivery` | Pedidos | Consumidor | Grava `estimated_delivery_on`, **só se estiver vazia**, sem tocar no status (`RecordEstimatedDeliveryUseCase`) |
-| `App\Modules\Fulfillment\Jobs\DeliverOrder` | Entrega | Job (`ShouldQueue`) | Após `ORDER_DELIVERY_DELAY_SECONDS`, simula a entrega e grava `OrderDelivered` numa transação só dele (`DeliverOrderUseCase`) |
-| `App\Modules\Fulfillment\Events\OrderDelivered` | Entrega | Evento `fulfillment.order_delivered` (v1) | Anuncia que a transportadora (fake) entregou o pedido |
-| `App\Modules\Ordering\Consumers\MarkOrderAsDelivered` | Pedidos | Consumidor | Move para `delivered` (`MarkOrderAsDeliveredUseCase`) |
+| `Modules\Ordering\Events\OrderPlaced` | Pedidos | Evento `ordering.order_placed` (v1) | Gravado na transação do checkout |
+| `Modules\Ordering\Core\Consumers\MarkOrderAsAwaitingPayment` | Pedidos | Consumidor | Move o pedido para `awaiting_payment` (`MarkOrderAsAwaitingPaymentUseCase`) |
+| `Modules\Payment\Events\PaymentApproved` | Pagamento | Evento `payment.payment_approved` (v1) | Gravado pelo `PayOrderUseCase` na mesma transação da tentativa aprovada |
+| `Modules\Ordering\Core\Consumers\MarkOrderAsPaid` | Pedidos | Consumidor | Move para `payment_approved` e grava `OrderPaid` na mesma transação (`MarkOrderAsPaidUseCase`) |
+| `Modules\Ordering\Events\OrderPaid` | Pedidos | Evento `ordering.order_paid` (v1) | Gravado só pela transição que de fato marcou o pedido como pago |
+| `Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery` | Entrega | Consumidor | Calcula a data prevista (`DeliveryCalendar`), registra no log, grava `DeliveryScheduled` numa transação só dele e, depois do commit, agenda o job de entrega (`ScheduleDeliveryUseCase`) |
+| `Modules\Fulfillment\Events\DeliveryScheduled` | Entrega | Evento `fulfillment.delivery_scheduled` (v1) | Carrega o id do pedido e a data prevista |
+| `Modules\Ordering\Core\Consumers\RecordEstimatedDelivery` | Pedidos | Consumidor | Grava `estimated_delivery_on`, **só se estiver vazia**, sem tocar no status (`RecordEstimatedDeliveryUseCase`) |
+| `Modules\Fulfillment\Core\Jobs\DeliverOrder` | Entrega | Job (`ShouldQueue`) | Após `ORDER_DELIVERY_DELAY_SECONDS`, simula a entrega e grava `OrderDelivered` numa transação só dele (`DeliverOrderUseCase`) |
+| `Modules\Fulfillment\Events\OrderDelivered` | Entrega | Evento `fulfillment.order_delivered` (v1) | Anuncia que a transportadora (fake) entregou o pedido |
+| `Modules\Ordering\Core\Consumers\MarkOrderAsDelivered` | Pedidos | Consumidor | Move para `delivered` (`MarkOrderAsDeliveredUseCase`) |
 
-A camada de publicar e consumir fica no `Shared`:
+A camada de publicar e consumir fica no módulo `Messaging` (`backend/app-modules/messaging`):
 
-| Classe (`App\Modules\Shared\...`) | O que faz |
+| Classe (`Modules\Messaging\...`) | O que faz |
 | --- | --- |
-| `Messaging\DomainEvent` | O contrato de todo evento de módulo: `eventName()`, `eventVersion()`, `toPayload()` e `fromPayload()` |
-| `Messaging\EventOutbox` | Onde o caso de uso grava o evento (`record()`). Implementado pelo `Repositories\OutboxMessageRepository`, que recusa a gravação sem transação aberta (`LogicException`) e um valor do payload que não seja escalar nem nulo (`InvalidArgumentException`) |
-| `Messaging\EventEnvelope` | A mensagem como ela viaja: `id`, `name`, `version`, `payload`, `occurredAt` e `requestId`, as mesmas chaves das colunas de `outbox_messages` |
-| `Messaging\EventTransport` | A porta por onde o relay publica: retornar é aceitar, lançar exceção é recusar. Duas implementações: o `Messaging\QueueEventTransport` (a fila do Laravel) e o `Messaging\RabbitMq\RabbitMqEventTransport`. O que o container entrega à porta é o `Messaging\EventTransportSelector`, que escolhe uma delas pela flag |
-| `Messaging\EventTransportFlag`, `Messaging\EventTransportSelector` | A flag `event-transport` (`redis`, o padrão, ou `rabbitmq`), lida e gravada pelo Pennant com o driver `database`, e o seletor que lê a flag a cada publicação e registra uma linha de log quando o transporte muda |
-| `Messaging\EventSubscriptions` | As inscrições, por nome de evento, e o **nome estável** de cada consumidor, dado como terceiro argumento do `subscribe()`. Recusa (`LogicException`) um consumidor que não implementa `EventConsumer` ou cujo `handle()` não recebe a classe inscrita, duas classes de evento com o mesmo nome, um nome de consumidor fora de `^[a-z]+\.[a-z_]+$`, um nome de dois consumidores e dois nomes de um consumidor |
-| `Messaging\EventConsumer` | A interface dos consumidores, que ficam em `<Módulo>/Consumers` |
-| `Messaging\EventDelivery`, `Messaging\DeliverEvent` | As regras de uma entrega (versão, `request_id`, reconstrução do evento, `handle()`), iguais nos dois transportes, e o job de uma entrega (mensagem, consumidor) da fila do Laravel, com `$tries = 3`, que as chama |
-| `Messaging\RabbitMq\RabbitMqConnector`, `RabbitMqTopology`, `RabbitMqEnvelope`, `RabbitMqEventTransport`, `DeadDeliveries` | A conexão com o broker (toda falha diz `RabbitMQ ...`), a topologia (exchanges e filas), a mensagem e o corpo JSON, o transporte e a leitura e a devolução das entregas mortas |
+| `Contracts\DomainEvent` | O contrato de todo evento de módulo: `eventName()`, `eventVersion()`, `toPayload()` e `fromPayload()` |
+| `Contracts\EventOutbox` | Onde o caso de uso grava o evento (`record()`). Implementado pelo `Persistence\Repositories\OutboxMessageRepository`, que recusa a gravação sem transação aberta (`LogicException`) e um valor do payload que não seja escalar nem nulo (`InvalidArgumentException`) |
+| `Core\EventEnvelope` | A mensagem como ela viaja: `id`, `name`, `version`, `payload`, `occurredAt` e `requestId`, as mesmas chaves das colunas de `outbox_messages` |
+| `Core\EventTransport` | A porta por onde o relay publica: retornar é aceitar, lançar exceção é recusar. Duas implementações: o `Core\QueueEventTransport` (a fila do Laravel) e o `Core\RabbitMq\RabbitMqEventTransport`. O que o container entrega à porta é o `Core\EventTransportSelector`, que escolhe uma delas pela flag |
+| `Core\EventTransportFlag`, `Core\EventTransportSelector` | A flag `event-transport` (`redis`, o padrão, ou `rabbitmq`), lida e gravada pelo Pennant com o driver `database`, e o seletor que lê a flag a cada publicação e registra uma linha de log quando o transporte muda |
+| `Contracts\EventSubscriptions` (a interface que os módulos usam) e `Core\EventSubscriptionRegistry` (a implementação, privada) | As inscrições, por nome de evento, e o **nome estável** de cada consumidor, dado como terceiro argumento do `subscribe()`. Recusa (`LogicException`) um consumidor que não implementa `EventConsumer` ou cujo `handle()` não recebe a classe inscrita, duas classes de evento com o mesmo nome, um nome de consumidor fora de `^[a-z]+\.[a-z_]+$`, um nome de dois consumidores e dois nomes de um consumidor |
+| `Contracts\EventConsumer` | A interface dos consumidores, que ficam em `<módulo>/src/Core/Consumers` |
+| `Core\EventDelivery`, `Core\DeliverEvent` | As regras de uma entrega (versão, `request_id`, reconstrução do evento, `handle()`), iguais nos dois transportes, e o job de uma entrega (mensagem, consumidor) da fila do Laravel, com `$tries = 3`, que as chama |
+| `Core\RabbitMq\RabbitMqConnector`, `RabbitMqTopology`, `RabbitMqEnvelope`, `RabbitMqEventTransport`, `DeadDeliveries` | A conexão com o broker (toda falha diz `RabbitMQ ...`), a topologia (exchanges e filas), a mensagem e o corpo JSON, o transporte e a leitura e a devolução das entregas mortas |
 | `Console\EventTransportCommand`, `ConsumeEventsCommand`, `FailedEventsCommand`, `RetryEventsCommand` | `events:transport`, `events:consume`, `events:failed` e `events:retry` |
-| `Messaging\OutboxRelay`, `Console\RelayOutboxCommand` | O ciclo do relay e o processo `outbox:relay [--once]` |
-| `Messaging\RestartSignal` | O sinal do `queue:restart` como um processo longo o enxerga (o relay e o `events:consume`): guarda o valor lido na partida e `changed()` fica verdadeiro quando o comando grava outro; com o cache ilegível (Redis fora) o processo segue e adota o sinal quando o cache voltar |
-| `Models\OutboxMessage` | Uma linha de `outbox_messages` |
+| `Core\OutboxRelay`, `Console\RelayOutboxCommand` | O ciclo do relay e o processo `outbox:relay [--once]` |
+| `Core\RestartSignal` | O sinal do `queue:restart` como um processo longo o enxerga (o relay e o `events:consume`): guarda o valor lido na partida e `changed()` fica verdadeiro quando o comando grava outro; com o cache ilegível (Redis fora) o processo segue e adota o sinal quando o cache voltar |
+| `Persistence\Models\OutboxMessage` | Uma linha de `outbox_messages` |
 
 - **O evento é gravado na transação da mudança, e gravar fora de uma é erro.** Antes, cada evento saía depois do commit, numa chamada separada à fila, e uma falha dela travava o pedido para sempre: em `placed` (sem o `OrderPlaced`), em `awaiting_payment` com o cliente já cobrado (sem o `PaymentApproved`) ou, no caso do `OrderPaid`, com a transição já gravada e o retry sem conseguir repeti-la. Agora a mensagem fica pendente até o transporte aceitar, e uma falha da fila só atrasa o pedido. No pagamento, a tentativa aprovada e o `PaymentApproved` entram juntos. Na marcação de pago, a transição e o `OrderPaid` entram juntos, e uma transição que não acontece não grava nada. O agendamento da entrega e a entrega, que não têm estado próprio, abrem uma transação só para a mensagem, e o `DeliverOrder` entra na fila depois do commit da `DeliveryScheduled`.
-- **Ninguém dispara evento pelo dispatcher do Laravel.** Nenhum evento de módulo tem listener do Laravel (o `bootstrap/app.php` não registra eventos), e o `DomainEventsTest` exige que toda classe de `Events` implemente `DomainEvent` e recusa, em `App\Modules`, o despacho de eventos do Laravel: o trait `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event` e o helper `event()`.
+- **Ninguém dispara evento pelo dispatcher do Laravel.** Nenhum evento de módulo tem listener do Laravel (o `bootstrap/app.php` não registra eventos), e o `DomainEventsTest` exige que toda classe de `Events` implemente `DomainEvent` e recusa, em `Modules`, o despacho de eventos do Laravel: o trait `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event` e o helper `event()`.
 - **O formato publicado não depende da classe PHP.** O nome é `<módulo>.<evento em snake_case>`, a versão é um inteiro a partir de 1 e o payload tem só escalares, em chaves snake_case: `order_id` em todos; `delivery_business_days` (inteiro) no `OrderPaid`; `estimated_delivery_on` (o dia de `America/Sao_Paulo`, em `Y-m-d`) no `DeliveryScheduled`. Mudar um payload é subir a versão. O `DeliverEvent` recusa uma versão que a classe inscrita não declara (`UnexpectedValueException`, com o nome e a versão) sem chamar o consumidor, e a entrega vai para o `failed_jobs`.
 - **Cada módulo inscreve os próprios consumidores** no `boot()` do seu service provider, e o produtor nunca lista quem o consome: o `OrderingServiceProvider` inscreve os 4 do Ordering e o `FulfillmentServiceProvider`, o `ScheduleOrderDelivery`.
 - **Uma entrega por consumidor.** Se um consumidor falha, só a entrega dele é repetida (até 3 tentativas) e depois vai para o `failed_jobs`; os outros consumidores da mesma mensagem rodam uma vez. O `make queue-failed` lista a entrega como `<nome do evento> -> <consumidor>`. Como a entrega carrega o envelope inteiro, um `make queue-retry` funciona mesmo depois que a mensagem foi apagada.
@@ -630,7 +629,7 @@ O `down` faz a API responder `503`, então nenhum pedido novo grava mensagem. O 
 
 ## Regra de disponibilidade do produto
 
-Um produto só pode ser comprado quando **`status = active` E estoque > 0**. A única fonte da regra no backend é o `App\Modules\Catalog\ValueObjects\ProductAvailability` (HEL-6; antes ela morava no `PurchaseAvailabilityService` do Ordering, o que obrigava o Catalog e o Inventory a depender de um módulo que depende deles):
+Um produto só pode ser comprado quando **`status = active` E estoque > 0**. A única fonte da regra no backend é o `Modules\Catalog\Core\ValueObjects\ProductAvailability` (HEL-6; antes ela morava no `PurchaseAvailabilityService` do Ordering, o que obrigava o Catalog e o Inventory a depender de um módulo que depende deles):
 
 - `isAvailable()`: combina o status do catálogo com as unidades do estoque.
 - `availableQuantity()`: as unidades do estoque, também para um produto inativo (`0` quando o produto não tem linha de estoque).
@@ -646,7 +645,7 @@ O value object recebe dados, não models. O `CatalogProduct` (o que o contrato `
 
 ## API REST
 
-Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. **Todo id de registro** (`id` e qualquer `*_id`, no caminho, no corpo e na resposta) é um UUID v7 em texto, na forma canônica (minúsculas, com hífens); o pedido também traz o `code` de 8 símbolos. Um id malformado no caminho (`/api/products/1`, um UUID em maiúsculas) responde `404`, sem nenhuma query, e no corpo responde `422` no campo. Erros seguem sempre o formato (montado por `App\Modules\Shared\Http\Responses\ApiErrorResponse`):
+Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. **Todo id de registro** (`id` e qualquer `*_id`, no caminho, no corpo e na resposta) é um UUID v7 em texto, na forma canônica (minúsculas, com hífens); o pedido também traz o `code` de 8 símbolos. Um id malformado no caminho (`/api/products/1`, um UUID em maiúsculas) responde `404`, sem nenhuma query, e no corpo responde `422` no campo. Erros seguem sempre o formato (montado por `Modules\Shared\Http\Responses\ApiErrorResponse`):
 
 ```json
 {
@@ -657,7 +656,7 @@ Todas as rotas ficam em `backend/routes/api.php` com prefixo `/api`. **Todo id d
 }
 ```
 
-- `code`: identificador estável do erro (enum `App\Modules\Shared\Enums\ApiErrorCode`). O frontend deve decidir pelo `code`, nunca pelo texto de `message`. Valores: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `METHOD_NOT_ALLOWED`, `CSRF_TOKEN_MISMATCH`, `TOO_MANY_REQUESTS`, `BUSINESS_RULE_VIOLATION`, `INSUFFICIENT_STOCK`, `PAYMENT_DECLINED` (402, pagamento recusado pelo gateway), `HTTP_ERROR`, `SERVER_ERROR`.
+- `code`: identificador estável do erro (enum `Modules\Shared\Enums\ApiErrorCode`). O frontend deve decidir pelo `code`, nunca pelo texto de `message`. Valores: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `METHOD_NOT_ALLOWED`, `CSRF_TOKEN_MISMATCH`, `TOO_MANY_REQUESTS`, `BUSINESS_RULE_VIOLATION`, `INSUFFICIENT_STOCK`, `PAYMENT_DECLINED` (402, pagamento recusado pelo gateway), `HTTP_ERROR`, `SERVER_ERROR`.
 - `errors`: mensagens por campo (lista de strings); `{}` quando o erro não é de um campo específico.
 - `request_id`: o mesmo valor do header `X-Request-ID`, presente em **todas** as respostas. É gerado pelo middleware `AssignRequestId` (ou reaproveitado do header enviado por um proxy, se for seguro) e gravado no `Context` do Laravel, então aparece em todas as linhas de log da requisição e dos jobs enfileirados por ela.
 - Respostas de erro são enviadas com `Cache-Control: private, no-store`.
@@ -865,6 +864,9 @@ O frontend ainda não é verificado no CI.
 | `Models/CustomerAccountTest` | `customers`: FK do pedido (`restrict`, id existente), `CHECK` do e-mail e unicidade direto no banco |
 | `Middleware/EnsureUserIsAdminTest` | o middleware `admin` deixa passar só o papel `admin` |
 | `UseCases/User/StaffUseCasesTest` | regras do admin sobre si mesmo: não muda o próprio papel, não remove a própria conta; exclusão e edição por id, com `ModelNotFoundException` para id desconhecido |
+| `Unit/Architecture/ModulePackagesTest` | os 10 pacotes em `modules:list`, nenhuma referência ao namespace antigo, `bootstrap/providers.php` sem módulos e só as pastas permitidas em cada `src` |
+| `Unit/Architecture/ModuleLayersTest` | `Core` e `Persistence` sem o `Http` do módulo, infraestrutura (`Shared`, `Messaging`) sem módulo de negócio e `Shared` sem `Messaging`, cada regra com uma violação plantada em `Fixtures/Layout/` |
+| `Feature/Messaging/MessagingModuleTest` | a fachada do `Messaging` (4 interfaces) e os 5 comandos de evento registrados pelo provider do módulo |
 | `Unit/Architecture/ModuleBoundariesTest` | fronteiras entre módulos: pastas privadas (o `Http` incluído) e vocabulário público calculado das assinaturas de `Contracts` e `Events` (com classes de teste em `Fixtures/` para o percurso), estoque só pelos contratos, Identity sem pedidos, Ordering, Payment e Fulfillment sem o `User` da equipe, Payment e Fulfillment sem `OrderRepository` e sem se conhecerem, Payment cobrando só pela porta `PaymentGateway`, Ordering sem o Customers e só com os eventos do Fulfillment (uma expectativa por namespace), Fulfillment sem o Customers, contratos do Ordering só interfaces, Shared sem módulos de negócio, repositories sem os services do próprio módulo, e as consultas (sem model nem coleção do Eloquent nas assinaturas, sem repositories nem casos de uso do próprio módulo, os 6 contratos de leitura resolvidos para as consultas dos donos, sem lista de exceções). As 9 travessias que eram exceções foram vistas falhando uma a uma com uma violação de propósito |
 | `Auth/EmailAndPasswordTest` | e-mail como conta única (caixa, `CHECK` do banco em `users` e `customers`, login, perfil, admin), política de senha só ao escolher uma |
 | `Unit/ValueObjects/*` | `ProductAvailability` (os 4 casos de status e unidades), `Email` (normalização e recusas), `Password` (política, sem vazar o texto em dumps, serialização e traces) e as listas tipadas (`TypedListsTest`: agrupamento, totais derivados, recusa de tipo e de id inválido ou repetido) |
@@ -976,20 +978,29 @@ Decisões relevantes:
 - **Um guard de sessão por área**: `config/auth.php` define `customer` (provider `customers` → `CustomerAccount`, o padrão) e `staff` (provider `users` → `User`). As rotas da loja usam `auth:customer` e as do admin `auth:staff`; **nenhuma rota usa `auth:sanctum`** (o Sanctum fica só no `statefulApi()`, para sessão e CSRF), e um teste confere isso. Com `auth:sanctum` e uma lista de guards, a primeira sessão que autenticasse valeria, e uma sessão de equipe passaria nas rotas da loja. Código novo deve seguir o mesmo precedente. O browser tem **um cookie de sessão**, então `POST /api/auth/logout` e `POST /api/admin/auth/logout` encerram as duas áreas.
 - **Só o admin remove** (precedente): todo `DELETE` de `/api/admin/*` e o recurso `/api/admin/users` ficam no grupo com o middleware `admin` (`EnsureUserIsAdmin`), e o suporte recebe `403`. Uma rota `DELETE` nova entra no grupo restrito por padrão, e o teste `StaffRoleTest` percorre `Route::getRoutes()` e falha se algum `DELETE` de `api/admin/*` responder diferente de `403` ao suporte. A alternativa, um `delete` em cada policy, deixaria uma rota nova sem o método liberar o suporte em silêncio.
 - **Equipe**: o admin cadastra, edita, troca o papel e remove membros em **Usuários**. Ele não muda o próprio papel nem remove a própria conta (`409`, `BusinessRuleException`). Dois admins se removendo ou se rebaixando ao mesmo tempo é aceito sem trava: pode sobrar zero admins, e a recuperação é pelo seeder. Excluir clientes continua fora do escopo (`orders.customer_id` impede, e não há decisão de LGPD).
-- **Módulos** (`app/Modules/<Módulo>`): cada módulo repete a mesma estrutura interna, só com as pastas de que precisa:
+- **Módulos** (`app-modules/<módulo>`): cada módulo é um pacote Composer (`modules/<módulo>`, namespace `Modules\<Módulo>`) que o `internachi/modular` descobre; o provider vem do `composer.json` do pacote. A fachada pública (`Contracts`, `Events`) fica ao lado de três camadas privadas, `Core`, `Persistence` e `Http`, e cada módulo usa só as pastas de que precisa:
 
   ```
-  Modules/Ordering/
-    Consumers/  DTOs/  Enums/  Events/  Exceptions/  Models/
-    Queries/  Repositories/  Services/  UseCases/  ValueObjects/
-    Http/Controllers/(Admin/)  Http/Requests/(Admin/)  Http/Resources/
+  app-modules/ordering/
+    composer.json
+    src/
+      Contracts/  Events/                           fachada pública
+      Core/         Consumers/ DTOs/ Enums/ Exceptions/ Jobs/ Services/ UseCases/ ValueObjects/
+      Persistence/  Models/ Queries/ Repositories/
+      Http/         Controllers/(Admin/) Requests/(Admin/) Resources/ Rules/ Middleware/
+      Providers/    OrderingServiceProvider.php
+    database/factories/
   ```
 
+  - **Direção das camadas:** `Http` → `Core` → `Persistence`. `Core` e `Persistence` nunca usam o `Http` do próprio módulo, e o `ModuleLayersTest` cobra. O `Payment` ainda tem a pasta `Gateways` (adaptadores do gateway de pagamento), e o `Messaging`, a `Console` (os comandos de evento). O `Shared` é um kernel e não tem camadas: `Http`, `Cache`, `Enums`, `Exceptions`, `Repositories` e `Support`.
+  - **Criar um módulo:** `php artisan make:module <nome>` cria o pacote; fora dele só mudam o `composer.json` e o `composer.lock` da raiz. Depois de baixar o repositório, ou de trocar de branch com módulos novos, rode `composer install` para criar o symlink de `vendor/modules/<módulo>` (o container `api` só instala quando falta o `vendor/autoload.php`).
+  - **Deploy:** esvazie a fila do Redis antes de subir a troca de namespace (os jobs `DeliverEvent` já enfileirados guardam a classe do consumidor com o namespace antigo); o RabbitMQ não é afetado, porque as filas usam o nome estável do consumidor.
+  - **Padrões de rota:** os padrões de UUID dos parâmetros são registrados no `register()` do `AppServiceProvider`, e não no `boot()`: uma rota copia os padrões globais quando é criada, e as rotas de um módulo são criadas quando a biblioteca de módulos inicia.
   - **`Admin/`** separa o que pertence à área administrativa, como `Catalog\Http\Controllers\ProductController` (vitrine) e `Catalog\Http\Controllers\Admin\ProductController` (cadastro).
   - **Ligações explícitas:** models e factories se declaram por `#[UseFactory]` / `protected $model`. Assim não dependem mais da convenção de namespace `App\Models`.
   - **Rotas:** ficam centralizadas em `routes/api.php`, que importa cada controller pelo nome completo, para manter num só lugar o mapa da API e os grupos de middleware (`auth:customer`, `auth:staff`, `admin`).
   - **Testes:** continuam em `backend/tests`, organizados por tipo (Unit/Feature). Só os namespaces importados mudaram.
-- **Contratos do estoque**: o catálogo, o carrinho, o checkout e o dashboard não usam o `StockRepository` diretamente, e sim quatro contratos em `App\Modules\Inventory\Contracts`, que falam em ids e quantidades:
+- **Contratos do estoque**: o catálogo, o carrinho, o checkout e o dashboard não usam o `StockRepository` diretamente, e sim quatro contratos em `Modules\Inventory\Contracts`, que falam em ids e quantidades:
   - `StockInitializer::createForProduct(productId, quantity)`, usado pelo `CreateProductUseCase` para abrir o estoque de um produto novo, na mesma transação.
   - `StockLevels::quantitiesFor(ProductIds): StockQuantities`, usado pelo `ValidateCartUseCase`, sem bloqueio, e `StockLevels::stocksFor(ProductIds): ProductStocks`, que devolve o id da linha e a quantidade de cada produto e é usado pela consulta do Catalog (`ProductQuery`) para a vitrine e o cadastro de produto, numa leitura só para a página inteira.
   - `StockMetrics::totals(): StockTotals`, usado pela consulta do Backoffice (`DashboardQuery`): os produtos com unidades e o total de unidades.
@@ -1044,8 +1055,8 @@ Decisões relevantes:
   - **O nome no `throttle` venceu os limitadores nomeados** (`RateLimiter::for` num service provider). Os dois separam os contadores, mas o nome é uma palavra a mais em cada rota e deixa o limite escrito nela. Os limitadores nomeados passam a valer a pena quando uma rota precisar de mais de um limite, de um limite diferente para visitante e cliente, ou de uma chave além do cliente (por exemplo, o e-mail tentado no login).
   - **O cadastro e os dois logins não dividem um contador.** Um contador comum não reduz a força bruta: contra cada formulário, o atacante continua com 10 tentativas por minuto por IP. E um formulário bloquearia os outros para todos atrás do mesmo IP (uma rede de escritório, ou o gateway do Compose no Docker local): as senhas erradas de clientes travariam o login da equipe, e um cadastro recusado (o `422` também conta) gastaria as tentativas de login.
   - O `RateLimitTest` percorre a tabela de rotas e falha se uma rota com `throttle` não nomear o contador ou repetir o nome de outra, e esgota cada rota para provar que as outras continuam abertas.
-- **Contar antes de conferir** (achado no perfil `limits` do k6, HEL-14: numa rajada de 30 logins simultâneos com senha errada, passaram 11 contra o limite de 10): o `ThrottleRequests` do Laravel lê a contagem, compara com o limite e só depois soma a requisição. As requisições que chegam juntas leem a contagem antes de qualquer uma somar, e todas passam: no `RateLimitBurstTest`, com 30 processos soltos no mesmo instante, passaram as 30. Agora o alias `throttle` é o [`AtomicThrottleRequests`](backend/app/Modules/Shared/Http/Middleware/AtomicThrottleRequests.php), que soma primeiro e deixa passar a requisição cuja contagem não passa do limite. Os limites, os nomes dos contadores e o `429` (a exceção e os headers do framework) não mudaram.
-  - **O incremento também precisava ser um comando só.** O `RateLimiter::increment` do framework cria o contador em zero, incrementa e, quando o incremento diz 1 mas a criação falhou, grava 1 por cima. As requisições que abrem a janela se intercalam ali, e a gravação apaga os acertos das outras: só com a ordem trocada no middleware, passaram até 19 de 30, em 12 de 40 rajadas. O [`AtomicRateLimiter`](backend/app/Modules/Shared/Cache/AtomicRateLimiter.php) incrementa e dá a validade da janela num script Lua, e com as duas mudanças passaram exatamente 10 nas 40 rajadas. Ele entra por um `extend` no `AppServiceProvider` (o framework registra o `RateLimiter` num provider adiado, que substituiria uma ligação comum ao carregar), na mesma store (`cache.limiter`) e com as mesmas chaves (o contador e o `:timer` do `Retry-After`).
+- **Contar antes de conferir** (achado no perfil `limits` do k6, HEL-14: numa rajada de 30 logins simultâneos com senha errada, passaram 11 contra o limite de 10): o `ThrottleRequests` do Laravel lê a contagem, compara com o limite e só depois soma a requisição. As requisições que chegam juntas leem a contagem antes de qualquer uma somar, e todas passam: no `RateLimitBurstTest`, com 30 processos soltos no mesmo instante, passaram as 30. Agora o alias `throttle` é o [`AtomicThrottleRequests`](backend/app-modules/shared/src/Http/Middleware/AtomicThrottleRequests.php), que soma primeiro e deixa passar a requisição cuja contagem não passa do limite. Os limites, os nomes dos contadores e o `429` (a exceção e os headers do framework) não mudaram.
+  - **O incremento também precisava ser um comando só.** O `RateLimiter::increment` do framework cria o contador em zero, incrementa e, quando o incremento diz 1 mas a criação falhou, grava 1 por cima. As requisições que abrem a janela se intercalam ali, e a gravação apaga os acertos das outras: só com a ordem trocada no middleware, passaram até 19 de 30, em 12 de 40 rajadas. O [`AtomicRateLimiter`](backend/app-modules/shared/src/Cache/AtomicRateLimiter.php) incrementa e dá a validade da janela num script Lua, e com as duas mudanças passaram exatamente 10 nas 40 rajadas. Ele entra por um `extend` no `AppServiceProvider` (o framework registra o `RateLimiter` num provider adiado, que substituiria uma ligação comum ao carregar), na mesma store (`cache.limiter`) e com as mesmas chaves (o contador e o `:timer` do `Retry-After`).
   - **O `throttleWithRedis()` do Laravel não resolve**: o `ThrottleRequestsWithRedis` confere num script, soma em outro e ignora a resposta do próprio `acquire()`; passaram 21, 13 e 15 de 30 em três rajadas. O `RateLimiter::attempt` também confere antes de somar. Uma trava (`Cache::lock`) em volta da conferência e da soma faria as requisições da mesma chave esperarem umas pelas outras.
   - **Uma requisição recusada também conta**, porque soma antes de saber. A janela não estica: termina um minuto depois do primeiro acerto, e o `Retry-After` continua vindo dela. Com mais de um limite na rota (hoje nenhuma tem), a requisição recusada por um já contou nos anteriores. Um limite com `after()` só sabe se conta depois da resposta e continua na ordem do framework.
   - Fora do Redis, o incremento é o do framework: a store `array`, dos testes e dos perfis de volume do k6, vive num processo só.
