@@ -373,7 +373,7 @@ Seeders (chamados pelo `DatabaseSeeder` nesta ordem):
 
 ### Como o Faker é utilizado
 
-- As **factories** (`database/factories`) usam o Faker (`fake()`) com locale `pt_BR` para nomes de clientes, e-mails, nomes/descrições/preços de produtos e datas dos pedidos.
+- As **factories** (`database/factories` de cada módulo) usam o Faker (`fake()`) com locale `pt_BR` para nomes de clientes, e-mails, nomes/descrições/preços de produtos e datas dos pedidos.
 - O `DatabaseSeeder` fixa a semente do Faker (`fake()->seed(2026)`): **toda execução de `make fresh` gera exatamente os mesmos dados**, o que deixa o ambiente previsível.
 - Os seeders são idempotentes onde faz sentido (admin via `firstOrNew`, categorias via `firstOrCreate`; produtos/pedidos só são criados se a tabela estiver vazia).
 - Os pedidos de demonstração **não decrementam estoque**: representam vendas passadas, anteriores à contagem atual de estoque.
