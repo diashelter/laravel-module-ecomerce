@@ -1,34 +1,23 @@
-Preparing worktree (detached HEAD 73399e3)
-HEAD is now at 73399e3 feat(payment): read the order through a port of the payment module
-removal copy inventory-alone without: backoffice catalog customers fulfillment identity ordering payment
- Container ecommerce-api-run-23a767d50e90 Creating 
- Container ecommerce-api-run-23a767d50e90 Created 
-./composer.json has been updated
-Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/identity modules/ordering modules/payment
-Loading composer repositories with package information
-Updating dependencies
-Lock file operations: 0 installs, 0 updates, 7 removals
-  - Removing modules/backoffice (1.0)
-  - Removing modules/catalog (1.0)
-  - Removing modules/customers (1.0)
-  - Removing modules/fulfillment (1.0)
-  - Removing modules/identity (1.0)
-  - Removing modules/ordering (1.0)
-  - Removing modules/payment (1.0)
-Writing lock file
+CREATE DATABASE
+Preparing worktree (detached HEAD be1c84c)
+HEAD is now at be1c84c Merge pull request #29 from diashelter/helterdias/hel-16-event-idempotency
+ Container ecommerce-api-run-d6181c2e3d74 Creating 
+ Container ecommerce-api-run-d6181c2e3d74 Created 
 Installing dependencies from lock file (including require-dev)
-Nothing to install, update or remove
+Verifying lock file contents can be installed on current platform.
+Package operations: 0 installs, 5 updates, 0 removals
+    0 [>---------------------------]    0 [->--------------------------]
+  - Upgrading modules/catalog (1.0 5788f0a => 1.0 fd53881): Source already present
+  - Upgrading modules/identity (1.0 180b726 => 1.0 dfac254): Source already present
+  - Upgrading modules/messaging (1.0 6423ee2 => 1.0 237fcc5): Source already present
+  - Upgrading modules/payment (1.0 41a0ea9 => 1.0 2d57094): Source already present
+  - Upgrading modules/shared (1.0 39bf23a => 1.0 be9a54c): Source already present
+    0 [>---------------------------]    0 [->--------------------------]
 Generating optimized autoload files
-Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Allowed located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/Consumers/Allowed.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
-Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/UseCases/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\InfrastructureUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/infrastructure-uses-business/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
-Class Tests\Unit\Architecture\Fixtures\Layout\ModuleTestUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/module-test-uses-business/tests/Feature/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\SharedUsesMessaging\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/shared-uses-messaging/src/Support/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\FolderOutside\Stray located in ./tests/Unit/Architecture/Fixtures/Layout/folder-outside/src/Controllers/Stray.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\CoreUsesHttp\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/core-uses-http/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
-Class Tests\Unit\Architecture\Fixtures\Isolation\OrderingNamesPayment\Offender located in ./tests/Unit/Architecture/Fixtures/Isolation/ordering-names-payment/ordering/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
-Class Tests\Unit\Architecture\Fixtures\Isolation\PaymentNamesOrdering\Offender located in ./tests/Unit/Architecture/Fixtures/Isolation/payment-names-ordering/payment/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
-Class Tests\Unit\Architecture\Fixtures\Isolation\IntegrationNamesBoth\Adapter located in ./tests/Unit/Architecture/Fixtures/Isolation/integration-names-both/integration/src/Payment/Adapter.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 > Illuminate\Foundation\ComposerScripts::postAutoloadDump
 > @php artisan package:discover --ansi
 
@@ -42,9 +31,15 @@ Class Tests\Unit\Architecture\Fixtures\Isolation\IntegrationNamesBoth\Adapter lo
   laravel/sanctum [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
   laravel/sentinel [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
   laravel/tinker [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
-  modules/integration [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/backoffice [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/catalog [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/customers [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/fulfillment [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/identity [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
   modules/inventory [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
   modules/messaging [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/ordering [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  modules/payment [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
   modules/shared [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
   nesbot/carbon [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
   nunomaduro/collision [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
@@ -53,49 +48,75 @@ Class Tests\Unit\Architecture\Fixtures\Isolation\IntegrationNamesBoth\Adapter lo
 
 101 packages you are using are looking for funding.
 Use the `composer fund` command to find out more!
-> @php artisan vendor:publish --tag=laravel-assets --ansi --force
-
-  [37;44m INFO [39;49m No publishable resources for tag [1m[laravel-assets][22m.  
-
-No security vulnerability advisories found.
-Banco de testes: ecommerce_testing_removal_inventory_alone (vhost do RabbitMQ: ecommerce_testing_removal_inventory_alone)
-packages left: integration inventory messaging shared 
- Container ecommerce-api-run-82263086be89 Creating 
- Container ecommerce-api-run-82263086be89 Created 
+ Container ecommerce-api-run-6f1585edc1a8 Creating 
+ Container ecommerce-api-run-6f1585edc1a8 Created 
 
    INFO  Preparing database.  
 
-  Creating migration table ...................................... 26.12ms DONE
+  Creating migration table ...................................... 35.77ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000001_create_cache_table .......................... 29.60ms DONE
-  0001_01_01_000002_create_jobs_table ........................... 37.16ms DONE
-  2026_10_05_000003_create_stocks_table ......................... 36.52ms FAIL
+  0001_01_01_000000_create_users_table .......................... 58.17ms DONE
+  0001_01_01_000001_create_cache_table .......................... 24.14ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 41.22ms DONE
+  2026_10_05_000000_create_customers_table ...................... 13.54ms DONE
+  2026_10_05_000001_create_categories_table ..................... 11.24ms DONE
+  2026_10_05_000002_create_products_table ....................... 41.02ms DONE
+  2026_10_05_000003_create_stocks_table ......................... 36.80ms DONE
+  2026_10_05_000004_create_category_product_table ............... 14.58ms DONE
+  2026_10_05_000005_create_orders_table ......................... 28.56ms DONE
+  2026_10_05_000006_create_order_items_table .................... 17.80ms DONE
+  2026_10_06_000001_create_payments_table ....................... 10.73ms DONE
+  2026_10_07_000001_create_customer_addresses_table .............. 9.23ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 7.70ms DONE
+  2026_10_18_170032_create_features_table ........................ 6.95ms DONE
+  2026_10_20_000001_create_deliveries_table ...................... 4.27ms DONE
 
-   Illuminate\Database\QueryException 
+foreign keys at be1c84c:
+category_product_category_id_foreign
+category_product_product_id_foreign
+customer_addresses_customer_id_foreign
+deliveries_order_id_foreign
+order_items_order_id_foreign
+order_items_product_id_foreign
+orders_customer_id_foreign
+payments_order_id_foreign
+stocks_product_id_foreign
+ Container ecommerce-api-run-2fd947dd9ec2 Creating 
+ Container ecommerce-api-run-2fd947dd9ec2 Created 
 
-  SQLSTATE[42P01]: Undefined table: 7 ERROR:  relation "products" does not exist (Connection: pgsql, Host: db, Port: 5432, Database: ecommerce_testing_removal_inventory_alone, SQL: alter table "stocks" add constraint "stocks_product_id_foreign" foreign key ("product_id") references "products" ("id") on delete cascade)
+   INFO  Running migrations.  
 
-  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:857
-    853▕             $exceptionType = ($isUniqueConstraintError = $this->isUniqueConstraintError($e))
-    854▕                 ? UniqueConstraintViolationException::class
-    855▕                 : QueryException::class;
-    856▕ 
-  ➜ 857▕             $exception = new $exceptionType(
-    858▕                 $this->getNameWithReadWriteType(),
-    859▕                 $query,
-    860▕                 $this->prepareBindings($bindings),
-    861▕                 $e,
+  2026_10_21_000001_drop_payments_order_id_foreign .............. 16.25ms DONE
 
-      [2m+9 vendor frames [22m
+foreign keys at HEAD:
+category_product_category_id_foreign
+category_product_product_id_foreign
+customer_addresses_customer_id_foreign
+deliveries_order_id_foreign
+order_items_order_id_foreign
+order_items_product_id_foreign
+orders_customer_id_foreign
+stocks_product_id_foreign
+ Container ecommerce-api-run-726f3f87cd60 Creating 
+ Container ecommerce-api-run-726f3f87cd60 Created 
 
-  10  app-modules/inventory/database/migrations/2026_10_05_000003_create_stocks_table.php:12
-      Illuminate\Support\Facades\Facade::__callStatic("create")
-      [2m+38 vendor frames [22m
-
-  49  artisan:16
-      Illuminate\Foundation\Application::handleCommand(Object(Symfony\Component\Console\Input\ArgvInput))
-
-
-FAIL: migrate:fresh
+  Migration name .............................................. Batch / Status  
+  0001_01_01_000000_create_users_table ............................... [1] Ran  
+  0001_01_01_000001_create_cache_table ............................... [1] Ran  
+  0001_01_01_000002_create_jobs_table ................................ [1] Ran  
+  2026_10_05_000000_create_customers_table ........................... [1] Ran  
+  2026_10_05_000001_create_categories_table .......................... [1] Ran  
+  2026_10_05_000002_create_products_table ............................ [1] Ran  
+  2026_10_05_000003_create_stocks_table .............................. [1] Ran  
+  2026_10_05_000004_create_category_product_table .................... [1] Ran  
+  2026_10_05_000005_create_orders_table .............................. [1] Ran  
+  2026_10_05_000006_create_order_items_table ......................... [1] Ran  
+  2026_10_06_000001_create_payments_table ............................ [1] Ran  
+  2026_10_07_000001_create_customer_addresses_table .................. [1] Ran  
+  2026_10_15_000001_create_outbox_messages_table ..................... [1] Ran  
+  2026_10_18_170032_create_features_table ............................ [1] Ran  
+  2026_10_20_000001_create_deliveries_table .......................... [1] Ran  
+  2026_10_21_000001_drop_payments_order_id_foreign ................... [2] Ran  
+PASS: migrate on a database of the base drops only payments_order_id_foreign, every migration Ran

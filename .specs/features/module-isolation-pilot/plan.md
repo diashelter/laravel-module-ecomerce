@@ -17,7 +17,7 @@ Quem paga é o objetivo de estudo do projeto, que é provar que cada módulo é 
 
 Números do repositório em 2026-10-20:
 
-- 637 declarações `it(`/`test(` em 114 arquivos;
+- 628 declarações `it(`/`test(` em 114 arquivos (recontadas em 2026-10-20 por `git grep`; a descoberta dizia 637);
 - 7 linhas `use` entre Payment e Ordering: 5 do Payment para o Ordering e 2 do Ordering para o Payment;
 - 1 chave estrangeira entre eles.
 
@@ -116,7 +116,7 @@ Os testes que já usam só o próprio módulo moram nele e passam com só ele in
 4. WHEN the tests of `Identity`, `Messaging`, `Shared`, `Catalog` or `Payment` run with every business module except that one removed THEN the system SHALL run `migrate:fresh` and pass all of that module's tests
 5. The system SHALL map `Modules\<Módulo>\Tests\` to `tests/` in the `composer.json` of each package that has a `tests` folder, and in no root `composer.json` key
 6. IF a file under `app-modules/<A>/tests` names a class of another business module THEN the architecture suite SHALL fail, and it SHALL fail on a deliberate violation
-7. The system SHALL keep the count of `it(`/`test(` declarations summed over `backend/tests` and `app-modules/*/tests` at least 637 minus the one case replaced by criterion 21
+7. The system SHALL keep every `it(`/`test(` declaration of the base (628, recounted on 2026-10-20; the 637 of the discovery was a miscount) by name in `backend/tests` or `app-modules/*/tests`, except the one case replaced by criterion 21
 8. The system SHALL let a module test sign in as a customer with the test identity of `Modules\Shared\Tests` on the `customer` guard, with an `id` that is a canonical UUID v7
 
 **Independent test:** `make test` verde, a pasta `tests` de cada um dos 5 módulos verde numa cópia com os outros módulos de negócio removidos e nenhum dos 27 arquivos em `backend/tests`.

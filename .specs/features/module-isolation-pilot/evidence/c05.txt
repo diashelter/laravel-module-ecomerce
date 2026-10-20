@@ -1,0 +1,2 @@
+exit 0:   Tests:    1 passed (4 assertions)
+PASS: the filter ran the one Payment module test
