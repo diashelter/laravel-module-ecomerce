@@ -4,6 +4,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
+use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Fulfillment\Events\DeliveryScheduled;
 use Modules\Fulfillment\Events\OrderDelivered;
 use Modules\Fulfillment\Persistence\Models\Delivery;
@@ -94,7 +95,8 @@ it('redelivers OrderDelivered to MarkOrderAsDelivered', function () {
 });
 
 it('redelivers OrderPaid to ScheduleOrderDelivery', function () {
-    // The job is only counted here: DeliverOrder has its own tests.
+    // The job is only counted here (DeliverOrder has its own tests): the redelivery of an order not
+    // yet delivered queues it again, and the guard of the job makes the second one a no-op.
     Queue::fake();
     $order = Order::factory()->status(OrderStatus::PaymentApproved)->create();
     $envelope = envelopeOf(new OrderPaid($order->id, 2));
@@ -105,4 +107,5 @@ it('redelivers OrderPaid to ScheduleOrderDelivery', function () {
     expect(Delivery::query()->where('order_id', $order->id)->count())->toBe(1)
         ->and(outboxMessages('fulfillment.delivery_scheduled'))->toHaveCount(1)
         ->and(DB::table('outbox_messages')->count())->toBe(1);
+    Queue::assertPushedTimes(DeliverOrder::class, 2);
 });
