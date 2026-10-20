@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Tests\Unit\Architecture\Support\ModuleLayout;
 
 function isCodeName(string $name): bool
 {
@@ -8,14 +9,13 @@ function isCodeName(string $name): bool
 }
 
 it('keeps the order code out of the contracts events and routes', function () {
-    $modules = realpath(__DIR__.'/../../../app/Modules');
-    $contracts = glob("{$modules}/*/Contracts/*.php");
-    $carriers = [...glob("{$modules}/*/Events/*.php"), ...glob("{$modules}/*/Jobs/*.php")];
+    $contracts = ModuleLayout::filesMatching('Contracts/*.php');
+    $carriers = [...ModuleLayout::filesMatching('Events/*.php'), ...ModuleLayout::filesMatching('Core/Jobs/*.php')];
 
     expect(count($contracts))->toBeGreaterThanOrEqual(11)
         ->and(count($carriers))->toBeGreaterThanOrEqual(6);
 
-    $classOf = fn (string $file) => 'App\\Modules\\'.str_replace('/', '\\', substr($file, strlen($modules) + 1, -4));
+    $classOf = ModuleLayout::classOf(...);
 
     foreach ($contracts as $file) {
         foreach ((new ReflectionClass($classOf($file)))->getMethods() as $method) {

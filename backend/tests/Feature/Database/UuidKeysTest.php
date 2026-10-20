@@ -1,15 +1,15 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Customers\Models\CustomerAddress;
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Models\User;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\Models\OrderItem;
-use App\Modules\Payment\Models\Payment;
 use Illuminate\Support\Facades\DB;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Customers\Persistence\Models\CustomerAddress;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Identity\Persistence\Models\User;
+use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Ordering\Persistence\Models\OrderItem;
+use Modules\Payment\Persistence\Models\Payment;
 
 const UUID_KEY_COLUMNS = [
     'users.id', 'customers.id', 'categories.id', 'products.id', 'stocks.id', 'orders.id',

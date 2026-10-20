@@ -1,14 +1,14 @@
 <?php
 
-use App\Modules\Shared\Messaging\EventEnvelope;
-use App\Modules\Shared\Messaging\EventOutbox;
-use App\Modules\Shared\Messaging\EventSubscriptions;
-use App\Modules\Shared\Messaging\RabbitMq\RabbitMqConnector;
-use App\Modules\Shared\Messaging\RabbitMq\RabbitMqEventTransport;
-use App\Modules\Shared\Models\OutboxMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
+use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Messaging\Core\EventEnvelope;
+use Modules\Messaging\Core\RabbitMq\RabbitMqConnector;
+use Modules\Messaging\Core\RabbitMq\RabbitMqEventTransport;
+use Modules\Messaging\Persistence\Models\OutboxMessage;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPTimeoutException;

@@ -1,16 +1,16 @@
 <?php
 
-use App\Modules\Fulfillment\Consumers\ScheduleOrderDelivery;
-use App\Modules\Fulfillment\Jobs\DeliverOrder;
-use App\Modules\Ordering\Consumers\MarkOrderAsPaid;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Events\OrderPaid;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Payment\Events\PaymentApproved;
-use App\Modules\Shared\Messaging\EventOutbox;
-use App\Modules\Shared\Messaging\EventTransport;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
+use Modules\Fulfillment\Core\Jobs\DeliverOrder;
+use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Core\EventTransport;
+use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Events\OrderPaid;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Payment\Events\PaymentApproved;
 use Tests\Feature\Outbox\Fixtures\FailingOutbox;
 
 /*

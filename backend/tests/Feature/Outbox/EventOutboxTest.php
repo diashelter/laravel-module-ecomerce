@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Ordering\Events\OrderPlaced;
-use App\Modules\Shared\Messaging\EventOutbox;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
+use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Ordering\Events\OrderPlaced;
 use Tests\Feature\Outbox\Fixtures\SampleEvent;
 
 /** Records the event through the bound outbox, inside a transaction of its own. */

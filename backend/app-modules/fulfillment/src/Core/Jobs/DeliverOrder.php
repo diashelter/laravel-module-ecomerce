@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Fulfillment\Core\Jobs;
+
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Modules\Fulfillment\Core\UseCases\DeliverOrderUseCase;
+
+/**
+ * Fulfillment: simulates the carrier delivering a paid order (no real carrier integration).
+ */
+class DeliverOrder implements ShouldQueue
+{
+    use Queueable;
+
+    public int $tries = 3;
+
+    public function __construct(public string $orderId) {}
+
+    public function handle(): void
+    {
+        app(DeliverOrderUseCase::class)->execute($this->orderId);
+    }
+}

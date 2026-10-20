@@ -1,13 +1,13 @@
 <?php
 
-use App\Modules\Identity\Http\Middleware\EnsureUserIsAdmin;
-use App\Modules\Shared\Exceptions\ApiExceptionRenderer;
-use App\Modules\Shared\Http\Middleware\AssignRequestId;
-use App\Modules\Shared\Http\Middleware\AtomicThrottleRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Modules\Identity\Http\Middleware\EnsureUserIsAdmin;
+use Modules\Shared\Exceptions\ApiExceptionRenderer;
+use Modules\Shared\Http\Middleware\AssignRequestId;
+use Modules\Shared\Http\Middleware\AtomicThrottleRequests;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(

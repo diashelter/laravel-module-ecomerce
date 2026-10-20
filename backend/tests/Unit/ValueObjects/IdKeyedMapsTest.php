@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Inventory\ValueObjects\StockQuantities;
-use App\Modules\Ordering\DTOs\CartItemDTO;
-use App\Modules\Ordering\ValueObjects\OrderCountsByCustomer;
-use App\Modules\Ordering\ValueObjects\ProductQuantities;
 use Illuminate\Support\Collection;
+use Modules\Inventory\Core\ValueObjects\StockQuantities;
+use Modules\Ordering\Core\DTOs\CartItemDTO;
+use Modules\Ordering\Core\ValueObjects\OrderCountsByCustomer;
+use Modules\Ordering\Core\ValueObjects\ProductQuantities;
 
 const MAP_FIRST_ID = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a';
 

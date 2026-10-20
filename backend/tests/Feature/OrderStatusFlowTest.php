@@ -1,26 +1,26 @@
 <?php
 
-use App\Modules\Fulfillment\Consumers\ScheduleOrderDelivery;
-use App\Modules\Fulfillment\Events\DeliveryScheduled;
-use App\Modules\Fulfillment\Events\OrderDelivered;
-use App\Modules\Fulfillment\Jobs\DeliverOrder;
-use App\Modules\Ordering\Consumers\MarkOrderAsAwaitingPayment;
-use App\Modules\Ordering\Consumers\MarkOrderAsDelivered;
-use App\Modules\Ordering\Consumers\MarkOrderAsPaid;
-use App\Modules\Ordering\Consumers\RecordEstimatedDelivery;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Events\OrderPaid;
-use App\Modules\Ordering\Events\OrderPlaced;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Payment\Events\PaymentApproved;
-use App\Modules\Shared\Messaging\DeliverEvent;
-use App\Modules\Shared\Messaging\EventOutbox;
-use App\Modules\Shared\Messaging\EventSubscriptions;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
+use Modules\Fulfillment\Core\Jobs\DeliverOrder;
+use Modules\Fulfillment\Events\DeliveryScheduled;
+use Modules\Fulfillment\Events\OrderDelivered;
+use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Messaging\Core\DeliverEvent;
+use Modules\Ordering\Core\Consumers\MarkOrderAsAwaitingPayment;
+use Modules\Ordering\Core\Consumers\MarkOrderAsDelivered;
+use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
+use Modules\Ordering\Core\Consumers\RecordEstimatedDelivery;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Events\OrderPaid;
+use Modules\Ordering\Events\OrderPlaced;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Payment\Events\PaymentApproved;
 
 it('subscribes exactly the five order consumers', function () {
     $pairs = [];

@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Customers\DTOs\CustomerAddressDTO;
-use App\Modules\Customers\Models\CustomerAddress;
-use App\Modules\Customers\UseCases\CreateCustomerAddressUseCase;
-use App\Modules\Ordering\Enums\BrazilianState;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Modules\Customers\Core\DTOs\CustomerAddressDTO;
+use Modules\Customers\Core\UseCases\CreateCustomerAddressUseCase;
+use Modules\Customers\Persistence\Models\CustomerAddress;
+use Modules\Ordering\Core\Enums\BrazilianState;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 function addressData(): CustomerAddressDTO
 {

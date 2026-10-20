@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Database\Seeder;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
 
 class ProductSeeder extends Seeder
 {

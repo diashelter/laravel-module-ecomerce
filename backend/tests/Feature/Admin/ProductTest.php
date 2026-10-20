@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Ordering\Models\OrderItem;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Ordering\Persistence\Models\OrderItem;
 
 beforeEach(fn () => $this->actingAs(admin()));
 

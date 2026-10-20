@@ -1,16 +1,16 @@
 <?php
 
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Http\Requests\Admin\StoreProductRequest;
-use App\Modules\Catalog\Http\Requests\ProductIndexRequest;
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Customers\Http\Requests\UpdateProfileRequest;
-use App\Modules\Inventory\Enums\StockOperation;
-use App\Modules\Inventory\Http\Requests\Admin\UpdateStockRequest;
-use App\Modules\Ordering\DTOs\CartItemDTO;
-use App\Modules\Ordering\Http\Requests\ValidateCartRequest;
-use App\Modules\Shared\Http\Requests\ApiFormRequest;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Http\Requests\Admin\StoreProductRequest;
+use Modules\Catalog\Http\Requests\ProductIndexRequest;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Customers\Http\Requests\UpdateProfileRequest;
+use Modules\Inventory\Core\Enums\StockOperation;
+use Modules\Inventory\Http\Requests\Admin\UpdateStockRequest;
+use Modules\Ordering\Core\DTOs\CartItemDTO;
+use Modules\Ordering\Http\Requests\ValidateCartRequest;
+use Modules\Shared\Http\Requests\ApiFormRequest;
 
 /**
  * @template T of ApiFormRequest

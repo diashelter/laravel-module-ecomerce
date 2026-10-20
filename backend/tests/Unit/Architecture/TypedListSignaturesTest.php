@@ -1,25 +1,25 @@
 <?php
 
-use App\Modules\Catalog\Contracts\CatalogMetrics;
-use App\Modules\Catalog\Contracts\ProductCatalog;
-use App\Modules\Catalog\DTOs\ProductDTO;
-use App\Modules\Catalog\Queries\ProductCatalogQuery;
-use App\Modules\Catalog\Repositories\ProductRepository;
-use App\Modules\Customers\UseCases\ListCustomersUseCase;
-use App\Modules\Identity\Contracts\CustomerAccounts;
-use App\Modules\Identity\Contracts\CustomerMetrics;
-use App\Modules\Inventory\Contracts\StockLevels;
-use App\Modules\Inventory\Contracts\StockMetrics;
-use App\Modules\Inventory\Contracts\StockReservation;
-use App\Modules\Ordering\Contracts\CustomerOrderHistory;
-use App\Modules\Ordering\Contracts\OrderMetrics;
-use App\Modules\Ordering\Contracts\PayableOrders;
-use App\Modules\Ordering\DTOs\CartDTO;
-use App\Modules\Ordering\Repositories\OrderRepository;
-use App\Modules\Ordering\Services\CartValidationService;
-use App\Modules\Ordering\Services\CheckoutService;
-use App\Modules\Ordering\UseCases\PlaceOrderUseCase;
-use App\Modules\Ordering\UseCases\ValidateCartUseCase;
+use Modules\Catalog\Contracts\CatalogMetrics;
+use Modules\Catalog\Contracts\ProductCatalog;
+use Modules\Catalog\Core\DTOs\ProductDTO;
+use Modules\Catalog\Persistence\Queries\ProductCatalogQuery;
+use Modules\Catalog\Persistence\Repositories\ProductRepository;
+use Modules\Customers\Core\UseCases\ListCustomersUseCase;
+use Modules\Identity\Contracts\CustomerAccounts;
+use Modules\Identity\Contracts\CustomerMetrics;
+use Modules\Inventory\Contracts\StockLevels;
+use Modules\Inventory\Contracts\StockMetrics;
+use Modules\Inventory\Contracts\StockReservation;
+use Modules\Ordering\Contracts\CustomerOrderHistory;
+use Modules\Ordering\Contracts\OrderMetrics;
+use Modules\Ordering\Contracts\PayableOrders;
+use Modules\Ordering\Core\DTOs\CartDTO;
+use Modules\Ordering\Core\Services\CartValidationService;
+use Modules\Ordering\Core\Services\CheckoutService;
+use Modules\Ordering\Core\UseCases\PlaceOrderUseCase;
+use Modules\Ordering\Core\UseCases\ValidateCartUseCase;
+use Modules\Ordering\Persistence\Repositories\OrderRepository;
 
 it('declares no array in the domain list signatures', function (string $class, ?string $method) {
     $reflection = new ReflectionClass($class);

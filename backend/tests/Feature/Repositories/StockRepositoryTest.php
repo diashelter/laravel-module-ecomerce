@@ -1,12 +1,12 @@
 <?php
 
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\ValueObjects\ProductIds;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Inventory\Repositories\StockRepository;
-use App\Modules\Inventory\ValueObjects\StockQuantities;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Modules\Catalog\Core\ValueObjects\ProductIds;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Inventory\Core\ValueObjects\StockQuantities;
+use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Inventory\Persistence\Repositories\StockRepository;
 
 beforeEach(fn () => $this->repository = app(StockRepository::class));
 

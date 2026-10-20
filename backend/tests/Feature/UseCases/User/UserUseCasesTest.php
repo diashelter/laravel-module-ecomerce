@@ -1,22 +1,22 @@
 <?php
 
-use App\Modules\Customers\UseCases\CreateCustomerUseCase;
-use App\Modules\Customers\UseCases\ListCustomersUseCase;
-use App\Modules\Customers\UseCases\ShowCustomerUseCase;
-use App\Modules\Customers\UseCases\UpdateCustomerUseCase;
-use App\Modules\Customers\UseCases\UpdateOwnProfileUseCase;
-use App\Modules\Identity\Contracts\CustomerAccounts;
-use App\Modules\Identity\DTOs\CreateUserDTO;
-use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\UseCases\RegisterCustomerUseCase;
-use App\Modules\Identity\ValueObjects\CustomerProfile;
-use App\Modules\Identity\ValueObjects\Email;
-use App\Modules\Identity\ValueObjects\Password;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\ValueObjects\OrderSummaries;
-use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
+use Modules\Customers\Core\UseCases\CreateCustomerUseCase;
+use Modules\Customers\Core\UseCases\ListCustomersUseCase;
+use Modules\Customers\Core\UseCases\ShowCustomerUseCase;
+use Modules\Customers\Core\UseCases\UpdateCustomerUseCase;
+use Modules\Customers\Core\UseCases\UpdateOwnProfileUseCase;
+use Modules\Identity\Contracts\CustomerAccounts;
+use Modules\Identity\Core\DTOs\CreateUserDTO;
+use Modules\Identity\Core\DTOs\UpdateUserProfileDTO;
+use Modules\Identity\Core\UseCases\RegisterCustomerUseCase;
+use Modules\Identity\Core\ValueObjects\CustomerProfile;
+use Modules\Identity\Core\ValueObjects\Email;
+use Modules\Identity\Core\ValueObjects\Password;
+use Modules\Identity\Database\Factories\UserFactory;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Ordering\Core\ValueObjects\OrderSummaries;
+use Modules\Ordering\Persistence\Models\Order;
 
 it('registers a customer account', function () {
     $account = app(RegisterCustomerUseCase::class)->execute(new CreateUserDTO('Maria', new Email('maria@example.com'), new Password('secret-password')));

@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Catalog\Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Inventory\Persistence\Models\Stock;
+
+/**
+ * @extends Factory<Product>
+ */
+class ProductFactory extends Factory
+{
+    protected $model = Product::class;
+
+    private const TYPES = [
+        'Notebook', 'Monitor', 'Teclado Mecânico', 'Mouse Gamer', 'Headset', 'Smartphone',
+        'Tablet', 'Smartwatch', 'Caixa de Som', 'Webcam', 'Cadeira Ergonômica', 'Luminária',
+        'Console', 'Controle', 'Carregador', 'Cabo USB-C', 'SSD', 'Roteador', 'Impressora', 'Mousepad',
+    ];
+
+    private const ADJECTIVES = ['Pro', 'Max', 'Ultra', 'Lite', 'Plus', 'Air', 'Prime', 'Turbo'];
+
+    public function definition(): array
+    {
+        $name = sprintf(
+            '%s %s %s %s',
+            fake()->randomElement(self::TYPES),
+            fake()->lastName(),
+            fake()->randomElement(self::ADJECTIVES),
+            fake()->bothify('?###'),
+        );
+
+        return [
+            'name' => $name,
+            // Prices are integer cents: money never goes through float math.
+            'price_cents' => fake()->numberBetween(19, 4999) * 100 + fake()->randomElement([0, 49, 90, 99]),
+            'description' => fake()->paragraphs(2, true),
+            'image_url' => 'https://picsum.photos/seed/'.Str::slug($name).'/600/600',
+            'status' => ProductStatus::Active,
+        ];
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['status' => ProductStatus::Inactive]);
+    }
+
+    public function withStock(int $quantity): static
+    {
+        return $this->afterCreating(fn (Product $product) => Stock::factory()->create(['product_id' => $product->id, 'quantity' => $quantity]));
+    }
+}

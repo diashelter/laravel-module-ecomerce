@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Customers\Models\CustomerAddress;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Modules\Customers\Persistence\Models\CustomerAddress;
 
 /** A complete row for the table, written straight to it with no model in between. */
 function addressRow(string $customerId, array $overrides = []): array

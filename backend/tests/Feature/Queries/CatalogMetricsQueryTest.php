@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Catalog\Contracts\CatalogMetrics;
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Models\Product;
+use Modules\Catalog\Contracts\CatalogMetrics;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Persistence\Models\Product;
 
 it('counts products by status', function () {
     Product::factory()->count(2)->create();

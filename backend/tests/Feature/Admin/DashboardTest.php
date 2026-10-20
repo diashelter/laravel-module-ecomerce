@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Ordering\Models\Order;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Ordering\Persistence\Models\Order;
 
 it('returns aggregated metrics', function () {
     productWithStock(10);

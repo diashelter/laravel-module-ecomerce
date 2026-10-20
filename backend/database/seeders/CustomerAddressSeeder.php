@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Modules\Customers\Models\CustomerAddress;
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Ordering\Enums\BrazilianState;
 use Illuminate\Database\Seeder;
+use Modules\Customers\Persistence\Models\CustomerAddress;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Ordering\Core\Enums\BrazilianState;
 
 /**
  * Address books for the demo customers, so a seeded customer can check out right away.

@@ -31,7 +31,10 @@ it('registers the five event commands from its own provider', function () {
     expect(app()->getProvider(MessagingServiceProvider::class))->not->toBeNull();
 
     $application = new AppServiceProvider(app());
-    $wired = [...array_keys($application->bindings), ...array_keys($application->singletons)];
+    $wired = [
+        ...array_keys(property_exists($application, 'bindings') ? $application->bindings : []),
+        ...array_keys(property_exists($application, 'singletons') ? $application->singletons : []),
+    ];
 
     foreach ([EventOutbox::class, EventSubscriptions::class] as $contract) {
         expect($wired)->not->toContain($contract);

@@ -1,0 +1,22 @@
+{
+    "name": "modules/messaging",
+    "description": "The Messaging module.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Messaging\\": "src/",
+            "Modules\\Messaging\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Messaging\\Providers\\MessagingServiceProvider"
+            ]
+        }
+    }
+}

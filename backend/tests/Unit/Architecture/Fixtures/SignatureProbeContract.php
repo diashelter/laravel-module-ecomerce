@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Architecture\Fixtures;
 
-use App\Modules\Identity\DTOs\CreateUserDTO;
-use App\Modules\Identity\ValueObjects\CustomerProfile;
-use App\Modules\Ordering\ValueObjects\DeliveryAddress;
-use App\Modules\Ordering\ValueObjects\OrderForPayment;
-use App\Modules\Ordering\ValueObjects\ShippingQuote;
-use App\Modules\Shared\Enums\ApiErrorCode;
 use Carbon\CarbonImmutable;
+use Modules\Identity\Core\DTOs\CreateUserDTO;
+use Modules\Identity\Core\ValueObjects\CustomerProfile;
+use Modules\Ordering\Core\ValueObjects\DeliveryAddress;
+use Modules\Ordering\Core\ValueObjects\OrderForPayment;
+use Modules\Ordering\Core\ValueObjects\ShippingQuote;
+use Modules\Shared\Enums\ApiErrorCode;
 
 /**
  * A contract that is never implemented: the ModuleBoundariesTest walks its signatures to prove

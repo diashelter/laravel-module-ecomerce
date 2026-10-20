@@ -1,14 +1,14 @@
 <?php
 
-use App\Modules\Fulfillment\Events\DeliveryScheduled;
-use App\Modules\Fulfillment\Events\OrderDelivered;
-use App\Modules\Fulfillment\Jobs\DeliverOrder;
-use App\Modules\Ordering\Events\OrderPaid;
-use App\Modules\Ordering\Events\OrderPlaced;
-use App\Modules\Payment\Events\PaymentApproved;
-use App\Modules\Shared\Messaging\DomainEvent;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Fulfillment\Core\Jobs\DeliverOrder;
+use Modules\Fulfillment\Events\DeliveryScheduled;
+use Modules\Fulfillment\Events\OrderDelivered;
+use Modules\Messaging\Contracts\DomainEvent;
+use Modules\Ordering\Events\OrderPaid;
+use Modules\Ordering\Events\OrderPlaced;
+use Modules\Payment\Events\PaymentApproved;
 
 /*
  * The order events and the delivery job cross module boundaries (and the events are stored in the

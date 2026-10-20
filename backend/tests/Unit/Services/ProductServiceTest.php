@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Catalog\Services\ProductService;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Modules\Catalog\Core\Services\ProductService;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 it('builds a default image url from the product id', function () {
     expect((new ProductService)->defaultImageUrl(42))->toBe('https://picsum.photos/seed/product-42/600/600');

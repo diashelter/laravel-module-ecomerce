@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
+use Modules\Catalog\Persistence\Models\Category;
 
 beforeEach(fn () => $this->actingAs(admin()));
 

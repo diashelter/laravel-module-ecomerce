@@ -1,11 +1,11 @@
 <?php
 
-use App\Modules\Fulfillment\Consumers\ScheduleOrderDelivery;
-use App\Modules\Ordering\Consumers\MarkOrderAsAwaitingPayment;
-use App\Modules\Ordering\Consumers\MarkOrderAsDelivered;
-use App\Modules\Ordering\Consumers\MarkOrderAsPaid;
-use App\Modules\Ordering\Consumers\RecordEstimatedDelivery;
-use App\Modules\Shared\Messaging\EventSubscriptions;
+use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
+use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Ordering\Core\Consumers\MarkOrderAsAwaitingPayment;
+use Modules\Ordering\Core\Consumers\MarkOrderAsDelivered;
+use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
+use Modules\Ordering\Core\Consumers\RecordEstimatedDelivery;
 use Tests\Feature\Outbox\Fixtures\OtherEvent;
 use Tests\Feature\Outbox\Fixtures\OtherEventConsumer;
 use Tests\Feature\Outbox\Fixtures\SampleEvent;

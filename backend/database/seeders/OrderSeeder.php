@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Customers\Models\CustomerAddress;
-use App\Modules\Fulfillment\Services\DeliveryCalendar;
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Ordering\Contracts\ShippingQuoter;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\Models\OrderItem;
 use Illuminate\Database\Seeder;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Customers\Persistence\Models\CustomerAddress;
+use Modules\Fulfillment\Core\Services\DeliveryCalendar;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Ordering\Contracts\ShippingQuoter;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Ordering\Persistence\Models\OrderItem;
 
 /**
  * Historical demo orders so the dashboard has data right after installation.

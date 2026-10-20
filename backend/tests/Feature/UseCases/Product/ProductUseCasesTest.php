@@ -1,22 +1,22 @@
 <?php
 
-use App\Modules\Catalog\DTOs\CreateProductDTO;
-use App\Modules\Catalog\DTOs\ProductDTO;
-use App\Modules\Catalog\DTOs\UpdateProductStatusDTO;
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\UseCases\ChangeProductStatusUseCase;
-use App\Modules\Catalog\UseCases\CreateProductUseCase;
-use App\Modules\Catalog\UseCases\DeleteProductUseCase;
-use App\Modules\Catalog\UseCases\UpdateProductUseCase;
-use App\Modules\Catalog\ValueObjects\CategoryIds;
-use App\Modules\Catalog\ValueObjects\ProductRecord;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Ordering\Models\OrderItem;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
+use Modules\Catalog\Core\DTOs\CreateProductDTO;
+use Modules\Catalog\Core\DTOs\ProductDTO;
+use Modules\Catalog\Core\DTOs\UpdateProductStatusDTO;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Core\UseCases\ChangeProductStatusUseCase;
+use Modules\Catalog\Core\UseCases\CreateProductUseCase;
+use Modules\Catalog\Core\UseCases\DeleteProductUseCase;
+use Modules\Catalog\Core\UseCases\UpdateProductUseCase;
+use Modules\Catalog\Core\ValueObjects\CategoryIds;
+use Modules\Catalog\Core\ValueObjects\ProductRecord;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Ordering\Persistence\Models\OrderItem;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 beforeEach(function () {
     $this->product = fn (array $categoryIds, array $overrides = []) => new ProductDTO(...[

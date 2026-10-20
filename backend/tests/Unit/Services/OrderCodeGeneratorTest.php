@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Ordering\Services\OrderCodeGenerator;
+use Modules\Ordering\Core\Services\OrderCodeGenerator;
 
 it('draws 8 symbols of the order code alphabet', function () {
     $generator = new OrderCodeGenerator;

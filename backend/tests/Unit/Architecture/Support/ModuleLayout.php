@@ -30,6 +30,20 @@ final class ModuleLayout
         return base_path('app-modules/'.Str::kebab($module).'/src');
     }
 
+    /** @return list<string> the files under every module's src that match a glob pattern such as "Events/*.php" */
+    public static function filesMatching(string $pattern): array
+    {
+        return glob(base_path("app-modules/*/src/{$pattern}")) ?: [];
+    }
+
+    /** The class a file of app-modules declares, from its path: app-modules/ordering/src/Events/OrderPaid.php -> Modules\Ordering\Events\OrderPaid. */
+    public static function classOf(string $file): string
+    {
+        [$module, $rest] = explode('/src/', substr($file, strlen(base_path('app-modules/'))), 2);
+
+        return 'Modules\\'.Str::studly($module).'\\'.str_replace('/', '\\', substr($rest, 0, -4));
+    }
+
     /** @return list<string> the folders a module may have directly under src */
     public static function allowedFolders(string $module): array
     {

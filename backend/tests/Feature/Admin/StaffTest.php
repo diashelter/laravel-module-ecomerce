@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Models\User;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Persistence\Models\User;
 
 beforeEach(fn () => $this->withHeader('Origin', 'http://localhost'));
 

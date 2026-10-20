@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Repositories\CategoryRepository;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Repositories\CategoryRepository;
 
 beforeEach(fn () => $this->repository = app(CategoryRepository::class));
 

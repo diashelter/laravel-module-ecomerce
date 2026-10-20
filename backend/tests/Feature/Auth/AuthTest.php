@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Models\User;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Identity\Persistence\Models\User;
 
 // Sanctum only starts a session for "stateful" requests coming from the SPA domain.
 beforeEach(fn () => $this->withHeader('Origin', 'http://localhost'));

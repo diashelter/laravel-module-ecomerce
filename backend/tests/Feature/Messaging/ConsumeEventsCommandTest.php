@@ -1,12 +1,12 @@
 <?php
 
-use App\Modules\Shared\Messaging\EventSubscriptions;
-use App\Modules\Shared\Messaging\RabbitMq\RabbitMqConnector;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
+use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Messaging\Core\RabbitMq\RabbitMqConnector;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Tests\Feature\Outbox\Fixtures\FailingConsumer;

@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Identity\ValueObjects\Password;
+use Modules\Identity\Core\ValueObjects\Password;
 
 it('refuses a short password without echoing it', function () {
     try {

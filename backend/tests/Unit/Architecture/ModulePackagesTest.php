@@ -27,7 +27,8 @@ it('keeps no App.Modules reference in the project', function () {
 
     expect(is_dir(base_path('app/Modules')))->toBeFalse();
 
-    foreach (['backend', 'load-tests', '.github'] as $directory) {
+    // The api container mounts backend/ only; load-tests/ and .github/ are checked from the host (proofs/c02).
+    foreach (array_filter(['backend', 'load-tests', '.github'], fn (string $directory) => is_dir("{$project}/{$directory}")) as $directory) {
         $iterator = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(
             new RecursiveDirectoryIterator("{$project}/{$directory}", FilesystemIterator::SKIP_DOTS),
             fn (SplFileInfo $file) => ! in_array($file->getFilename(), ['vendor', 'node_modules', 'storage', 'results', 'cache'], true),

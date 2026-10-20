@@ -1,19 +1,20 @@
 <?php
 
-use App\Modules\Catalog\Contracts\ProductOrderHistory;
-use App\Modules\Fulfillment\Events\DeliveryScheduled;
-use App\Modules\Fulfillment\Events\OrderDelivered;
-use App\Modules\Fulfillment\Jobs\DeliverOrder;
-use App\Modules\Identity\Contracts\CustomerAccounts;
-use App\Modules\Inventory\Contracts\StockInitializer;
-use App\Modules\Inventory\Contracts\StockReservation;
-use App\Modules\Ordering\Contracts\CustomerOrderHistory;
-use App\Modules\Ordering\Contracts\DeliveryAddressBook;
-use App\Modules\Ordering\Contracts\PayableOrders;
-use App\Modules\Ordering\Events\OrderPaid;
-use App\Modules\Ordering\Events\OrderPlaced;
-use App\Modules\Ordering\ValueObjects\OrderForPayment;
-use App\Modules\Payment\Events\PaymentApproved;
+use Modules\Catalog\Contracts\ProductOrderHistory;
+use Modules\Fulfillment\Core\Jobs\DeliverOrder;
+use Modules\Fulfillment\Events\DeliveryScheduled;
+use Modules\Fulfillment\Events\OrderDelivered;
+use Modules\Identity\Contracts\CustomerAccounts;
+use Modules\Inventory\Contracts\StockInitializer;
+use Modules\Inventory\Contracts\StockReservation;
+use Modules\Ordering\Contracts\CustomerOrderHistory;
+use Modules\Ordering\Contracts\DeliveryAddressBook;
+use Modules\Ordering\Contracts\PayableOrders;
+use Modules\Ordering\Core\ValueObjects\OrderForPayment;
+use Modules\Ordering\Events\OrderPaid;
+use Modules\Ordering\Events\OrderPlaced;
+use Modules\Payment\Events\PaymentApproved;
+use Tests\Unit\Architecture\Support\ModuleLayout;
 
 function isIdName(string $name): bool
 {
@@ -79,7 +80,7 @@ function idTypeNames(?ReflectionType $type): array
 }
 
 it('declares no integer id in the modules', function () {
-    $root = realpath(__DIR__.'/../../../app/Modules');
+    $root = realpath(base_path('app-modules'));
     $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
     $read = 0;
     $violations = [];
@@ -89,7 +90,11 @@ it('declares no integer id in the modules', function () {
             continue;
         }
 
-        $class = 'App\\Modules\\'.str_replace('/', '\\', substr($file->getPathname(), strlen($root) + 1, -4));
+        if (! str_contains($file->getPathname(), '/src/')) {
+            continue;
+        }
+
+        $class = ModuleLayout::classOf($file->getPathname());
 
         if (! class_exists($class) && ! interface_exists($class) && ! trait_exists($class) && ! enum_exists($class)) {
             continue;

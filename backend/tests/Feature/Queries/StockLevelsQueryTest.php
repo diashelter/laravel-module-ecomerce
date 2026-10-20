@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Catalog\ValueObjects\ProductIds;
-use App\Modules\Inventory\Contracts\StockLevels;
-use App\Modules\Inventory\ValueObjects\ProductStock;
-use App\Modules\Inventory\ValueObjects\ProductStocks;
+use Modules\Catalog\Core\ValueObjects\ProductIds;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Inventory\Contracts\StockLevels;
+use Modules\Inventory\Core\ValueObjects\ProductStock;
+use Modules\Inventory\Core\ValueObjects\ProductStocks;
 
 it('reads the stock row of each product for the product pages', function () {
     $first = productWithStock(4);

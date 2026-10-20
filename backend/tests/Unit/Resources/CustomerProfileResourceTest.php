@@ -1,10 +1,10 @@
 <?php
 
-use App\Modules\Customers\Http\Resources\CustomerProfileResource as CustomersCustomerProfileResource;
-use App\Modules\Identity\Http\Resources\CustomerProfileResource as IdentityCustomerProfileResource;
-use App\Modules\Identity\ValueObjects\CustomerProfile;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Modules\Customers\Http\Resources\CustomerProfileResource as CustomersCustomerProfileResource;
+use Modules\Identity\Core\ValueObjects\CustomerProfile;
+use Modules\Identity\Http\Resources\CustomerProfileResource as IdentityCustomerProfileResource;
 
 // Identity (the store session) and customers (account and admin screens) each render the account
 // with their own resource, and the API keeps one shape of it.

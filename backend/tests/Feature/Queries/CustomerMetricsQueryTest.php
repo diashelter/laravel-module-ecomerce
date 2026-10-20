@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Identity\Contracts\CustomerMetrics;
+use Modules\Identity\Contracts\CustomerMetrics;
 
 it('counts only customer accounts for the dashboard', function () {
     customer();

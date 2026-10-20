@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\ValueObjects\ProductAvailability;
-use App\Modules\Ordering\Services\PurchaseAvailabilityService;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Core\ValueObjects\ProductAvailability;
+use Modules\Ordering\Core\Services\PurchaseAvailabilityService;
 
 beforeEach(function () {
     $this->service = new PurchaseAvailabilityService;
@@ -20,7 +20,7 @@ it('explains why a quantity cannot be bought', function (ProductStatus $status, 
 
 // The rule is the catalog's (ProductAvailability): ordering words the problem and never decides it.
 arch('ordering takes the availability from the catalog product')
-    ->expect('App\Modules\Ordering')
+    ->expect('Modules\Ordering')
     ->not->toUse(ProductStatus::class);
 
 it('leaves the availability rule out of the purchase messages', function () {

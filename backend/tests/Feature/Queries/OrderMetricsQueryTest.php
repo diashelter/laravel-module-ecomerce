@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Ordering\Contracts\OrderMetrics;
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Support\Carbon;
+use Modules\Ordering\Contracts\OrderMetrics;
+use Modules\Ordering\Persistence\Models\Order;
 
 it('counts all the orders for the dashboard', function () {
     expect(app(OrderMetrics::class)->totalOrders())->toBe(0);

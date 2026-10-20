@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\ValueObjects\OrderForPayment;
-use App\Modules\Payment\Services\PaymentService;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Core\ValueObjects\OrderForPayment;
+use Modules\Payment\Core\Services\PaymentService;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 it('accepts orders awaiting payment', function () {
     (new PaymentService)->ensureCanBePaid(new OrderForPayment(1, 1, 1000, OrderStatus::AwaitingPayment), hasApprovedPayment: false);

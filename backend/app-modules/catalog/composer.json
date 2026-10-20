@@ -1,0 +1,22 @@
+{
+    "name": "modules/catalog",
+    "description": "The Catalog module.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Catalog\\": "src/",
+            "Modules\\Catalog\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Catalog\\Providers\\CatalogServiceProvider"
+            ]
+        }
+    }
+}

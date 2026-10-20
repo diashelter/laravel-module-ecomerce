@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Inventory\DTOs\AdjustStockDTO;
-use App\Modules\Inventory\Enums\StockOperation;
-use App\Modules\Inventory\Services\StockService;
-use App\Modules\Shared\Exceptions\BusinessRuleException;
+use Modules\Inventory\Core\DTOs\AdjustStockDTO;
+use Modules\Inventory\Core\Enums\StockOperation;
+use Modules\Inventory\Core\Services\StockService;
+use Modules\Shared\Exceptions\BusinessRuleException;
 
 it('calculates the new quantity', function (StockOperation $operation, int $expected) {
     expect((new StockService)->calculateNewQuantity(5, new AdjustStockDTO($operation, 3)))->toBe($expected);

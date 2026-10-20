@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Messaging\EventConsumer;
+use Modules\Messaging\Contracts\EventConsumer;
 
 /**
  * A consumer of OtherEvent: its queue is bound to another event name than the ones of SampleEvent.

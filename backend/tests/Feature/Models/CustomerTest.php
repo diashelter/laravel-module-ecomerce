@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Ordering\Models\Customer;
-use App\Modules\Ordering\Models\Order;
+use Modules\Ordering\Persistence\Models\Customer;
+use Modules\Ordering\Persistence\Models\Order;
 
 it('is the buyer of an order, read from the customer account', function () {
     $user = customer(['name' => 'Maria', 'email' => 'maria@example.com']);

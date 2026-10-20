@@ -1,12 +1,12 @@
 <?php
 
-use App\Modules\Shared\Messaging\EventEnvelope;
-use App\Modules\Shared\Messaging\EventSubscriptions;
-use App\Modules\Shared\Messaging\RabbitMq\DeadDeliveries;
-use App\Modules\Shared\Messaging\RabbitMq\RabbitMqConnector;
-use App\Modules\Shared\Messaging\RabbitMq\RabbitMqEnvelope;
-use App\Modules\Shared\Messaging\RabbitMq\RabbitMqTopology;
 use Illuminate\Support\Facades\Artisan;
+use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Messaging\Core\EventEnvelope;
+use Modules\Messaging\Core\RabbitMq\DeadDeliveries;
+use Modules\Messaging\Core\RabbitMq\RabbitMqConnector;
+use Modules\Messaging\Core\RabbitMq\RabbitMqEnvelope;
+use Modules\Messaging\Core\RabbitMq\RabbitMqTopology;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Message\AMQPMessage;
 use Tests\Feature\Outbox\Fixtures\FailingConsumer;

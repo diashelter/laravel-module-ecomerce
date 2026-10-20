@@ -1,12 +1,12 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Customers\Models\CustomerAddress;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Payment\Models\Payment;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Customers\Persistence\Models\CustomerAddress;
+use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Payment\Persistence\Models\Payment;
 
 dataset('admin endpoints', [
     ['get', '/api/admin/dashboard'],

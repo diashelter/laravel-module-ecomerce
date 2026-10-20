@@ -1,65 +1,67 @@
 <?php
 
-use App\Modules\Catalog\Contracts\CatalogMetrics;
-use App\Modules\Catalog\Contracts\ProductCatalog;
-use App\Modules\Catalog\Contracts\ProductOrderHistory;
-use App\Modules\Catalog\Enums\ProductStatus;
-use App\Modules\Catalog\Queries\ProductCatalogQuery;
-use App\Modules\Catalog\ValueObjects\CatalogProduct;
-use App\Modules\Catalog\ValueObjects\CatalogProducts;
-use App\Modules\Catalog\ValueObjects\CategoryIds;
-use App\Modules\Catalog\ValueObjects\ProductAvailability;
-use App\Modules\Catalog\ValueObjects\ProductCountsByStatus;
-use App\Modules\Catalog\ValueObjects\ProductIds;
-use App\Modules\Catalog\ValueObjects\ProductRecord;
-use App\Modules\Customers\Repositories\CustomerAddressRepository;
-use App\Modules\Identity\Contracts\CustomerAccounts;
-use App\Modules\Identity\Contracts\CustomerMetrics;
-use App\Modules\Identity\DTOs\CreateUserDTO;
-use App\Modules\Identity\DTOs\LoginCredentialsDTO;
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Models\User;
-use App\Modules\Identity\Repositories\CustomerAccountRepository;
-use App\Modules\Identity\ValueObjects\CustomerProfile;
-use App\Modules\Identity\ValueObjects\Email;
-use App\Modules\Identity\ValueObjects\Password;
-use App\Modules\Inventory\Contracts\StockInitializer;
-use App\Modules\Inventory\Contracts\StockLevels;
-use App\Modules\Inventory\Contracts\StockMetrics;
-use App\Modules\Inventory\Contracts\StockReservation;
-use App\Modules\Inventory\Queries\StockLevelsQuery;
-use App\Modules\Inventory\Repositories\StockRepository;
-use App\Modules\Inventory\ValueObjects\ProductStock;
-use App\Modules\Inventory\ValueObjects\ProductStocks;
-use App\Modules\Inventory\ValueObjects\StockQuantities;
-use App\Modules\Inventory\ValueObjects\StockRecord;
-use App\Modules\Inventory\ValueObjects\StockTotals;
-use App\Modules\Ordering\Contracts\CustomerOrderHistory;
-use App\Modules\Ordering\Contracts\DeliveryAddressBook;
-use App\Modules\Ordering\Contracts\OrderMetrics;
-use App\Modules\Ordering\Contracts\PayableOrders;
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\Events\OrderPlaced;
-use App\Modules\Ordering\Repositories\OrderRepository;
-use App\Modules\Ordering\ValueObjects\DeliveryAddress;
-use App\Modules\Ordering\ValueObjects\OrderCountsByPeriod;
-use App\Modules\Ordering\ValueObjects\OrderForPayment;
-use App\Modules\Ordering\ValueObjects\OrderLines;
-use App\Modules\Ordering\ValueObjects\ProductQuantities;
-use App\Modules\Ordering\ValueObjects\ShippingQuote;
-use App\Modules\Ordering\ValueObjects\ValidatedCart;
-use App\Modules\Ordering\ValueObjects\ValidatedCartLine;
-use App\Modules\Payment\Contracts\PaymentGateway;
-use App\Modules\Payment\Enums\DeclineReason;
-use App\Modules\Payment\Events\PaymentApproved;
-use App\Modules\Payment\Gateways\FakePaymentGateway;
-use App\Modules\Shared\Enums\ApiErrorCode;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+use Modules\Catalog\Contracts\CatalogMetrics;
+use Modules\Catalog\Contracts\ProductCatalog;
+use Modules\Catalog\Contracts\ProductOrderHistory;
+use Modules\Catalog\Core\Enums\ProductStatus;
+use Modules\Catalog\Core\ValueObjects\CatalogProduct;
+use Modules\Catalog\Core\ValueObjects\CatalogProducts;
+use Modules\Catalog\Core\ValueObjects\CategoryIds;
+use Modules\Catalog\Core\ValueObjects\ProductAvailability;
+use Modules\Catalog\Core\ValueObjects\ProductCountsByStatus;
+use Modules\Catalog\Core\ValueObjects\ProductIds;
+use Modules\Catalog\Core\ValueObjects\ProductRecord;
+use Modules\Catalog\Persistence\Queries\ProductCatalogQuery;
+use Modules\Customers\Persistence\Repositories\CustomerAddressRepository;
+use Modules\Identity\Contracts\CustomerAccounts;
+use Modules\Identity\Contracts\CustomerMetrics;
+use Modules\Identity\Core\DTOs\CreateUserDTO;
+use Modules\Identity\Core\DTOs\LoginCredentialsDTO;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Core\ValueObjects\CustomerProfile;
+use Modules\Identity\Core\ValueObjects\Email;
+use Modules\Identity\Core\ValueObjects\Password;
+use Modules\Identity\Persistence\Models\User;
+use Modules\Identity\Persistence\Repositories\CustomerAccountRepository;
+use Modules\Inventory\Contracts\StockInitializer;
+use Modules\Inventory\Contracts\StockLevels;
+use Modules\Inventory\Contracts\StockMetrics;
+use Modules\Inventory\Contracts\StockReservation;
+use Modules\Inventory\Core\ValueObjects\ProductStock;
+use Modules\Inventory\Core\ValueObjects\ProductStocks;
+use Modules\Inventory\Core\ValueObjects\StockQuantities;
+use Modules\Inventory\Core\ValueObjects\StockRecord;
+use Modules\Inventory\Core\ValueObjects\StockTotals;
+use Modules\Inventory\Persistence\Queries\StockLevelsQuery;
+use Modules\Inventory\Persistence\Repositories\StockRepository;
+use Modules\Ordering\Contracts\CustomerOrderHistory;
+use Modules\Ordering\Contracts\DeliveryAddressBook;
+use Modules\Ordering\Contracts\OrderMetrics;
+use Modules\Ordering\Contracts\PayableOrders;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Core\ValueObjects\DeliveryAddress;
+use Modules\Ordering\Core\ValueObjects\OrderCountsByPeriod;
+use Modules\Ordering\Core\ValueObjects\OrderForPayment;
+use Modules\Ordering\Core\ValueObjects\OrderLines;
+use Modules\Ordering\Core\ValueObjects\ProductQuantities;
+use Modules\Ordering\Core\ValueObjects\ShippingQuote;
+use Modules\Ordering\Core\ValueObjects\ValidatedCart;
+use Modules\Ordering\Core\ValueObjects\ValidatedCartLine;
+use Modules\Ordering\Events\OrderPlaced;
+use Modules\Ordering\Persistence\Repositories\OrderRepository;
+use Modules\Payment\Contracts\PaymentGateway;
+use Modules\Payment\Core\Enums\DeclineReason;
+use Modules\Payment\Events\PaymentApproved;
+use Modules\Payment\Gateways\FakePaymentGateway;
+use Modules\Shared\Enums\ApiErrorCode;
 use Tests\Unit\Architecture\Fixtures\DocblockProbeContract;
 use Tests\Unit\Architecture\Fixtures\SignatureProbeContract;
 use Tests\Unit\Architecture\Fixtures\SignatureProbeEvent;
+use Tests\Unit\Architecture\Support\ModuleLayout;
 
 /*
  * Boundaries between the modules (see docs/domain-analysis.md).
@@ -69,36 +71,62 @@ use Tests\Unit\Architecture\Fixtures\SignatureProbeEvent;
  * so the last test makes sure every module named here still exists.
  */
 
-const MODULES = ['Backoffice', 'Catalog', 'Customers', 'Fulfillment', 'Identity', 'Inventory', 'Ordering', 'Payment', 'Shared'];
+const MODULES = ['Backoffice', 'Catalog', 'Customers', 'Fulfillment', 'Identity', 'Inventory', 'Messaging', 'Ordering', 'Payment', 'Shared'];
 
-const MODULES_PATH = __DIR__.'/../../../app/Modules';
+/** The source folder of a module package: app-modules/<kebab>/src. */
+function moduleSrc(string $module): string
+{
+    return __DIR__.'/../../../app-modules/'.Str::kebab($module).'/src';
+}
 
 /*
- * A module's facade is its Contracts and its Events: every other folder is private, so a new
- * folder is private without touching this file. Http included: each module has its own
- * adapters, even when they translate the same value object.
+ * A module's facade is its Contracts and its Events, the first level of src: every other folder is
+ * private, so a new folder is private without touching this file. Http included: each module has its
+ * own adapters, even when they translate the same value object.
  */
 const PUBLIC_DIRECTORIES = ['Contracts', 'Events'];
 
 /*
- * The folders where a module's vocabulary lives. A class in them is public only when the
+ * The folders of Core where a module's vocabulary lives. A class in them is public only when the
  * signatures of the module's facade reach it (see vocabularyOf), so the rule is computed on every
  * run and never kept as a list here.
  */
 const VOCABULARY_DIRECTORIES = ['DTOs', 'ValueObjects', 'Enums'];
 
-/** @return list<string> the folders of a module that no other module may use */
+/** @return list<string> the folders of a module that no other module may use, as paths under src (Core opens into its subfolders, minus the vocabulary) */
 function privateDirectoriesOf(string $module): array
 {
-    return array_values(array_diff(array_map('basename', glob(MODULES_PATH."/{$module}/*", GLOB_ONLYDIR)), PUBLIC_DIRECTORIES, VOCABULARY_DIRECTORIES));
+    $private = [];
+
+    foreach (glob(moduleSrc($module).'/*', GLOB_ONLYDIR) as $directory) {
+        $name = basename($directory);
+
+        if (in_array($name, PUBLIC_DIRECTORIES, true)) {
+            continue;
+        }
+
+        if ($name !== 'Core') {
+            $private[] = $name;
+
+            continue;
+        }
+
+        foreach (glob("{$directory}/*", GLOB_ONLYDIR) as $inner) {
+            if (! in_array(basename($inner), VOCABULARY_DIRECTORIES, true)) {
+                $private[] = 'Core/'.basename($inner);
+            }
+        }
+    }
+
+    return $private;
 }
 
 /** @return list<class-string> the contract interfaces and the event classes of a module */
 function facadeOf(string $module): array
 {
     return array_map(
-        fn (string $file) => 'App\\Modules\\'.$module.'\\'.basename(dirname($file)).'\\'.basename($file, '.php'),
-        [...glob(MODULES_PATH."/{$module}/Contracts/*.php"), ...glob(MODULES_PATH."/{$module}/Events/*.php")],
+        fn (string $file) => 'Modules\\'.$module.'\\'.basename(dirname($file)).'\\'.basename($file, '.php'),
+        [...glob(moduleSrc($module).'/Contracts/*.php'), ...glob(moduleSrc($module).'/Events/*.php')],
     );
 }
 
@@ -131,7 +159,7 @@ function signatureTypesOf(string $class): array
 
     return array_values(array_unique(array_filter(
         array_merge(...array_map('namedTypesIn', $types)),
-        fn (string $name) => str_starts_with($name, 'App\\Modules\\') && ! str_starts_with($name, 'App\\Modules\\Shared\\'),
+        fn (string $name) => str_starts_with($name, 'Modules\\') && ! str_starts_with($name, 'Modules\\Shared\\') && ! str_starts_with($name, 'Modules\\Messaging\\'),
     )));
 }
 
@@ -163,7 +191,7 @@ function vocabularyOf(string $module): array
 {
     return array_values(array_filter(
         reachedFrom(facadeOf($module)),
-        fn (string $class) => str_starts_with($class, 'App\\Modules\\'.$module.'\\'),
+        fn (string $class) => str_starts_with($class, 'Modules\\'.$module.'\\'),
     ));
 }
 
@@ -173,18 +201,12 @@ function classesOutsideVocabularyOf(string $module): array
     $classes = [];
 
     foreach (VOCABULARY_DIRECTORIES as $directory) {
-        foreach (glob(MODULES_PATH."/{$module}/{$directory}/*.php") as $file) {
-            $classes[] = 'App\\Modules\\'.$module.'\\'.$directory.'\\'.basename($file, '.php');
+        foreach (glob(moduleSrc($module)."/Core/{$directory}/*.php") as $file) {
+            $classes[] = 'Modules\\'.$module.'\\Core\\'.$directory.'\\'.basename($file, '.php');
         }
     }
 
     return array_values(array_diff($classes, vocabularyOf($module)));
-}
-
-/** @return list<string> the classes declared directly in a module folder (its service provider) */
-function rootClassesOf(string $module): array
-{
-    return array_map(fn (string $file) => 'App\\Modules\\'.$module.'\\'.basename($file, '.php'), glob(MODULES_PATH."/{$module}/*.php"));
 }
 
 // Privacy: a module reaches another one only through its public folders (one namespace per expectation).
@@ -192,8 +214,8 @@ foreach (MODULES as $source) {
     foreach (array_diff(MODULES, [$source, 'Shared']) as $target) {
         foreach (privateDirectoriesOf($target) as $directory) {
             arch("{$source} reaches another module only through its public directories: {$target}\\{$directory}")
-                ->expect('App\\Modules\\'.$source)
-                ->not->toUse('App\\Modules\\'.$target.'\\'.$directory);
+                ->expect('Modules\\'.$source)
+                ->not->toUse('Modules\\'.$target.'\\'.str_replace('/', '\\', $directory));
         }
     }
 }
@@ -202,16 +224,16 @@ it('generates the private directory rules from the folders that exist', function
     $private = array_unique(array_merge(...array_map('privateDirectoriesOf', MODULES)));
 
     expect(PUBLIC_DIRECTORIES)->toBe(['Contracts', 'Events'])
-        ->and($private)->toContain('Consumers', 'Exceptions', 'Gateways', 'Http', 'Jobs', 'Models', 'Repositories', 'Services', 'UseCases')
+        ->and($private)->toContain('Core/Consumers', 'Core/Exceptions', 'Core/Jobs', 'Core/Services', 'Core/UseCases', 'Gateways', 'Http', 'Persistence', 'Providers', 'Console')
         ->and($private)->not->toContain('Contracts')
         ->and($private)->not->toContain('Events')
-        ->and($private)->not->toContain('DTOs')
-        ->and($private)->not->toContain('Enums')
-        ->and($private)->not->toContain('ValueObjects')
-        ->and($private)->toContain('Queries');
+        ->and($private)->not->toContain('Core')
+        ->and($private)->not->toContain('Core/DTOs')
+        ->and($private)->not->toContain('Core/Enums')
+        ->and($private)->not->toContain('Core/ValueObjects');
 
     // Every pair of modules gets the Http rule: each business module has its own Http folder.
-    foreach (array_diff(MODULES, ['Shared']) as $module) {
+    foreach (array_diff(MODULES, ['Shared', 'Messaging']) as $module) {
         expect(privateDirectoriesOf($module))->toContain('Http');
     }
 });
@@ -222,7 +244,7 @@ foreach (array_diff(MODULES, ['Shared']) as $target) {
     foreach (classesOutsideVocabularyOf($target) as $class) {
         foreach (array_diff(MODULES, [$target]) as $source) {
             arch("{$source} uses only the public vocabulary of {$target}: {$class}")
-                ->expect('App\\Modules\\'.$source)
+                ->expect('Modules\\'.$source)
                 ->not->toUse($class);
         }
     }
@@ -297,19 +319,11 @@ it('computes the vocabulary the read side exposes', function () {
         ->and(vocabularyOf('Ordering'))->toContain(OrderCountsByPeriod::class);
 });
 
-// A module root class (its service provider) is wiring, never something another module calls.
-foreach (MODULES as $source) {
-    foreach (array_diff(MODULES, [$source]) as $target) {
-        foreach (rootClassesOf($target) as $class) {
-            arch("{$source} does not use another module root class: ".class_basename($class))
-                ->expect('App\\Modules\\'.$source)
-                ->not->toUse($class);
-        }
+// The service provider of a module is wiring, never something another module calls: Providers is a private folder.
+it('keeps the service providers private in every module', function () {
+    foreach (array_diff(MODULES, ['Shared']) as $module) {
+        expect(privateDirectoriesOf($module))->toContain('Providers');
     }
-}
-
-it('does not use another module root class: every module root is covered', function () {
-    expect(count(array_merge(...array_map('rootClassesOf', MODULES))))->toBeGreaterThanOrEqual(7);
 });
 
 it('declares no boundary exception', function () {
@@ -319,23 +333,23 @@ it('declares no boundary exception', function () {
 });
 
 // Contracts: interfaces only, in every module that publishes or defines one.
-$modulesWithContracts = array_values(array_filter(MODULES, fn (string $module) => is_dir(MODULES_PATH."/{$module}/Contracts")));
+$modulesWithContracts = array_values(array_filter(MODULES, fn (string $module) => is_dir(moduleSrc($module).'/Contracts')));
 
 foreach ($modulesWithContracts as $module) {
     arch("keeps only interfaces in every module contracts: {$module}")
-        ->expect('App\\Modules\\'.$module.'\\Contracts')
+        ->expect('Modules\\'.$module.'\\Contracts')
         ->toBeInterfaces();
 }
 
 it('keeps only interfaces in every module contracts: every module is covered', function () use ($modulesWithContracts) {
-    expect($modulesWithContracts)->toBe(['Catalog', 'Identity', 'Inventory', 'Ordering', 'Payment']);
+    expect($modulesWithContracts)->toBe(['Catalog', 'Identity', 'Inventory', 'Messaging', 'Ordering', 'Payment']);
 });
 
 // Contracts speak data: no Eloquent model nor Eloquent collection crosses a module boundary.
 it('speaks only data in every contract signature', function () {
     $interfaces = array_map(
-        fn (string $file) => 'App\\Modules\\'.basename(dirname($file, 2)).'\\Contracts\\'.basename($file, '.php'),
-        glob(MODULES_PATH.'/*/Contracts/*.php'),
+        ModuleLayout::classOf(...),
+        ModuleLayout::filesMatching('Contracts/*.php'),
     );
 
     expect(count($interfaces))->toBeGreaterThanOrEqual(11);
@@ -371,13 +385,13 @@ it('resolves the module contracts to their implementations', function (string $c
 // Queries: the read side of a module. A query serves a route, reads the module's own tables, and asks
 // the owner of anything else through that owner's contract. It never uses the module's repositories
 // (writes) or use cases, and it never speaks the Eloquent types in a public signature.
-$modulesWithQueries = array_values(array_filter(MODULES, fn (string $module) => is_dir(MODULES_PATH."/{$module}/Queries")));
+$modulesWithQueries = array_values(array_filter(MODULES, fn (string $module) => is_dir(moduleSrc($module).'/Persistence/Queries')));
 
 foreach ($modulesWithQueries as $module) {
-    foreach (['repositories' => 'Repositories', 'use cases' => 'UseCases'] as $label => $layer) {
-        arch("queries do not use the module {$label}: {$module}")
-            ->expect("App\\Modules\\{$module}\\Queries")
-            ->not->toUse("App\\Modules\\{$module}\\{$layer}");
+    foreach (['repositories' => 'Persistence\\Repositories', 'use cases' => 'Core\\UseCases'] as $label => $layer) {
+        arch("queries do not use the module repositories and use cases ({$label}): {$module}")
+            ->expect("Modules\\{$module}\\Persistence\\Queries")
+            ->not->toUse("Modules\\{$module}\\{$layer}");
     }
 }
 
@@ -387,8 +401,8 @@ it('every module with queries is covered', function () use ($modulesWithQueries)
 
 it('speaks only data in every query signature', function () {
     $queries = array_map(
-        fn (string $file) => 'App\\Modules\\'.basename(dirname($file, 2)).'\\Queries\\'.basename($file, '.php'),
-        glob(MODULES_PATH.'/*/Queries/*.php'),
+        ModuleLayout::classOf(...),
+        ModuleLayout::filesMatching('Persistence/Queries/*.php'),
     );
 
     expect(count($queries))->toBeGreaterThanOrEqual(9);
@@ -410,7 +424,7 @@ it('speaks only data in every query signature', function () {
 it('resolves the read contracts to the owner queries', function (string $contract, string $module) {
     $implementation = app($contract);
 
-    expect($implementation::class)->toStartWith("App\\Modules\\{$module}\\Queries\\")
+    expect($implementation::class)->toStartWith("Modules\\{$module}\\Persistence\\Queries\\")
         ->and($implementation)->toBeInstanceOf($contract);
 })->with([
     [ProductCatalog::class, 'Catalog'],
@@ -424,32 +438,32 @@ it('resolves the read contracts to the owner queries', function (string $contrac
 // Inventory: other modules use its contracts, never its repository.
 foreach (array_diff(MODULES, ['Inventory']) as $module) {
     arch("{$module} reaches the inventory only through its contracts")
-        ->expect("App\\Modules\\{$module}")
+        ->expect("Modules\\{$module}")
         ->not->toUse(StockRepository::class);
 }
 
 arch('the inventory contracts are interfaces')
-    ->expect('App\Modules\Inventory\Contracts')
+    ->expect('Modules\Inventory\Contracts')
     ->toBeInterfaces();
 
 // Catalog: it does not read order data; it asks through its own ProductOrderHistory contract,
 // implemented by the ordering module.
 foreach (['Models', 'Repositories'] as $layer) {
     arch("the catalog does not use the ordering {$layer}")
-        ->expect('App\Modules\Catalog')
-        ->not->toUse("App\\Modules\\Ordering\\{$layer}");
+        ->expect('Modules\Catalog')
+        ->not->toUse("Modules\\Ordering\\Persistence\\{$layer}");
 }
 
 // Identity: the account does not know about orders.
 arch('identity does not depend on ordering')
-    ->expect('App\Modules\Identity')
-    ->not->toUse('App\Modules\Ordering');
+    ->expect('Modules\Identity')
+    ->not->toUse('Modules\Ordering');
 
 // The staff `User` belongs to the admin area: the order side knows the shopper account only,
 // so a staff session can never be mistaken for a buyer.
 foreach (['Ordering', 'Payment', 'Fulfillment'] as $module) {
     arch("{$module} does not use the staff user")
-        ->expect("App\\Modules\\{$module}")
+        ->expect("Modules\\{$module}")
         ->not->toUse(User::class);
 }
 
@@ -457,96 +471,91 @@ foreach (['Ordering', 'Payment', 'Fulfillment'] as $module) {
 // and they do not know each other.
 foreach (['Payment', 'Fulfillment'] as $module) {
     arch("{$module} never changes the order status itself")
-        ->expect("App\\Modules\\{$module}")
+        ->expect("Modules\\{$module}")
         ->not->toUse(OrderRepository::class);
 }
 
 arch('payment does not know fulfillment')
-    ->expect('App\Modules\Payment')
-    ->not->toUse('App\Modules\Fulfillment');
+    ->expect('Modules\Payment')
+    ->not->toUse('Modules\Fulfillment');
 
 arch('fulfillment does not know payment')
-    ->expect('App\Modules\Fulfillment')
-    ->not->toUse('App\Modules\Payment');
+    ->expect('Modules\Fulfillment')
+    ->not->toUse('Modules\Payment');
 
 // Ordering: it does not know the address book, and reaches fulfillment only through its events.
 // The customers module and the fulfillment module implement the contracts ordering defines.
 arch('ordering does not know customers')
-    ->expect('App\Modules\Ordering')
-    ->not->toUse('App\Modules\Customers');
+    ->expect('Modules\Ordering')
+    ->not->toUse('Modules\Customers');
 
 $fulfillmentNamespaces = array_values(array_diff(
-    array_map('basename', glob(__DIR__.'/../../../app/Modules/Fulfillment/*', GLOB_ONLYDIR)),
+    array_map('basename', glob(moduleSrc('Fulfillment').'/*', GLOB_ONLYDIR)),
     ['Events'],
 ));
 
 foreach ($fulfillmentNamespaces as $namespace) {
     arch("ordering reaches fulfillment only through its events: {$namespace}")
-        ->expect('App\\Modules\\Ordering')
-        ->not->toUse('App\\Modules\\Fulfillment\\'.$namespace);
+        ->expect('Modules\\Ordering')
+        ->not->toUse('Modules\\Fulfillment\\'.$namespace);
 }
 
-// The classes that sit directly in `App\Modules\Fulfillment` (its service provider) are a namespace too.
-$fulfillmentRootClasses = array_map(
-    fn (string $file) => 'App\\Modules\\Fulfillment\\'.basename($file, '.php'),
-    glob(__DIR__.'/../../../app/Modules/Fulfillment/*.php'),
-);
-
-foreach ($fulfillmentRootClasses as $class) {
-    arch('ordering reaches fulfillment only through its events: '.class_basename($class))
-        ->expect('App\\Modules\\Ordering')
-        ->not->toUse($class);
-}
-
-it('ordering reaches fulfillment only through its events: the module root is covered', function () use ($fulfillmentRootClasses) {
-    expect($fulfillmentRootClasses)->toContain('App\\Modules\\Fulfillment\\FulfillmentServiceProvider');
+it('ordering reaches fulfillment only through its events: the Providers namespace is covered', function () use ($fulfillmentNamespaces) {
+    expect($fulfillmentNamespaces)->toContain('Providers');
 });
 
 it('ordering reaches fulfillment only through its events: every namespace but Events is covered', function () use ($fulfillmentNamespaces) {
-    expect(count($fulfillmentNamespaces))->toBeGreaterThanOrEqual(4)
+    expect(count($fulfillmentNamespaces))->toBeGreaterThanOrEqual(3)
         ->and($fulfillmentNamespaces)->not->toContain('Events');
 });
 
 arch('the ordering contracts are interfaces')
-    ->expect('App\Modules\Ordering\Contracts')
+    ->expect('Modules\Ordering\Contracts')
     ->toBeInterfaces();
 
 // Fulfillment answers the ordering side through the contracts ordering defines, and never reads
 // the customer's address book: the order carries the address copy it needs.
 arch('fulfillment does not know customers')
-    ->expect('App\Modules\Fulfillment')
-    ->not->toUse('App\Modules\Customers');
+    ->expect('Modules\Fulfillment')
+    ->not->toUse('Modules\Customers');
 
 // Payment charges through its own PaymentGateway port: only the module's service provider
 // names the adapter, so swapping the gateway is a new class and one binding.
-foreach (['UseCases', 'Services', 'Http'] as $layer) {
+foreach (['Core\\UseCases', 'Core\\Services', 'Http'] as $layer) {
     arch("payment {$layer} reaches the payment gateway only through its contract")
-        ->expect("App\\Modules\\Payment\\{$layer}")
+        ->expect("Modules\\Payment\\{$layer}")
         ->not->toUse(FakePaymentGateway::class);
 }
 
 arch('the payment contracts are interfaces')
-    ->expect('App\Modules\Payment\Contracts')
+    ->expect('Modules\Payment\Contracts')
     ->toBeInterfaces();
 
 // Shared kernel: infrastructure only, no business module.
 foreach (array_diff(MODULES, ['Shared']) as $module) {
     arch("the shared kernel does not depend on {$module}")
-        ->expect('App\Modules\Shared')
-        ->not->toUse("App\\Modules\\{$module}");
+        ->expect('Modules\Shared')
+        ->not->toUse("Modules\\{$module}");
+}
+
+// The messaging module is infrastructure too: it serves the business modules and uses none of them.
+foreach (array_diff(MODULES, ['Shared', 'Messaging']) as $module) {
+    arch("the messaging module does not depend on {$module}")
+        ->expect('Modules\\Messaging')
+        ->not->toUse("Modules\\{$module}");
 }
 
 // Layers: a repository only reads and writes the database. The business rules (services) are
 // applied before it is called, so a repository never uses its own module services.
 $modulesWithRepositoriesAndServices = array_values(array_filter(
     MODULES,
-    fn (string $module) => is_dir(MODULES_PATH."/{$module}/Repositories") && is_dir(MODULES_PATH."/{$module}/Services"),
+    fn (string $module) => is_dir(moduleSrc($module).'/Persistence/Repositories') && is_dir(moduleSrc($module).'/Core/Services'),
 ));
 
 foreach ($modulesWithRepositoriesAndServices as $module) {
     arch("repositories do not use the module services: {$module}")
-        ->expect("App\\Modules\\{$module}\\Repositories")
-        ->not->toUse("App\\Modules\\{$module}\\Services");
+        ->expect("Modules\\{$module}\\Persistence\\Repositories")
+        ->not->toUse("Modules\\{$module}\\Core\\Services");
 }
 
 it('repositories do not use the module services: every module with both layers is covered', function () use ($modulesWithRepositoriesAndServices) {
@@ -570,23 +579,23 @@ it('resolves the payment gateway to the fake gateway', function () {
 });
 
 it('keeps every module named by these rules', function (string $module) {
-    expect(glob(app_path("Modules/{$module}/*")))->not->toBeEmpty();
+    expect(glob(moduleSrc($module).'/*'))->not->toBeEmpty();
 })->with(MODULES);
 
 // Value objects: immutable by construction, and the account rules live in them only.
 arch('identity value objects are final and readonly')
-    ->expect('App\Modules\Identity\ValueObjects')
+    ->expect('Modules\Identity\Core\ValueObjects')
     ->toBeFinal()
     ->toBeReadonly();
 
 foreach ([
-    'App\Modules\Identity\Http\Requests\RegisterRequest',
-    'App\Modules\Identity\Http\Requests\LoginRequest',
-    'App\Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest',
-    'App\Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest',
-    'App\Modules\Customers\Http\Requests\Admin\StoreCustomerRequest',
-    'App\Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest',
-    'App\Modules\Customers\Http\Requests\UpdateProfileRequest',
+    'Modules\Identity\Http\Requests\RegisterRequest',
+    'Modules\Identity\Http\Requests\LoginRequest',
+    'Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest',
+    'Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest',
+    'Modules\Customers\Http\Requests\Admin\StoreCustomerRequest',
+    'Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest',
+    'Modules\Customers\Http\Requests\UpdateProfileRequest',
 ] as $request) {
     arch("{$request} does not write the password policy itself")
         ->expect($request)

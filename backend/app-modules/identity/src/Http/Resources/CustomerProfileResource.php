@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Identity\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Modules\Identity\Core\ValueObjects\CustomerProfile;
+
+/**
+ * The shopper's account fields as the store session (AuthController) renders them. The customers
+ * module renders the same account with its own resource (the Http folder of a module is
+ * private), and a test keeps the two in one shape.
+ *
+ * @property CustomerProfile $resource
+ */
+class CustomerProfileResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->resource->id,
+            'name' => $this->resource->name,
+            'email' => $this->resource->email,
+            'created_at' => $this->resource->createdAt->toIso8601String(),
+        ];
+    }
+}

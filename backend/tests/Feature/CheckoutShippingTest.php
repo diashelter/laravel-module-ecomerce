@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Payment\Models\Payment;
+use Modules\Ordering\Persistence\Models\Order;
+use Modules\Payment\Persistence\Models\Payment;
 
 const DELIVERY_ADDRESS_KEYS = ['recipient_name', 'postal_code', 'street', 'number', 'complement', 'district', 'city', 'state'];
 

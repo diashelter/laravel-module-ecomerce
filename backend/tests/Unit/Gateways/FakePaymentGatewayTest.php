@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Payment\DTOs\ChargeRequest;
-use App\Modules\Payment\Enums\DeclineReason;
-use App\Modules\Payment\Enums\PaymentStatus;
-use App\Modules\Payment\Gateways\FakePaymentGateway;
+use Modules\Payment\Core\DTOs\ChargeRequest;
+use Modules\Payment\Core\Enums\DeclineReason;
+use Modules\Payment\Core\Enums\PaymentStatus;
+use Modules\Payment\Gateways\FakePaymentGateway;
 
 function fakeCharge(string $cardToken, int $amountCents = 1000): ChargeRequest
 {

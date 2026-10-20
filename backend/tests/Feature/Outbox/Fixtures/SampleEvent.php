@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbox\Fixtures;
 
-use App\Modules\Shared\Messaging\DomainEvent;
+use Modules\Messaging\Contracts\DomainEvent;
 
 /**
  * The test event (testing.sample_event, version 1): its payload is whatever the test gives it.

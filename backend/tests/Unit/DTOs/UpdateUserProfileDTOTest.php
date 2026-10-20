@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Identity\DTOs\UpdateUserProfileDTO;
-use App\Modules\Identity\ValueObjects\Email;
-use App\Modules\Identity\ValueObjects\Password;
+use Modules\Identity\Core\DTOs\UpdateUserProfileDTO;
+use Modules\Identity\Core\ValueObjects\Email;
+use Modules\Identity\Core\ValueObjects\Password;
 
 it('keeps the password out of the changes when none is sent', function () {
     $changes = (new UpdateUserProfileDTO('Novo Nome', new Email('novo@example.com')))->toArray();

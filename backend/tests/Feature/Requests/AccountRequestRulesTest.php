@@ -1,19 +1,19 @@
 <?php
 
-use App\Modules\Customers\Http\Requests\Admin\StoreCustomerRequest;
-use App\Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest;
-use App\Modules\Customers\Http\Requests\Concerns\NormalizesEmailInput as CustomersNormalizesEmailInput;
-use App\Modules\Customers\Http\Requests\UpdateProfileRequest;
-use App\Modules\Customers\Http\Rules\EmailRule as CustomersEmailRule;
-use App\Modules\Customers\Http\Rules\PasswordRule as CustomersPasswordRule;
-use App\Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest;
-use App\Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest;
-use App\Modules\Identity\Http\Requests\Concerns\NormalizesEmailInput as IdentityNormalizesEmailInput;
-use App\Modules\Identity\Http\Requests\LoginRequest;
-use App\Modules\Identity\Http\Requests\RegisterRequest;
-use App\Modules\Identity\Http\Rules\EmailRule as IdentityEmailRule;
-use App\Modules\Identity\Http\Rules\PasswordRule as IdentityPasswordRule;
 use Illuminate\Validation\Rules\Password as LaravelPasswordRule;
+use Modules\Customers\Http\Requests\Admin\StoreCustomerRequest;
+use Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest;
+use Modules\Customers\Http\Requests\Concerns\NormalizesEmailInput as CustomersNormalizesEmailInput;
+use Modules\Customers\Http\Requests\UpdateProfileRequest;
+use Modules\Customers\Http\Rules\EmailRule as CustomersEmailRule;
+use Modules\Customers\Http\Rules\PasswordRule as CustomersPasswordRule;
+use Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest;
+use Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest;
+use Modules\Identity\Http\Requests\Concerns\NormalizesEmailInput as IdentityNormalizesEmailInput;
+use Modules\Identity\Http\Requests\LoginRequest;
+use Modules\Identity\Http\Requests\RegisterRequest;
+use Modules\Identity\Http\Rules\EmailRule as IdentityEmailRule;
+use Modules\Identity\Http\Rules\PasswordRule as IdentityPasswordRule;
 
 /** @return list<class-string> the classes of the module e-mail and password rules among these rules */
 function accountRuleClasses(array $rules): array

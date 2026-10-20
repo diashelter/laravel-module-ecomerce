@@ -1,7 +1,5 @@
 <?php
 
-use App\Modules\Shared\Models\OutboxMessage;
-use App\Modules\Shared\Repositories\OutboxMessageRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\Events\QueryExecuted;
@@ -13,6 +11,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Modules\Messaging\Persistence\Models\OutboxMessage;
+use Modules\Messaging\Persistence\Repositories\OutboxMessageRepository;
 use Tests\Feature\Outbox\Fixtures\StoppingOutboxRepository;
 
 const RESTART_SIGNAL = 'illuminate:queue:restart';

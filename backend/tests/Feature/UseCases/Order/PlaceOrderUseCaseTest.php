@@ -1,17 +1,17 @@
 <?php
 
-use App\Modules\Ordering\Contracts\DeliveryAddressBook;
-use App\Modules\Ordering\Contracts\ShippingQuoter;
-use App\Modules\Ordering\DTOs\CartDTO;
-use App\Modules\Ordering\DTOs\CartItemDTO;
-use App\Modules\Ordering\Enums\BrazilianState;
-use App\Modules\Ordering\Models\Order;
-use App\Modules\Ordering\UseCases\PlaceOrderUseCase;
-use App\Modules\Ordering\ValueObjects\DeliveryAddress;
-use App\Modules\Ordering\ValueObjects\ShippingQuote;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Modules\Ordering\Contracts\DeliveryAddressBook;
+use Modules\Ordering\Contracts\ShippingQuoter;
+use Modules\Ordering\Core\DTOs\CartDTO;
+use Modules\Ordering\Core\DTOs\CartItemDTO;
+use Modules\Ordering\Core\Enums\BrazilianState;
+use Modules\Ordering\Core\UseCases\PlaceOrderUseCase;
+use Modules\Ordering\Core\ValueObjects\DeliveryAddress;
+use Modules\Ordering\Core\ValueObjects\ShippingQuote;
+use Modules\Ordering\Persistence\Models\Order;
 
 /** An address book that answers the given address (or none), whoever asks. */
 function fixedAddressBook(?DeliveryAddress $address): DeliveryAddressBook

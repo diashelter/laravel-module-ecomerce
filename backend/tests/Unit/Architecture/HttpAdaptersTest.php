@@ -1,16 +1,16 @@
 <?php
 
-use App\Modules\Customers\Http\Requests\Concerns\NormalizesEmailInput as CustomersNormalizesEmailInput;
-use App\Modules\Customers\Http\Requests\Concerns\NormalizesStateInput as CustomersNormalizesStateInput;
-use App\Modules\Customers\Http\Requests\CustomerAddressRequest;
-use App\Modules\Customers\Http\Resources\CustomerProfileResource as CustomersCustomerProfileResource;
-use App\Modules\Customers\Http\Rules\EmailRule as CustomersEmailRule;
-use App\Modules\Customers\Http\Rules\PasswordRule as CustomersPasswordRule;
-use App\Modules\Fulfillment\Http\Requests\Concerns\NormalizesStateInput as FulfillmentNormalizesStateInput;
-use App\Modules\Fulfillment\Http\Requests\ShippingQuoteRequest;
-use App\Modules\Identity\ValueObjects\Email;
-use App\Modules\Identity\ValueObjects\Password;
-use App\Modules\Ordering\Enums\BrazilianState;
+use Modules\Customers\Http\Requests\Concerns\NormalizesEmailInput as CustomersNormalizesEmailInput;
+use Modules\Customers\Http\Requests\Concerns\NormalizesStateInput as CustomersNormalizesStateInput;
+use Modules\Customers\Http\Requests\CustomerAddressRequest;
+use Modules\Customers\Http\Resources\CustomerProfileResource as CustomersCustomerProfileResource;
+use Modules\Customers\Http\Rules\EmailRule as CustomersEmailRule;
+use Modules\Customers\Http\Rules\PasswordRule as CustomersPasswordRule;
+use Modules\Fulfillment\Http\Requests\Concerns\NormalizesStateInput as FulfillmentNormalizesStateInput;
+use Modules\Fulfillment\Http\Requests\ShippingQuoteRequest;
+use Modules\Identity\Core\ValueObjects\Email;
+use Modules\Identity\Core\ValueObjects\Password;
+use Modules\Ordering\Core\Enums\BrazilianState;
 
 /*
  * The Http folder of a module is private, so the customers and fulfillment modules have their own

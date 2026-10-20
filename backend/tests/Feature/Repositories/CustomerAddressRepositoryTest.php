@@ -1,9 +1,9 @@
 <?php
 
-use App\Modules\Customers\Repositories\CustomerAddressRepository;
-use App\Modules\Ordering\Enums\BrazilianState;
-use App\Modules\Ordering\ValueObjects\DeliveryAddress;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Modules\Customers\Persistence\Repositories\CustomerAddressRepository;
+use Modules\Ordering\Core\Enums\BrazilianState;
+use Modules\Ordering\Core\ValueObjects\DeliveryAddress;
 
 it('finds a delivery address only in the customer own book', function (string $case) {
     $owner = customer();

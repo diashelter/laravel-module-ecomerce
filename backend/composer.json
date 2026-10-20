@@ -13,6 +13,16 @@
         "laravel/pennant": "^1.26",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "modules/backoffice": "*",
+        "modules/catalog": "*",
+        "modules/customers": "*",
+        "modules/fulfillment": "*",
+        "modules/identity": "*",
+        "modules/inventory": "*",
+        "modules/messaging": "*",
+        "modules/ordering": "*",
+        "modules/payment": "*",
+        "modules/shared": "*",
         "php-amqplib/php-amqplib": "^3.7"
     },
     "require-dev": {

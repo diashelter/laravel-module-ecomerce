@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Modules\Ordering\Persistence\Models\Order;
 
 // Postgres aborts the test transaction after a failed statement, so each refused write runs
 // in a nested transaction (a savepoint).

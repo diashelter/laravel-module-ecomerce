@@ -1,16 +1,16 @@
 <?php
 
-use App\Modules\Catalog\ValueObjects\CategoryIds;
-use App\Modules\Catalog\ValueObjects\ProductIds;
-use App\Modules\Ordering\DTOs\CartDTO;
-use App\Modules\Ordering\DTOs\CartItemDTO;
-use App\Modules\Ordering\ValueObjects\CustomerIds;
-use App\Modules\Ordering\ValueObjects\OrderCountsByCustomer;
-use App\Modules\Ordering\ValueObjects\OrderLine;
-use App\Modules\Ordering\ValueObjects\OrderLines;
-use App\Modules\Ordering\ValueObjects\ProductQuantities;
-use App\Modules\Ordering\ValueObjects\ValidatedCart;
-use App\Modules\Ordering\ValueObjects\ValidatedCartLine;
+use Modules\Catalog\Core\ValueObjects\CategoryIds;
+use Modules\Catalog\Core\ValueObjects\ProductIds;
+use Modules\Ordering\Core\DTOs\CartDTO;
+use Modules\Ordering\Core\DTOs\CartItemDTO;
+use Modules\Ordering\Core\ValueObjects\CustomerIds;
+use Modules\Ordering\Core\ValueObjects\OrderCountsByCustomer;
+use Modules\Ordering\Core\ValueObjects\OrderLine;
+use Modules\Ordering\Core\ValueObjects\OrderLines;
+use Modules\Ordering\Core\ValueObjects\ProductQuantities;
+use Modules\Ordering\Core\ValueObjects\ValidatedCart;
+use Modules\Ordering\Core\ValueObjects\ValidatedCartLine;
 
 const FIRST_ID = '0199e3b0-4c2a-7d10-9a3b-5f6e7d8c9b0a';
 

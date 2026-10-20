@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Models\User;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Seeder;
+use Modules\Identity\Core\Enums\UserRole;
+use Modules\Identity\Database\Factories\UserFactory;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Identity\Persistence\Models\User;
 
 class UserSeeder extends Seeder
 {

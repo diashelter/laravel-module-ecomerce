@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Architecture\Fixtures;
 
-use App\Modules\Ordering\Enums\OrderStatus;
-use App\Modules\Ordering\ValueObjects\OrderLines;
-use App\Modules\Ordering\ValueObjects\ProductQuantities;
-use App\Modules\Ordering\ValueObjects\ValidatedCartLine;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Core\ValueObjects\OrderLines;
+use Modules\Ordering\Core\ValueObjects\ProductQuantities;
+use Modules\Ordering\Core\ValueObjects\ValidatedCartLine;
 
 /**
  * An event that is never dispatched: only its public property is part of its signature, so the

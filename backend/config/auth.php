@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Identity\Models\CustomerAccount;
-use App\Modules\Identity\Models\User;
+use Modules\Identity\Persistence\Models\CustomerAccount;
+use Modules\Identity\Persistence\Models\User;
 
 return [
 

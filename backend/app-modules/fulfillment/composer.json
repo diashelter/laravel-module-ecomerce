@@ -1,0 +1,21 @@
+{
+    "name": "modules/fulfillment",
+    "description": "The Fulfillment module.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Fulfillment\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Fulfillment\\Providers\\FulfillmentServiceProvider"
+            ]
+        }
+    }
+}

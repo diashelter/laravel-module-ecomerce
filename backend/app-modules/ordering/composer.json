@@ -1,0 +1,22 @@
+{
+    "name": "modules/ordering",
+    "description": "The Ordering module.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Ordering\\": "src/",
+            "Modules\\Ordering\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Ordering\\Providers\\OrderingServiceProvider"
+            ]
+        }
+    }
+}

@@ -1,13 +1,13 @@
 <?php
 
-use App\Modules\Catalog\Models\Category;
-use App\Modules\Catalog\Models\Product;
-use App\Modules\Identity\Models\User;
-use App\Modules\Inventory\Models\Stock;
-use App\Modules\Ordering\Models\Order;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Modules\Catalog\Persistence\Models\Category;
+use Modules\Catalog\Persistence\Models\Product;
+use Modules\Identity\Persistence\Models\User;
+use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Ordering\Persistence\Models\Order;
 
 const NOT_ALLOWED = 'Você não tem permissão para realizar esta ação.';
 
