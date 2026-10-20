@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/module-isolation-pilot/plan.md`
 
-38 checks em 2 slices · 7 one-way doors · 0 open
+39 checks em 2 slices · 7 one-way doors · 0 open
 
 **Notação das provas**
 
@@ -122,6 +122,9 @@ Proof: `make test-filter FILTER="places each module migration in its owner packa
 **C29** - Numa cópia sem o Payment, o `migrate:fresh` sai com 0, `POST /api/orders/{order}/payment` responde `404`, e a pasta `tests` de cada módulo restante que tem uma (Identity, Messaging, Shared e Catalog) passa (AC 22)
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c29-without-payment.sh`
 
+**C39** - Numa cópia sem o Payment, um pedido em `awaiting_payment` continua `awaiting_payment` depois da tentativa de pagamento (`404`) e de o relay esvaziar o outbox, e nenhum `payment.payment_approved` existe (o estado "Payment ausente" do design; acrescentado na rodada 2 da verificação, que achou esse membro sem prova)
+Proof: `bash .specs/features/module-isolation-pilot/proofs/c29-without-payment.sh` - o caso `keeps an order awaiting payment without the payment module installed`, copiado de `proofs/c29-WithoutPaymentTest.php`
+
 **C30** - Com os dois módulos instalados, `OrdersToPay` resolve para o adaptador do `Integration`. Ele devolve um `OrderToPay` com o id, o id do cliente e o total do pedido, e `awaitingPayment` verdadeiro só em `awaiting_payment` (tabela sobre os 4 status). Para um pedido desconhecido ou de outro cliente, devolve `null` (AC 23)
 Proof: `make test-filter FILTER="resolves the order port to the integration adapter|translates each order status into awaiting payment|answers null for an order the customer cannot pay"` - `tests/Feature/Integration/OrdersToPayAdapterTest.php`
 
@@ -164,6 +167,7 @@ Proof: `make test-filter FILTER="creates a payment without creating an order"` -
 | entidades da Relations (1) | `orders` 1:N `payments` sem chave C26, C27 | - |
 | configurações de remoção (3) | um módulo sozinho C6 · Payment sem o Ordering C21 · sem o Payment C29 | - |
 | regras de arquitetura com violação proposital (4) | teste nomeando outro módulo C8 · isolamento nas duas direções C13 · uso das classes leitoras C25 · leitora divergente da produtora C24 | - |
+| estados do slice Payment ↔ Ordering no design (9) | pedido pago `202` C14 · desconhecido ou de outro cliente `404` C16 · não aguarda `409` C17 · recusado `402` C19 · Ordering ausente `503` C21 · Payment ausente, rota `404` C29 · Payment ausente, pedido em `awaiting_payment` C39 · Payment ausente, pastas restantes passam C29 · suíte do Payment sem o Ordering C6 | - |
 | documentos (4) | `AGENTS.md` C33 · `README.md` C33 · `docs/domain-analysis.md` C33 · `.design/module-isolation.md` C33 | - |
 | startup: ligação da porta `OrdersToPay` (2 assemblies) | harness de teste C30 · aplicação montada sem o Ordering C21 (as duas pelo mesmo `IntegrationServiceProvider`, descoberto pelo manifesto do pacote) | - |
 | startup: inscrição da classe leitora (2 assemblies) | harness de teste C22 · workers (`DeliverEvent` e `events:consume`) C22 (os dois pelo mesmo `boot()` do `OrderingServiceProvider`, que todo processo monta) | - |
@@ -225,3 +229,4 @@ Progresso do builder:
 - **Settled mid-build:** diashelter tirou o Inventory de C1 e C6 (o `StockServiceTest` ficou na raiz, assunção 8); o C9 passou a usar a contagem real da base (628) e a conferir cada caso pelo nome, com as duas renomeações que o C11 e o C28 pedem; a linha `payments.order_id restricts` do `UuidKeysTest` saiu pela Key decision 5; o caso de listeners do `EventDeliveryTest` voltou para a composição (`Outbox/ModuleEventsListenersTest`), e a regra do C8 passou a acusar também o apoio da suíte da raiz
 - **Abandoned:** trocar o `foreignUuid('order_id')` por `uuid('order_id')` na migration editada; voltou ao literal aprovado na porta 5 (só sai o `->constrained()->restrictOnDelete()`)
 - Rodada 1 da verificação: FAIL só por documentação (C33). Correções: as 6 linhas da `docs/domain-analysis.md` que ainda descreviam o Payment lendo o `PayableOrders` ou a chave `payments.order_id`, com a prova do C33 ampliada para pegá-las; a linha "Payment ausente" do design alinhada ao C29 (o Ordering ainda não tem pasta de testes); a Key decision 1 do design e o `Impact` do plano descrevendo a regra de isolamento pela varredura do `ModuleLayersTest`; os caminhos de C17, C18 e C19 e o escopo de C25 (código de `app-modules/*/src`)
+- Rodada 2 da verificação: FAIL por documentação e por um membro do design sem prova. Correções: a linha da `docs/domain-analysis.md` que ainda comparava `deliveries` a um `payments` restrito, e a contagem de tipos públicos do README (30, com o `OrderToPay`), com a prova do C33 ganhando uma heurística para qualquer linha que ainda descreva `payments` como restrito; o C39 novo prova o estado "Payment ausente: o pedido fica em `awaiting_payment`", e o Coverage ganhou a linha dos estados do slice Payment ↔ Ordering

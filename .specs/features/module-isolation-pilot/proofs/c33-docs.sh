@@ -20,7 +20,11 @@ stale = [r'congela os 15', r'\b15 nomes', r'continuam em `backend/tests`', r'`pa
          # the Payment reading Ordering's contract directly (found by the first verification round)
          r'Payment → Ordering: PayableOrders', r'o Payment lê o pedido pelo contrato `PayableOrders`', r'O Payment lê o pedido pelo contrato',
          r'Ordering \(lido pelo Payment\)', r'OrderForPayment`, para o Payment',
-         r'^\| Tentativas de pagamento presas ao pedido por `restrictOnDelete`']
+         r'^\| Tentativas de pagamento presas ao pedido por `restrictOnDelete`',
+         # found by the second round: payments named as restricted, and the vocabulary count before OrderToPay
+         r'como `payments`\)', r'Hoje são 29 tipos públicos']
+# any other line that still describes payments as restricted on delete, unless it says the key is gone
+GONE = re.compile(r'saiu|sem chave|isola|Resolvida|perdeu|não tem|nenhuma|drop_payments|era até|tirar')
 bad = 0
 for doc in docs:
     text = open(os.path.join(root, doc), encoding='utf-8').read()
@@ -30,6 +34,9 @@ for doc in docs:
     for pattern in stale:
         for m in re.finditer(pattern, text, re.M):
             bad += 1; print(f'{doc}: stale claim {m.group(0)!r}')
+    for number, line in enumerate(text.split('\n'), 1):
+        if 'payments' in line and re.search(r'restri', line, re.I) and not GONE.search(line):
+            bad += 1; print(f'{doc}:{number}: payments still described as restricted')
     base = os.path.dirname(os.path.join(root, doc))
     for m in re.finditer(r'\]\(([^)\s]+)\)', text):
         target = m.group(1)
