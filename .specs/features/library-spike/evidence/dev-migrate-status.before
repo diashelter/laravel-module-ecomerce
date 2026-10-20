@@ -1,0 +1,19 @@
+ Container ecommerce-api-run-9da25812a84a Creating 
+ Container ecommerce-api-run-9da25812a84a Created 
+
+  Migration name .............................................. Batch / Status  
+  0001_01_01_000000_create_users_table ............................... [1] Ran  
+  0001_01_01_000001_create_cache_table ............................... [1] Ran  
+  0001_01_01_000002_create_jobs_table ................................ [1] Ran  
+  2026_10_05_000000_create_customers_table ........................... [1] Ran  
+  2026_10_05_000001_create_categories_table .......................... [1] Ran  
+  2026_10_05_000002_create_products_table ............................ [1] Ran  
+  2026_10_05_000003_create_stocks_table .............................. [1] Ran  
+  2026_10_05_000004_create_category_product_table .................... [1] Ran  
+  2026_10_05_000005_create_orders_table .............................. [1] Ran  
+  2026_10_05_000006_create_order_items_table ......................... [1] Ran  
+  2026_10_06_000001_create_payments_table ............................ [1] Ran  
+  2026_10_07_000001_create_customer_addresses_table .................. [1] Ran  
+  2026_10_15_000001_create_outbox_messages_table ..................... [2] Ran  
+  2026_10_18_170032_create_features_table ............................ [3] Ran  
+

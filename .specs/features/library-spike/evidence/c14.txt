@@ -1,0 +1,2 @@
+vendor/modules/payment -> ../../app-modules/payment/
+OK

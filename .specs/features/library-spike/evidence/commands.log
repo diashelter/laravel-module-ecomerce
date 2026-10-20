@@ -1,0 +1,41 @@
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:list
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:cache
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan route:list --path=payment --json
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan route:list --path=orders -vv
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:fresh --force
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:status
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:status
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:fresh --force
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:fresh --force
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan route:list --path=payment --json
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan tinker --execute=echo app()->handle(Illuminate\Http\Request::create('/api/orders/0190a2f3-0000-7000-8000-000000000000/payment', 'POST'))->getStatusCode();
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:list
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:cache
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan route:list --path=payment --json
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan tinker --execute=echo app()->handle(Illuminate\Http\Request::create('/api/orders/0190a2f3-0000-7000-8000-000000000000/payment', 'POST'))->getStatusCode();
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan route:list --path=orders -vv
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan route:list --path=payment --json
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan tinker --execute=echo app()->handle(Illuminate\Http\Request::create('/api/orders/0190a2f3-0000-7000-8000-000000000000/payment', 'POST'))->getStatusCode();
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan modules:clear
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan route:list --path=orders -vv
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:fresh --force
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:status
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:status
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:fresh --force
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate
+DB_DATABASE=ecommerce_testing_spike_hel_12_library artisan migrate:fresh --force

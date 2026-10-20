@@ -1,0 +1,6 @@
+answers: 5
+Comando: lines: 5
+Resultado: lines: 5
+Efeito: lines: 5
+Veredito lines: 5
+OK

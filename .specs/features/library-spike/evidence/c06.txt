@@ -1,0 +1,3 @@
+[{"domain":null,"method":"POST","uri":"orders\/{order}\/payment","name":null,"action":"Modules\\Payment\\Http\\Controllers\\PaymentController@store","middleware":["Illuminate\\Auth\\Middleware\\Authenticate:customer","App\\Modules\\Shared\\Http\\Middleware\\AtomicThrottleRequests:20,1,payment"],"path":null}]
+POST /api/orders/{order}/payment -> 404
+OK

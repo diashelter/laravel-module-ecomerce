@@ -1,0 +1,3 @@
+development migrate:status identical (14 rows)
+artisan calls not on the test database: 0
+OK

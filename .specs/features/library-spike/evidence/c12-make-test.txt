@@ -1,0 +1,2264 @@
+Banco de testes: ecommerce_testing_spike_hel_12_library (vhost do RabbitMQ: ecommerce_testing_spike_hel_12_library)
+docker compose run --rm --no-deps -e DB_DATABASE=ecommerce_testing_spike_hel_12_library -e RABBITMQ_VHOST=ecommerce_testing_spike_hel_12_library api sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$@"' pest
+ Container ecommerce-api-run-7dd75e3a4584 Creating 
+ Container ecommerce-api-run-7dd75e3a4584 Created 
+
+   FAIL  Tests\Unit\Architecture\DomainEventsTest
+  ✓ implements DomainEvent in every module event: Fulfillment            0.20s  
+  ✓ implements DomainEvent in every module event: Ordering               0.02s  
+  ⨯ it implements DomainEvent in every module event: every module with…  0.03s  
+  ✓ uses no laravel event dispatching in the modules: Illuminate\Founda… 0.37s  
+  ✓ uses no laravel event dispatching in the modules: Illuminate\Contra… 0.03s  
+  ✓ uses no laravel event dispatching in the modules: Illuminate\Suppor… 0.02s  
+  ✓ uses no laravel event dispatching in the modules: event              0.02s  
+
+   PASS  Tests\Unit\Architecture\HttpAdaptersTest
+  ✓ it writes no limit, pattern or state list in the http adapters with… 0.03s  
+  ✓ it writes no limit, pattern or state list in the http adapters with… 0.02s  
+  ✓ it writes no limit, pattern or state list in the http adapters with… 0.01s  
+  ✓ it writes no limit, pattern or state list in the http adapters with… 0.01s  
+  ✓ it writes no limit, pattern or state list in the http adapters with… 0.01s  
+  ✓ it writes no limit, pattern or state list in the http adapters with… 0.01s  
+  ✓ delegates the http adapters to the vocabulary: Customers EmailRule…  0.02s  
+  ✓ delegates the http adapters to the vocabulary: Customers Normalizes… 0.02s  
+  ✓ delegates the http adapters to the vocabulary: Customers PasswordRu… 0.02s  
+  ✓ delegates the http adapters to the vocabulary: Customers Normalizes… 0.01s  
+  ✓ delegates the http adapters to the vocabulary: Fulfillment Normaliz… 0.01s  
+  ✓ it normalizes the state with the trait of its own module             0.02s  
+
+   PASS  Tests\Unit\Architecture\IdTypesTest
+  ✓ it types every id of the contracts as a string with ('App\Modules\C… 0.03s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\I… 0.01s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\I… 0.01s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\I… 0.02s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\I… 0.01s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\O… 0.01s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\O… 0.01s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\O… 0.01s  
+  ✓ it types every id of the contracts as a string with ('App\Modules\O… 0.02s  
+  ✓ it declares the owner in the payable orders contract                 0.01s  
+  ✓ it carries the order id as a string in the order events and the del… 0.01s  
+  ✓ it carries the order id as a string in the order events and the del… 0.01s  
+  ✓ it carries the order id as a string in the order events and the del… 0.01s  
+  ✓ it carries the order id as a string in the order events and the del… 0.01s  
+  ✓ it carries the order id as a string in the order events and the del… 0.01s  
+  ✓ it carries the order id as a string in the order events and the del… 0.01s  
+  ✓ it declares no integer id in the modules                             0.04s  
+
+   FAIL  Tests\Unit\Architecture\ModuleBoundariesTest
+  ✓ Backoffice reaches another module only through its public directori… 0.04s  
+  ✓ Backoffice reaches another module only through its public directori… 0.03s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.03s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.01s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.01s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.03s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.01s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.01s  
+  ✓ Backoffice reaches another module only through its public directori… 0.01s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.03s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Backoffice reaches another module only through its public directori… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.06s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.03s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.01s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Catalog reaches another module only through its public directories:… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.06s  
+  ✓ Customers reaches another module only through its public directorie… 0.03s  
+  ✓ Customers reaches another module only through its public directorie… 0.04s  
+  ✓ Customers reaches another module only through its public directorie… 0.03s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Customers reaches another module only through its public directorie… 0.02s  
+  ✓ Customers reaches another module only through its public directorie… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Fulfillment reaches another module only through its public director… 0.01s  
+  ✓ Fulfillment reaches another module only through its public director… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.05s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Identity reaches another module only through its public directories… 0.02s  
+  ✓ Identity reaches another module only through its public directories… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.03s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.03s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.02s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.02s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.02s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.02s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.02s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Inventory reaches another module only through its public directorie… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.06s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.03s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.03s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.02s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Ordering reaches another module only through its public directories… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.03s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.02s  
+  ✓ Payment reaches another module only through its public directories:… 0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.06s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.03s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.02s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ✓ Shared reaches another module only through its public directories:…  0.01s  
+  ⨯ it generates the private directory rules from the folders that exis… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.01s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.02s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.03s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.01s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.02s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.01s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.01s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.02s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.01s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.02s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.01s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.03s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.01s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.02s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.02s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.02s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.01s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.01s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.03s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.02s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.01s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.02s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.01s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.02s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.02s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.01s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.01s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.03s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.01s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.02s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.02s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.01s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.01s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Catalog: App\Modules</>… 0.03s  
+  ✓ Customers uses only the public vocabulary of Catalog: App\Modules\C… 0.04s  
+  ✓ Fulfillment uses only the public vocabulary of Catalog: App\Modules… 0.02s  
+  ✓ Identity uses only the public vocabulary of Catalog: App\Modules\Ca… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Catalog: App\Modules\C… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Catalog: App\Modules\Ca… 0.02s  
+  ✓ Payment uses only the public vocabulary of Catalog: App\Modules\Cat… 0.02s  
+  ✓ Shared uses only the public vocabulary of Catalog: App\Modules\Cata… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Customers: App\Module… 0.04s  
+  ✓ Catalog uses only the public vocabulary of Customers: App\Modules\C… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Customers: App\Modul… 0.02s  
+  ✓ Identity uses only the public vocabulary of Customers: App\Modules</>… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Customers: App\Modules… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Customers: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Customers: App\Modules\C… 0.02s  
+  ✓ Shared uses only the public vocabulary of Customers: App\Modules\Cu… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Customers: App\Module… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Customers: App\Modules\C… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Customers: App\Modul… 0.02s  
+  ✓ Identity uses only the public vocabulary of Customers: App\Modules</>… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Customers: App\Modules… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Customers: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Customers: App\Modules\C… 0.02s  
+  ✓ Shared uses only the public vocabulary of Customers: App\Modules\Cu… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Identity: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Identity: App\Modules\Id… 0.02s  
+  ✓ Customers uses only the public vocabulary of Identity: App\Modules</>… 0.03s  
+  ✓ Fulfillment uses only the public vocabulary of Identity: App\Module… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Identity: App\Modules</>… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Identity: App\Modules\I… 0.01s  
+  ✓ Payment uses only the public vocabulary of Identity: App\Modules\Id… 0.01s  
+  ✓ Shared uses only the public vocabulary of Identity: App\Modules\Ide… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Identity: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Identity: App\Modules\Id… 0.01s  
+  ✓ Customers uses only the public vocabulary of Identity: App\Modules</>… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Identity: App\Module… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Identity: App\Modules</>… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Identity: App\Modules\I… 0.02s  
+  ✓ Payment uses only the public vocabulary of Identity: App\Modules\Id… 0.02s  
+  ✓ Shared uses only the public vocabulary of Identity: App\Modules\Ide… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Identity: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Identity: App\Modules\Id… 0.02s  
+  ✓ Customers uses only the public vocabulary of Identity: App\Modules</>… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Identity: App\Module… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Identity: App\Modules</>… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Identity: App\Modules\I… 0.03s  
+  ✓ Payment uses only the public vocabulary of Identity: App\Modules\Id… 0.01s  
+  ✓ Shared uses only the public vocabulary of Identity: App\Modules\Ide… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Identity: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Identity: App\Modules\Id… 0.01s  
+  ✓ Customers uses only the public vocabulary of Identity: App\Modules</>… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Identity: App\Module… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Identity: App\Modules</>… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Identity: App\Modules\I… 0.01s  
+  ✓ Payment uses only the public vocabulary of Identity: App\Modules\Id… 0.01s  
+  ✓ Shared uses only the public vocabulary of Identity: App\Modules\Ide… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Inventory: App\Module… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Inventory: App\Modules\I… 0.02s  
+  ✓ Customers uses only the public vocabulary of Inventory: App\Modules… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Inventory: App\Modul… 0.01s  
+  ✓ Identity uses only the public vocabulary of Inventory: App\Modules</>… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Inventory: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Inventory: App\Modules\I… 0.01s  
+  ✓ Shared uses only the public vocabulary of Inventory: App\Modules\In… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Inventory: App\Module… 0.03s  
+  ✓ Catalog uses only the public vocabulary of Inventory: App\Modules\I… 0.02s  
+  ✓ Customers uses only the public vocabulary of Inventory: App\Modules… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Inventory: App\Modul… 0.02s  
+  ✓ Identity uses only the public vocabulary of Inventory: App\Modules</>… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Inventory: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Inventory: App\Modules\I… 0.02s  
+  ✓ Shared uses only the public vocabulary of Inventory: App\Modules\In… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Inventory: App\Module… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Inventory: App\Modules\I… 0.01s  
+  ✓ Customers uses only the public vocabulary of Inventory: App\Modules… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Inventory: App\Modul… 0.02s  
+  ✓ Identity uses only the public vocabulary of Inventory: App\Modules</>… 0.01s  
+  ✓ Ordering uses only the public vocabulary of Inventory: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Inventory: App\Modules\I… 0.01s  
+  ✓ Shared uses only the public vocabulary of Inventory: App\Modules\In… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Inventory: App\Module… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Inventory: App\Modules\I… 0.02s  
+  ✓ Customers uses only the public vocabulary of Inventory: App\Modules… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Inventory: App\Modul… 0.03s  
+  ✓ Identity uses only the public vocabulary of Inventory: App\Modules</>… 0.02s  
+  ✓ Ordering uses only the public vocabulary of Inventory: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Inventory: App\Modules\I… 0.01s  
+  ✓ Shared uses only the public vocabulary of Inventory: App\Modules\In… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Ordering: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Ordering: App\Modules\Or… 0.01s  
+  ✓ Customers uses only the public vocabulary of Ordering: App\Modules</>… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Ordering: App\Module… 0.01s  
+  ✓ Identity uses only the public vocabulary of Ordering: App\Modules\O… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Shared uses only the public vocabulary of Ordering: App\Modules\Ord… 0.01s  
+  ✓ Backoffice uses only the public vocabulary of Ordering: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Customers uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Ordering: App\Module… 0.01s  
+  ✓ Identity uses only the public vocabulary of Ordering: App\Modules\O… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Ordering: App\Modules\Or… 0.03s  
+  ✓ Shared uses only the public vocabulary of Ordering: App\Modules\Ord… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Ordering: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Customers uses only the public vocabulary of Ordering: App\Modules</>… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Ordering: App\Module… 0.02s  
+  ✓ Identity uses only the public vocabulary of Ordering: App\Modules\O… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Ordering: App\Modules</>… 0.01s  
+  ✓ Payment uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Shared uses only the public vocabulary of Ordering: App\Modules\Ord… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Ordering: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Customers uses only the public vocabulary of Ordering: App\Modules</>… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Ordering: App\Module… 0.01s  
+  ✓ Identity uses only the public vocabulary of Ordering: App\Modules\O… 0.01s  
+  ✓ Inventory uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Shared uses only the public vocabulary of Ordering: App\Modules\Ord… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Ordering: App\Modules… 0.03s  
+  ✓ Catalog uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Customers uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Ordering: App\Module… 0.01s  
+  ✓ Identity uses only the public vocabulary of Ordering: App\Modules\O… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Ordering: App\Modules</>… 0.01s  
+  ✓ Payment uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Shared uses only the public vocabulary of Ordering: App\Modules\Ord… 0.02s  
+  ✓ Backoffice uses only the public vocabulary of Ordering: App\Modules… 0.02s  
+  ✓ Catalog uses only the public vocabulary of Ordering: App\Modules\Or… 0.02s  
+  ✓ Customers uses only the public vocabulary of Ordering: App\Modules</>… 0.01s  
+  ✓ Fulfillment uses only the public vocabulary of Ordering: App\Module… 0.01s  
+  ✓ Identity uses only the public vocabulary of Ordering: App\Modules\O… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Ordering: App\Modules\Or… 0.03s  
+  ✓ Shared uses only the public vocabulary of Ordering: App\Modules\Ord… 0.04s  
+  ✓ Backoffice uses only the public vocabulary of Ordering: App\Modules… 0.05s  
+  ✓ Catalog uses only the public vocabulary of Ordering: App\Modules\Or… 0.03s  
+  ✓ Customers uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Fulfillment uses only the public vocabulary of Ordering: App\Module… 0.02s  
+  ✓ Identity uses only the public vocabulary of Ordering: App\Modules\O… 0.02s  
+  ✓ Inventory uses only the public vocabulary of Ordering: App\Modules</>… 0.02s  
+  ✓ Payment uses only the public vocabulary of Ordering: App\Modules\Or… 0.01s  
+  ✓ Shared uses only the public vocabulary of Ordering: App\Modules\Ord… 0.02s  
+  ✓ it generates the vocabulary rules from the classes that exist        0.02s  
+  ⨯ it computes the vocabulary of a module from its own contracts and e… 0.02s  
+  ✓ it follows the native parameter, return and public property types t… 0.02s  
+  ✓ it keeps a type out of the vocabulary when only a docblock names it  0.01s  
+  ⨯ it computes the vocabulary the contracts expose today                0.01s  
+  ✓ it computes the vocabulary the read side exposes                     0.02s  
+  ✓ Backoffice does not use another module root class: CatalogServicePr… 0.02s  
+  ✓ Backoffice does not use another module root class: CustomersService… 0.02s  
+  ✓ Backoffice does not use another module root class: FulfillmentServi… 0.02s  
+  ✓ Backoffice does not use another module root class: IdentityServiceP… 0.02s  
+  ✓ Backoffice does not use another module root class: InventoryService… 0.03s  
+  ✓ Backoffice does not use another module root class: OrderingServiceP… 0.02s  
+  ✓ Catalog does not use another module root class: CustomersServicePro… 0.02s  
+  ✓ Catalog does not use another module root class: FulfillmentServiceP… 0.01s  
+  ✓ Catalog does not use another module root class: IdentityServiceProv… 0.02s  
+  ✓ Catalog does not use another module root class: InventoryServicePro… 0.02s  
+  ✓ Catalog does not use another module root class: OrderingServiceProv… 0.02s  
+  ✓ Customers does not use another module root class: CatalogServicePro… 0.01s  
+  ✓ Customers does not use another module root class: FulfillmentServic… 0.01s  
+  ✓ Customers does not use another module root class: IdentityServicePr… 0.01s  
+  ✓ Customers does not use another module root class: InventoryServiceP… 0.02s  
+  ✓ Customers does not use another module root class: OrderingServicePr… 0.02s  
+  ✓ Fulfillment does not use another module root class: CatalogServiceP… 0.02s  
+  ✓ Fulfillment does not use another module root class: CustomersServic… 0.01s  
+  ✓ Fulfillment does not use another module root class: IdentityService… 0.01s  
+  ✓ Fulfillment does not use another module root class: InventoryServic… 0.01s  
+  ✓ Fulfillment does not use another module root class: OrderingService… 0.01s  
+  ✓ Identity does not use another module root class: CatalogServiceProv… 0.02s  
+  ✓ Identity does not use another module root class: CustomersServicePr… 0.03s  
+  ✓ Identity does not use another module root class: FulfillmentService… 0.02s  
+  ✓ Identity does not use another module root class: InventoryServicePr… 0.02s  
+  ✓ Identity does not use another module root class: OrderingServicePro… 0.02s  
+  ✓ Inventory does not use another module root class: CatalogServicePro… 0.02s  
+  ✓ Inventory does not use another module root class: CustomersServiceP… 0.02s  
+  ✓ Inventory does not use another module root class: FulfillmentServic… 0.02s  
+  ✓ Inventory does not use another module root class: IdentityServicePr… 0.01s  
+  ✓ Inventory does not use another module root class: OrderingServicePr… 0.02s  
+  ✓ Ordering does not use another module root class: CatalogServiceProv… 0.02s  
+  ✓ Ordering does not use another module root class: CustomersServicePr… 0.02s  
+  ✓ Ordering does not use another module root class: FulfillmentService… 0.02s  
+  ✓ Ordering does not use another module root class: IdentityServicePro… 0.02s  
+  ✓ Ordering does not use another module root class: InventoryServicePr… 0.02s  
+  ✓ Payment does not use another module root class: CatalogServiceProvi… 0.02s  
+  ✓ Payment does not use another module root class: CustomersServicePro… 0.01s  
+  ✓ Payment does not use another module root class: FulfillmentServiceP… 0.01s  
+  ✓ Payment does not use another module root class: IdentityServiceProv… 0.01s  
+  ✓ Payment does not use another module root class: InventoryServicePro… 0.02s  
+  ✓ Payment does not use another module root class: OrderingServiceProv… 0.03s  
+  ✓ Shared does not use another module root class: CatalogServiceProvid… 0.02s  
+  ✓ Shared does not use another module root class: CustomersServiceProv… 0.02s  
+  ✓ Shared does not use another module root class: FulfillmentServicePr… 0.02s  
+  ✓ Shared does not use another module root class: IdentityServiceProvi… 0.02s  
+  ✓ Shared does not use another module root class: InventoryServiceProv… 0.02s  
+  ✓ Shared does not use another module root class: OrderingServiceProvi… 0.02s  
+  ⨯ it does not use another module root class: every module root is cov… 0.02s  
+  ✓ it declares no boundary exception                                    0.01s  
+  ✓ keeps only interfaces in every module contracts: Catalog             0.02s  
+  ✓ keeps only interfaces in every module contracts: Identity            0.02s  
+  ✓ keeps only interfaces in every module contracts: Inventory           0.02s  
+  ✓ keeps only interfaces in every module contracts: Ordering            0.02s  
+  ⨯ it keeps only interfaces in every module contracts: every module is… 0.01s  
+  ✓ it speaks only data in every contract signature                      0.02s  
+  ✓ it resolves the module contracts to their implementations with ('Ap… 0.02s  
+  ✓ it resolves the module contracts to their implementations with ('Ap… 0.01s  
+  ✓ it resolves the module contracts to their implementations with ('Ap… 0.03s  
+  ✓ it resolves the module contracts to their implementations with ('Ap… 0.02s  
+  ✓ it resolves the module contracts to their implementations with ('Ap… 0.01s  
+  ✓ queries do not use the module repositories: Backoffice               0.02s  
+  ✓ queries do not use the module use cases: Backoffice                  0.02s  
+  ✓ queries do not use the module repositories: Catalog                  0.02s  
+  ✓ queries do not use the module use cases: Catalog                     0.02s  
+  ✓ queries do not use the module repositories: Identity                 0.02s  
+  ✓ queries do not use the module use cases: Identity                    0.02s  
+  ✓ queries do not use the module repositories: Inventory                0.02s  
+  ✓ queries do not use the module use cases: Inventory                   0.02s  
+  ✓ queries do not use the module repositories: Ordering                 0.02s  
+  ✓ queries do not use the module use cases: Ordering                    0.01s  
+  ✓ it every module with queries is covered                              0.03s  
+  ✓ it speaks only data in every query signature                         0.02s  
+  ✓ it resolves the read contracts to the owner queries with ('App\Modu… 0.02s  
+  ✓ it resolves the read contracts to the owner queries with ('App\Modu… 0.01s  
+  ✓ it resolves the read contracts to the owner queries with ('App\Modu… 0.01s  
+  ✓ it resolves the read contracts to the owner queries with ('App\Modu… 0.01s  
+  ✓ it resolves the read contracts to the owner queries with ('App\Modu… 0.02s  
+  ✓ it resolves the read contracts to the owner queries with ('App\Modu… 0.01s  
+  ✓ Backoffice reaches the inventory only through its contracts          0.02s  
+  ✓ Catalog reaches the inventory only through its contracts             0.02s  
+  ✓ Customers reaches the inventory only through its contracts           0.02s  
+  ✓ Fulfillment reaches the inventory only through its contracts         0.02s  
+  ✓ Identity reaches the inventory only through its contracts            0.02s  
+  ✓ Ordering reaches the inventory only through its contracts            0.02s  
+  ✓ Payment reaches the inventory only through its contracts             0.02s  
+  ✓ Shared reaches the inventory only through its contracts              0.02s  
+  ✓ the inventory contracts are interfaces                               0.01s  
+  ✓ the catalog does not use the ordering Models                         0.02s  
+  ✓ the catalog does not use the ordering Repositories                   0.03s  
+  ✓ identity does not depend on ordering                                 0.07s  
+  ✓ Ordering does not use the staff user                                 0.02s  
+  ✓ Payment does not use the staff user                                  0.02s  
+  ✓ Fulfillment does not use the staff user                              0.02s  
+  ✓ Payment never changes the order status itself                        0.03s  
+  ✓ Fulfillment never changes the order status itself                    0.02s  
+  ✓ payment does not know fulfillment                                    0.04s  
+  ✓ fulfillment does not know payment                                    0.05s  
+  ✓ ordering does not know customers                                     0.07s  
+  ✓ ordering reaches fulfillment only through its events: Consumers      0.02s  
+  ✓ ordering reaches fulfillment only through its events: Http           0.02s  
+  ✓ ordering reaches fulfillment only through its events: Jobs           0.02s  
+  ✓ ordering reaches fulfillment only through its events: Services       0.02s  
+  ✓ ordering reaches fulfillment only through its events: UseCases       0.02s  
+  ✓ ordering reaches fulfillment only through its events: FulfillmentSe… 0.02s  
+  ✓ it ordering reaches fulfillment only through its events: the module… 0.01s  
+  ✓ it ordering reaches fulfillment only through its events: every name… 0.01s  
+  ✓ the ordering contracts are interfaces                                0.01s  
+  ✓ fulfillment does not know customers                                  0.02s  
+  ✓ payment UseCases reaches the payment gateway only through its contr… 0.02s  
+  ✓ payment Services reaches the payment gateway only through its contr… 0.02s  
+  ✓ payment Http reaches the payment gateway only through its contract   0.02s  
+  ✓ the payment contracts are interfaces                                 0.03s  
+  ✓ the shared kernel does not depend on Backoffice                      0.02s  
+  ✓ the shared kernel does not depend on Catalog                         0.06s  
+  ✓ the shared kernel does not depend on Customers                       0.02s  
+  ✓ the shared kernel does not depend on Fulfillment                     0.02s  
+  ✓ the shared kernel does not depend on Identity                        0.06s  
+  ✓ the shared kernel does not depend on Inventory                       0.05s  
+  ✓ the shared kernel does not depend on Ordering                        0.02s  
+  ✓ the shared kernel does not depend on Payment                         0.02s  
+  ✓ repositories do not use the module services: Catalog                 0.02s  
+  ✓ repositories do not use the module services: Customers               0.02s  
+  ✓ repositories do not use the module services: Inventory               0.02s  
+  ✓ repositories do not use the module services: Ordering                0.03s  
+  ⨯ it repositories do not use the module services: every module with b… 0.02s  
+  ✓ it resolves the catalog order history to the order repository        0.02s  
+  ✓ it resolves the delivery address book to the customers module        0.03s  
+  ✓ it resolves the inventory contracts to the stock repository with ('… 0.01s  
+  ✓ it resolves the inventory contracts to the stock repository with ('… 0.01s  
+  ✓ it resolves the payment gateway to the fake gateway                  0.01s  
+  ✓ it keeps every module named by these rules with ('Backoffice')       0.02s  
+  ✓ it keeps every module named by these rules with ('Catalog')          0.02s  
+  ✓ it keeps every module named by these rules with ('Customers')        0.02s  
+  ✓ it keeps every module named by these rules with ('Fulfillment')      0.01s  
+  ✓ it keeps every module named by these rules with ('Identity')         0.01s  
+  ✓ it keeps every module named by these rules with ('Inventory')        0.02s  
+  ✓ it keeps every module named by these rules with ('Ordering')         0.01s  
+  ⨯ it keeps every module named by these rules with ('Payment')          0.02s  
+  ✓ it keeps every module named by these rules with ('Shared')           0.01s  
+  ✓ identity value objects are final and readonly                        0.02s  
+  ✓ App\Modules\Identity\Http\Requests\RegisterRequest does not write t… 0.04s  
+  ✓ App\Modules\Identity\Http\Requests\LoginRequest does not write the…  0.01s  
+  ✓ App\Modules\Identity\Http\Requests\Admin\StoreStaffMemberRequest do… 0.02s  
+  ✓ App\Modules\Identity\Http\Requests\Admin\UpdateStaffMemberRequest d… 0.02s  
+  ✓ App\Modules\Customers\Http\Requests\Admin\StoreCustomerRequest does… 0.02s  
+  ✓ App\Modules\Customers\Http\Requests\Admin\UpdateCustomerRequest doe… 0.02s  
+  ✓ App\Modules\Customers\Http\Requests\UpdateProfileRequest does not w… 0.02s  
+
+   FAIL  Tests\Unit\Architecture\OrderCodeBoundariesTest
+  ⨯ it keeps the order code out of the contracts events and routes       0.57s  
+
+   PASS  Tests\Unit\Architecture\OrderEventPayloadTest
+  ✓ it carries no model in the order events and the delivery job with (… 0.02s  
+  ✓ it carries no model in the order events and the delivery job with (… 0.01s  
+  ✓ it carries no model in the order events and the delivery job with (… 0.01s  
+  ✓ it carries no model in the order events and the delivery job with (… 0.02s  
+  ✓ it carries no model in the order events and the delivery job with (… 0.01s  
+  ✓ it carries no model in the order events and the delivery job with (… 0.01s  
+  ✓ it declares the name and version of every order event with ('App\Mo… 0.01s  
+  ✓ it declares the name and version of every order event with ('Module… 0.01s  
+  ✓ it declares the name and version of every order event with ('App\Mo… 0.01s  
+  ✓ it declares the name and version of every order event with ('App\Mo… 0.02s  
+  ✓ it declares the name and version of every order event with ('App\Mo… 0.01s  
+  ✓ it maps every order event payload and rebuilds it with dataset "Ord… 0.02s  
+  ✓ it maps every order event payload and rebuilds it with dataset "Pay… 0.01s  
+  ✓ it maps every order event payload and rebuilds it with dataset "Ord… 0.01s  
+  ✓ it maps every order event payload and rebuilds it with dataset "Del… 0.01s  
+  ✓ it maps every order event payload and rebuilds it with dataset "Ord… 0.01s  
+
+   PASS  Tests\Unit\Architecture\RouteBindingTest
+  ✓ it resolves no record by implicit binding in any api route           0.03s  
+  ✓ it resolves no record by explicit binding in any api route           0.02s  
+  ✓ it constrains every api route parameter to the canonical id          0.01s  
+
+   PASS  Tests\Unit\Architecture\TypedListSignaturesTest
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.02s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.02s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.02s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.02s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.02s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+  ✓ it declares no array in the domain list signatures with ('App\Modul… 0.01s  
+
+   PASS  Tests\Unit\DTOs\UpdateUserProfileDTOTest
+  ✓ it keeps the password out of the changes when none is sent           0.04s  
+  ✓ it includes the password when a new one is sent                      0.01s  
+
+   PASS  Tests\Unit\Gateways\FakePaymentGatewayTest
+  ✓ it approves the fake approved card                                   0.03s  
+  ✓ it declines each fake card with its reason with dataset "insufficie… 0.01s  
+  ✓ it declines each fake card with its reason with dataset "declined b… 0.02s  
+  ✓ it declines each fake card with its reason with dataset "unknown to… 0.01s  
+  ✓ it declines each fake card with its reason with dataset "empty toke… 0.01s  
+  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.02s  
+  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.01s  
+
+   PASS  Tests\Unit\Resources\CustomerProfileResourceTest
+  ✓ it renders the customer account in the same shape in identity and c… 0.02s  
+
+   PASS  Tests\Unit\Services\CategoryServiceTest
+  ✓ it allows deleting empty categories                                  0.02s  
+  ✓ it does not allow deleting categories with products                  0.01s  
+
+   PASS  Tests\Unit\Services\CheckoutServiceTest
+  ✓ it accepts quantities that the stock can fulfil                      0.02s  
+  ✓ it reports every product that cannot be bought, keyed by item        0.02s  
+  ✓ it builds the order lines and total in cents                         0.01s  
+
+   PASS  Tests\Unit\Services\DashboardServiceTest
+  ✓ it starts the daily series 29 days ago and the monthly series 11 mo… 0.02s  
+  ✓ it builds the cards and fills the series gaps with zero              0.02s  
+
+   PASS  Tests\Unit\Services\DeliveryCalendarTest
+  ✓ it counts the delivery estimate in business days in Sao Paulo time…  0.02s  
+  ✓ it counts the delivery estimate in business days in Sao Paulo time…  0.01s  
+  ✓ it counts the delivery estimate in business days in Sao Paulo time…  0.01s  
+  ✓ it counts the delivery estimate in business days in Sao Paulo time…  0.01s  
+  ✓ it counts the delivery estimate in business days in Sao Paulo time…  0.01s  
+
+   PASS  Tests\Unit\Services\OrderCodeGeneratorTest
+  ✓ it draws 8 symbols of the order code alphabet                        0.03s  
+
+   PASS  Tests\Unit\Services\PaymentServiceTest
+  ✓ it accepts orders awaiting payment                                   0.02s  
+  ✓ it rejects orders that are not awaiting payment with (App\Modules\O… 0.02s  
+  ✓ it rejects orders that are not awaiting payment with (App\Modules\O… 0.01s  
+  ✓ it rejects orders that are not awaiting payment with (App\Modules\O… 0.01s  
+  ✓ it decides whether an order can be paid with dataset "awaiting paym… 0.01s  
+  ✓ it decides whether an order can be paid with dataset "awaiting paym… 0.02s  
+  ✓ it decides whether an order can be paid with dataset "placed"        0.02s  
+  ✓ it decides whether an order can be paid with dataset "payment appro… 0.01s  
+  ✓ it decides whether an order can be paid with dataset "delivered"     0.01s  
+
+   PASS  Tests\Unit\Services\ProductServiceTest
+  ✓ it builds a default image url from the product id                    0.03s  
+  ✓ it allows deleting products that were never ordered                  0.01s  
+  ✓ it does not allow deleting products that appear in orders            0.02s  
+
+   PASS  Tests\Unit\Services\PurchaseAvailabilityServiceTest
+  ✓ it explains why a quantity cannot be bought with dataset "enough st… 0.02s  
+  ✓ it explains why a quantity cannot be bought with dataset "not enoug… 0.02s  
+  ✓ it explains why a quantity cannot be bought with dataset "out of st… 0.01s  
+  ✓ it explains why a quantity cannot be bought with dataset "without a… 0.01s  
+  ✓ it explains why a quantity cannot be bought with dataset "inactive…  0.01s  
+  ✓ ordering takes the availability from the catalog product             0.02s  
+  ✓ it leaves the availability rule out of the purchase messages         0.02s  
+
+   PASS  Tests\Unit\Services\ShippingRateTableTest
+  ✓ it quotes every state from the shipping rate table with dataset "SP… 0.02s  
+  ✓ it quotes every state from the shipping rate table with dataset "RJ… 0.02s  
+  ✓ it quotes every state from the shipping rate table with dataset "MG… 0.02s  
+  ✓ it quotes every state from the shipping rate table with dataset "ES… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "PR… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "SC… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "RS… 0.02s  
+  ✓ it quotes every state from the shipping rate table with dataset "DF… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "GO… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "MT… 0.03s  
+  ✓ it quotes every state from the shipping rate table with dataset "MS… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "BA… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "SE… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "AL… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "PE… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "PB… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "RN… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "CE… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "PI… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "MA… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "PA… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "AP… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "AM… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "RR… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "AC… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "RO… 0.01s  
+  ✓ it quotes every state from the shipping rate table with dataset "TO… 0.01s  
+  ✓ it quotes every state from the shipping rate table with no state le… 0.01s  
+
+   PASS  Tests\Unit\Services\StockServiceTest
+  ✓ it calculates the new quantity with dataset "increase"               0.04s  
+  ✓ it calculates the new quantity with dataset "decrease"               0.01s  
+  ✓ it allows decreasing the stock to zero                               0.01s  
+  ✓ it never lets the stock become negative                              0.03s  
+
+   PASS  Tests\Unit\ValueObjects\EmailTest
+  ✓ it normalizes the email with dataset "non ascii capital"             0.02s  
+  ✓ it normalizes the email with dataset "spaces and capitals"           0.02s  
+  ✓ it normalizes the email with dataset "domain without dot"            0.02s  
+  ✓ it refuses an invalid email with dataset "no at sign"                0.02s  
+  ✓ it refuses an invalid email with dataset "two at signs"              0.01s  
+  ✓ it refuses an invalid email with dataset "too long"                  0.02s  
+
+   PASS  Tests\Unit\ValueObjects\IdKeyedMapsTest
+  ✓ it keys the id maps by canonical uuid with dataset "stock quantitie… 0.02s  
+  ✓ it keys the id maps by canonical uuid with dataset "order counts by… 0.01s  
+  ✓ it keys the id maps by canonical uuid in the product quantities      0.01s  
+
+   PASS  Tests\Unit\ValueObjects\PasswordTest
+  ✓ it refuses a short password without echoing it                       0.02s  
+  ✓ it accepts the minimum length and reveals the text explicitly        0.01s  
+  ✓ it never reveals the plain password with ('json_encode')             0.02s  
+  ✓ it never reveals the plain password with ('serialize')               0.01s  
+  ✓ it never reveals the plain password with ('var_export')              0.01s  
+  ✓ it never reveals the plain password with ('print_r')                 0.01s  
+  ✓ it never reveals the plain password with ('var_dump')                0.02s  
+  ✓ it never reveals the plain password with ('string cast')             0.01s  
+  ✓ it keeps the plain password out of exception traces                  0.01s  
+  ✓ it keeps the plain password out of exception traces when the constr… 0.01s  
+
+   PASS  Tests\Unit\ValueObjects\ProductAvailabilityTest
+  ✓ it decides the availability from the status and the units with data… 0.02s  
+  ✓ it decides the availability from the status and the units with data… 0.01s  
+  ✓ it decides the availability from the status and the units with data… 0.01s  
+  ✓ it decides the availability from the status and the units with data… 0.01s  
+  ✓ it carries the product status in the catalog product                 0.01s  
+
+   PASS  Tests\Unit\ValueObjects\TypedListsTest
+  ✓ it groups the cart into product quantities in ascending product ord… 0.02s  
+  ✓ it derives the validated cart total from the lines without a proble… 0.01s  
+  ✓ it treats an empty validated cart as invalid                         0.01s  
+  ✓ it derives the order line subtotal and the order total               0.01s  
+  ✓ it refuses an element of another type in a typed list with ('App\Mo… 0.01s  
+  ✓ it refuses an element of another type in a typed list with ('App\Mo… 0.01s  
+  ✓ it refuses an element of another type in a typed list with ('App\Mo… 0.02s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.02s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Cata… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Orde… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Orde… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Orde… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Orde… 0.01s  
+  ✓ it refuses an invalid id in a typed id list with ('App\Modules\Orde… 0.01s  
+  ✓ it accepts canonical uuids in a typed id list with ('App\Modules\Ca… 0.02s  
+  ✓ it accepts canonical uuids in a typed id list with ('App\Modules\Ca… 0.01s  
+  ✓ it accepts canonical uuids in a typed id list with ('App\Modules\Or… 0.01s  
+  ✓ it answers zero orders for a customer without orders                 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.02s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+  ✓ it typed lists are final readonly iterable and countable with ('App… 0.01s  
+
+   PASS  Tests\Feature\Account\AccountTest
+  ✓ it shows the account summary                                         0.38s  
+  ✓ it shows an empty account summary for a customer without orders      0.03s  
+  ✓ it renders the recent orders as summaries                            0.04s  
+  ✓ it updates name and email                                            0.04s  
+  ✓ it changes the password only with the current password               0.03s  
+  ✓ it does not allow taking another user email                          0.03s  
+  ✓ it lets a customer take an e-mail used by a staff member             0.03s  
+  ✓ it rejects a profile e-mail already used by another customer         0.03s  
+  ✓ it returns the account summary under the customer key without a rol… 0.03s  
+  ✓ it returns the order code in every order summary                     0.03s  
+
+   PASS  Tests\Feature\Account\CustomerAddressTest
+  ✓ it lists no addresses for a new customer                             0.03s  
+  ✓ it creates an address in the customer address book                   0.03s  
+  ✓ it normalizes the state and an empty complement with dataset "state… 0.03s  
+  ✓ it normalizes the state and an empty complement with dataset "compl… 0.03s  
+  ✓ it normalizes the state and an empty complement with dataset "compl… 0.03s  
+  ✓ it normalizes the state and an empty complement with dataset "compl… 0.03s  
+  ✓ it lists only the customer addresses, most recent first              0.03s  
+  ✓ it validates the postal code format with dataset "seven digits"      0.03s  
+  ✓ it validates the postal code format with dataset "hyphen in the wro… 0.03s  
+  ✓ it validates the postal code format with dataset "a letter"          0.04s  
+  ✓ it validates the postal code format with dataset "a space"           3.46s  
+  ✓ it validates the postal code format with dataset "eight digits"      0.24s  
+  ✓ it validates the postal code format with dataset "hyphenated"        0.17s  
+  ✓ it rejects a state outside the 27 states with dataset "unknown stat… 0.04s  
+  ✓ it rejects a state outside the 27 states with dataset "empty state"  0.07s  
+  ✓ it rejects a state outside the 27 states with dataset "missing stat… 0.05s  
+  ✓ it rejects a state outside the 27 states when updating an address    0.06s  
+  ✓ it rejects a state that is not a string on every address route with… 0.07s  
+  ✓ it rejects a state that is not a string on every address route with… 0.06s  
+  ✓ it requires every address field but the complement with dataset "re… 0.11s  
+  ✓ it requires every address field but the complement with dataset "re… 0.04s  
+  ✓ it requires every address field but the complement with dataset "st… 0.05s  
+  ✓ it requires every address field but the complement with dataset "st… 0.04s  
+  ✓ it requires every address field but the complement with dataset "nu… 0.03s  
+  ✓ it requires every address field but the complement with dataset "nu… 0.04s  
+  ✓ it requires every address field but the complement with dataset "di… 0.03s  
+  ✓ it requires every address field but the complement with dataset "di… 0.04s  
+  ✓ it requires every address field but the complement with dataset "ci… 0.05s  
+  ✓ it requires every address field but the complement with dataset "ci… 0.06s  
+  ✓ it limits the length of each address field with dataset "recipient_… 0.10s  
+  ✓ it limits the length of each address field with dataset "street"     0.05s  
+  ✓ it limits the length of each address field with dataset "number"     0.04s  
+  ✓ it limits the length of each address field with dataset "complement… 0.04s  
+  ✓ it limits the length of each address field with dataset "district"   0.04s  
+  ✓ it limits the length of each address field with dataset "city"       0.03s  
+  ✓ it refuses an eleventh address                                       0.08s  
+  ✓ it updates an address of the customer                                0.04s  
+  ✓ it normalizes the state when updating an address                     0.04s  
+  ✓ it requires the full address on update                               0.03s  
+  ✓ it deletes an address of the customer                                0.03s  
+  ✓ it forbids changing an address of another customer with ('put')      0.04s  
+  ✓ it forbids changing an address of another customer with ('delete')   0.03s  
+  ✓ it answers 404 to an unknown address with ('put')                    0.03s  
+  ✓ it answers 404 to an unknown address with ('delete')                 0.03s  
+  ✓ it answers 401 to a guest on every address route with ('get', '/api… 0.03s  
+  ✓ it answers 401 to a guest on every address route with ('post', '/ap… 0.19s  
+  ✓ it answers 401 to a guest on every address route with ('put', '/api… 0.07s  
+  ✓ it answers 401 to a guest on every address route with ('delete', '/… 0.10s  
+
+   PASS  Tests\Feature\Account\CustomerRecordRoutesTest
+  ✓ it answers the owner on the customer record routes with dataset "sh… 0.17s  
+  ✓ it answers the owner on the customer record routes with dataset "pa… 0.06s  
+  ✓ it answers the owner on the customer record routes with dataset "up… 0.04s  
+  ✓ it answers the owner on the customer record routes with dataset "de… 0.03s  
+  ✓ it answers another customer record as an unknown id with dataset "s… 0.04s  
+  ✓ it answers another customer record as an unknown id with dataset "p… 0.05s  
+  ✓ it answers another customer record as an unknown id with dataset "u… 0.04s  
+  ✓ it answers another customer record as an unknown id with dataset "d… 0.04s  
+  ✓ it answers 404 before the status for another customer order with (A… 0.03s  
+  ✓ it answers 404 before the status for another customer order with (A… 0.04s  
+  ✓ it answers 404 before the status for another customer order with (A… 0.04s  
+  ✓ it answers 404 to the payment of an unknown order                    0.04s  
+  ✓ it validates the body before the owner in the customer routes with…  0.04s  
+  ✓ it validates the body before the owner in the customer routes with…  0.05s  
+  ✓ it validates the body before the owner in the customer routes with…  0.03s  
+  ✓ it validates the body before the owner in the customer routes with…  0.03s  
+  ✓ it validates the body before the owner in the customer routes with…  0.03s  
+  ✓ it validates the body before the owner in the customer routes with…  0.03s  
+  ✓ it deletes an own address without reading it first                   0.03s  
+  ✓ it keeps the query count of the owner reads and updates with ('show… 0.06s  
+  ✓ it keeps the query count of the owner reads and updates with ('pay…  0.04s  
+  ✓ it keeps the query count of the owner reads and updates with ('upda… 0.03s  
+
+   PASS  Tests\Feature\Admin\CategoryTest
+  ✓ it creates a category generating the slug from the name              0.04s  
+  ✓ it does not allow duplicated slugs                                   0.03s  
+  ✓ it updates a category and regenerates its slug                       0.06s  
+  ✓ it deletes a category without products                               0.08s  
+  ✓ it blocks deleting a category with products                          0.05s  
+  ✓ it lists categories with product counts                              0.05s  
+
+   PASS  Tests\Feature\Admin\CustomerTest
+  ✓ it lists only customers with their order count with dataset "admin"  0.05s  
+  ✓ it lists only customers with their order count with dataset "suppor… 0.05s  
+  ✓ it reads the order counts of a customers page in one query           0.05s  
+  ✓ it creates a customer from the admin with dataset "admin"            0.04s  
+  ✓ it creates a customer from the admin with dataset "support"          0.04s  
+  ✓ it creates a customer with an e-mail used by a staff member          0.04s  
+  ✓ it rejects a customer e-mail already in use with ('POST')            0.04s  
+  ✓ it rejects a customer e-mail already in use with ('PUT')             0.04s  
+  ✓ it shows a customer with the ten most recent orders with dataset "a… 0.04s  
+  ✓ it shows a customer with the ten most recent orders with dataset "s… 0.04s  
+  ✓ it updates a customer from the admin with dataset "admin"            0.04s  
+  ✓ it updates a customer from the admin with dataset "support"          0.03s  
+  ✓ it renders the account fields on every admin customer route          0.04s  
+  ✓ it answers 404 to an unknown customer in the admin                   0.03s  
+  ✓ it pages customers fifteen at a time, newest first                   0.04s  
+  ✓ it does not delete customers                                         0.03s  
+  ✓ it counts only customers on the dashboard                            0.04s  
+
+   PASS  Tests\Feature\Admin\DashboardTest
+  ✓ it returns aggregated metrics                                        0.04s  
+  ✓ it returns zeros for an empty store                                  0.03s  
+
+   PASS  Tests\Feature\Admin\OrderTest
+  ✓ it lists all orders with their customers                             0.06s  
+  ✓ it shows an order with customer and items                            0.09s  
+  ✓ it returns the order code with every order with dataset "customer l… 0.04s  
+  ✓ it returns the order code with every order with dataset "customer o… 0.03s  
+  ✓ it returns the order code with every order with dataset "admin list… 0.04s  
+  ✓ it returns the order code with every order with dataset "admin orde… 0.04s  
+
+   PASS  Tests\Feature\Admin\ProductTest
+  ✓ it creates a product with its price in cents                         0.05s  
+  ✓ it opens the stock of a new product with the given quantity          0.04s  
+  ✓ it creates a product in exactly the given categories                 0.03s  
+  ✓ it replaces the product categories on update                         0.04s  
+  ✓ it validates product data                                            0.03s  
+  ✓ it updates a product without touching its stock                      0.03s  
+  ✓ it activates and deactivates a product                               0.04s  
+  ✓ it deletes a product without orders together with its stock          0.03s  
+  ✓ it blocks deleting a product present in orders                       0.04s  
+
+   PASS  Tests\Feature\Admin\StaffRecordRoutesTest
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.03s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.03s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it receives the record id as a string in the staff and showcase rou… 0.02s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.05s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.05s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.05s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.04s  
+  ✓ it answers 404 for an unknown id in the staff and showcase routes w… 0.05s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.04s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.04s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.04s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.04s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.03s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.03s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.03s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.04s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.03s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.04s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.03s  
+  ✓ it validates the body before the record in the staff routes with ('… 0.03s  
+  ✓ it adjusts the stock reading it once with a lock                     0.04s  
+  ✓ it deletes a product without reading it first                        0.04s  
+  ✓ it deletes a category without reading it first                       0.04s  
+  ✓ it refuses to delete the own account without querying the users      0.04s  
+  ✓ it deletes a staff member without reading it first                   0.04s  
+  ✓ it reads the customer once when the admin edits it                   0.04s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.03s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.04s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.04s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.04s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.04s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.05s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.04s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.04s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.05s  
+  ✓ it keeps the query count of the staff and showcase reads and update… 0.22s  
+
+   PASS  Tests\Feature\Admin\StaffRoleTest
+  ✓ it forbids the support role from deleting a product                  0.06s  
+  ✓ it forbids the support role from deleting a category                 0.03s  
+  ✓ it forbids every admin delete route to the support role              0.03s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.04s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.05s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.04s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.04s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.04s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.03s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.03s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.03s  
+  ✓ it lets the support role create, edit and read in the admin with ('… 0.04s  
+  ✓ it answers 404 for unknown admin records with ('GET', '/api/admin/c… 0.03s  
+  ✓ it answers 404 for unknown admin records with ('PUT', '/api/admin/c… 0.04s  
+  ✓ it answers 404 for unknown admin records with ('GET', '/api/admin/u… 0.03s  
+  ✓ it answers 404 for unknown admin records with ('PUT', '/api/admin/u… 0.04s  
+  ✓ it answers 404 for unknown admin records with ('DELETE', '/api/admi… 0.13s  
+  ✓ it answers 404 for unknown admin records with ('DELETE', '/api/admi… 0.03s  
+  ✓ it answers 404 for unknown admin records with ('DELETE', '/api/admi… 0.03s  
+
+   PASS  Tests\Feature\Admin\StaffTest
+  ✓ it lists only staff members to the admin                             0.05s  
+  ✓ it shows a staff member to the admin                                 0.03s  
+  ✓ it creates a support member from the admin                           0.03s  
+  ✓ it rejects a staff role other than admin or support with dataset "a… 0.03s  
+  ✓ it rejects a staff role other than admin or support with dataset "c… 0.04s  
+  ✓ it rejects a staff role other than admin or support with dataset "s… 0.03s  
+  ✓ it rejects a staff e-mail already in use with ('POST')               0.03s  
+  ✓ it rejects a staff e-mail already in use with ('PUT')                0.03s  
+  ✓ it creates a staff member with an e-mail used by a customer          0.03s  
+  ✓ it promotes a support member who can then delete                     0.04s  
+  ✓ it refuses changing the own role                                     0.03s  
+  ✓ it lets the admin edit the own name keeping the role                 0.03s  
+  ✓ it removes another staff member and ends their access                0.04s  
+  ✓ it refuses removing the own staff account                            0.03s  
+  ✓ it forbids the support role from managing staff with ('GET', '/api/… 0.03s  
+  ✓ it forbids the support role from managing staff with ('POST', '/api… 0.03s  
+  ✓ it forbids the support role from managing staff with ('GET', '/api/… 0.04s  
+  ✓ it forbids the support role from managing staff with ('PUT', '/api/… 0.03s  
+  ✓ it forbids the support role from managing staff with ('DELETE', '/a… 0.03s  
+
+   PASS  Tests\Feature\Admin\StockTest
+  ✓ it lists stocks with their products                                  0.04s  
+  ✓ it increases and decreases stock                                     0.03s  
+  ✓ it never allows negative stock                                       0.03s  
+  ✓ it validates the stock operation                                     0.03s  
+  ✓ it makes a product unavailable at zero stock and available again on… 0.04s  
+  ✓ it renders every stock row with exactly the keys of today            0.03s  
+  ✓ it lists the stock with the same query count for 1 and 20 rows       0.05s  
+  ✓ it lists twenty stock rows per page by quantity and then by id       0.06s  
+  ✓ it keeps a stock row whose product is gone with a null product       0.03s  
+
+   PASS  Tests\Feature\ApiErrorResponseTest
+  ✓ it builds the standard validation error shape                        0.03s  
+  ✓ it answers form request failures with the standard shape             0.03s  
+  ✓ it uses the same shape for validation errors thrown manually         0.23s  
+  ✓ it identifies business rule violations                               0.03s  
+  ✓ it identifies insufficient stock with its own code                   0.02s  
+  ✓ it maps http errors to stable codes                                  0.03s  
+  ✓ it forbids caching of error responses                                0.03s  
+
+   PASS  Tests\Feature\Auth\AuthTest
+  ✓ it registers a customer account in the customers table               0.04s  
+  ✓ it registers a customer with an e-mail used by a staff member        0.07s  
+  ✓ it rejects registering an e-mail already used by a customer          0.15s  
+  ✓ it validates registration data                                       0.05s  
+  ✓ it logs a customer in with the customer data only                    0.04s  
+  ✓ it refuses staff credentials on the store login                      0.23s  
+  ✓ it rejects invalid credentials                                       0.24s  
+  ✓ it returns the authenticated customer                                0.03s  
+  ✓ it returns 401 for guests on /me                                     0.02s  
+  ✓ it logs out                                                          0.03s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.04s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.03s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.04s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.04s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.03s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.04s  
+
+   PASS  Tests\Feature\Auth\EmailAndPasswordTest
+  ✓ it keeps the email normalized constraint on both account tables wit… 0.03s  
+  ✓ it keeps the email normalized constraint on both account tables wit… 0.02s  
+  ✓ it rejects a non normalized email written directly                   0.03s  
+  ✓ it registers with the email normalized                               0.03s  
+  ✓ it rejects registering an email that differs only in case            0.03s  
+  ✓ it logs in with the email in any case                                0.03s  
+  ✓ it rejects invalid credentials with the generic message              0.24s  
+  ✓ it keeps the own email when only its case changes                    0.06s  
+  ✓ it does not allow taking another user email in another case          0.03s  
+  ✓ it creates a customer with the email normalized                      0.03s  
+  ✓ it does not let the admin reuse another email in another case        0.04s  
+  ✓ it rejects a malformed email on every account route with ('register… 0.03s  
+  ✓ it rejects a malformed email on every account route with ('login')   0.02s  
+  ✓ it rejects a malformed email on every account route with ('admin cr… 0.03s  
+  ✓ it rejects a malformed email on every account route with ('admin up… 0.03s  
+  ✓ it rejects a malformed email on every account route with ('profile'… 0.02s  
+  ✓ it bounds the email at 255 characters                                0.03s  
+  ✓ it rejects an email that is not a string                             0.02s  
+  ✓ it normalizes an email with spaces and capitals on every customer r… 0.03s  
+  ✓ it normalizes an email with spaces and capitals on every customer r… 0.03s  
+  ✓ it normalizes an email with spaces and capitals on every customer r… 0.03s  
+  ✓ it rejects the email of another customer in another case on every c… 0.03s  
+  ✓ it rejects the email of another customer in another case on every c… 0.03s  
+  ✓ it rejects the email of another customer in another case on every c… 0.03s  
+  ✓ it rejects a malformed email on every customer route with ('admin c… 0.03s  
+  ✓ it rejects a malformed email on every customer route with ('admin u… 0.03s  
+  ✓ it rejects a malformed email on every customer route with ('profile… 0.03s  
+  ✓ it bounds the email at 255 characters on every customer route with…  0.04s  
+  ✓ it bounds the email at 255 characters on every customer route with…  0.06s  
+  ✓ it bounds the email at 255 characters on every customer route with…  0.05s  
+  ✓ it rejects an email or a password that is not a string on every cus… 0.04s  
+  ✓ it rejects an email or a password that is not a string on every cus… 0.04s  
+  ✓ it rejects an email or a password that is not a string on every cus… 0.08s  
+  ✓ it rejects a password shorter than 8 characters on every route that… 0.04s  
+  ✓ it rejects a password shorter than 8 characters on every route that… 0.05s  
+  ✓ it rejects a password shorter than 8 characters on every route that… 0.06s  
+  ✓ it rejects a password shorter than 8 characters on every route that… 0.04s  
+  ✓ it accepts a password of 8 characters on every customer route with…  0.04s  
+  ✓ it accepts a password of 8 characters on every customer route with…  0.05s  
+  ✓ it accepts a password of 8 characters on every customer route with…  0.04s  
+  ✓ it keeps the password when the profile is saved with a blank passwo… 0.04s  
+  ✓ it stores the hash of a chosen password                              0.03s  
+  ✓ it logs in with a password shorter than the current policy           0.03s  
+  ✓ it keeps the password when none is sent on profile and admin update… 0.03s  
+
+   PASS  Tests\Feature\Auth\StaffAuthTest
+  ✓ it logs a staff member into the admin with dataset "admin"           0.04s  
+  ✓ it logs a staff member into the admin with dataset "support"         0.03s  
+  ✓ it refuses customer credentials on the admin login                   0.23s  
+  ✓ it refuses a wrong password on the admin login                       0.23s  
+  ✓ it logs a staff member out of the admin                              0.03s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.02s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.02s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.03s  
+
+   PASS  Tests\Feature\AuthorizationTest
+  ✓ it requires authentication for admin endpoints with ('get', '/api/a… 0.03s  
+  ✓ it requires authentication for admin endpoints with ('get', '/api/a… 0.02s  
+  ✓ it requires authentication for admin endpoints with ('post', '/api/… 0.02s  
+  ✓ it requires authentication for admin endpoints with ('get', '/api/a… 0.02s  
+  ✓ it requires authentication for admin endpoints with ('get', '/api/a… 0.02s  
+  ✓ it requires authentication for admin endpoints with ('get', '/api/a… 0.02s  
+  ✓ it requires authentication for admin endpoints with ('post', '/api/… 0.02s  
+  ✓ it requires authentication for admin endpoints with ('get', '/api/a… 0.03s  
+  ✓ it requires authentication for admin endpoints with ('get', '/api/a… 0.03s  
+  ✓ it answers 401 to a customer session on every admin route            0.05s  
+  ✓ it answers 401 to a guest on every admin route                       0.05s  
+  ✓ it answers 401 to a staff session on every store route with ('get',… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('get',… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('post'… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('get',… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('post'… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('get',… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('put',… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('get',… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('post'… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('put',… 0.03s  
+  ✓ it answers 401 to a staff session on every store route with ('delet… 0.03s  
+  ✓ it allows admins on admin endpoints                                  0.03s  
+  ✓ it forbids a customer from seeing another customer order             0.03s  
+  ✓ it returns 404 with the standard error shape for unknown resources   0.03s  
+  ✓ it does not use sanctum token authentication on any route            0.04s  
+
+   PASS  Tests\Feature\CartValidationTest
+  ✓ it recalculates the cart in cents from database prices               0.04s  
+  ✓ it reports problems for each item                                    0.03s  
+  ✓ it treats a product without a stock row as unavailable in the cart   0.03s  
+  ✓ it validates the cart payload                                        0.02s  
+  ✓ it merges repeated lines and totals the cart in product order        0.03s  
+  ✓ it keeps a missing product line out of the cart total                0.03s  
+  ✓ it keeps an out of stock line out of total_cents                     0.03s  
+  ✓ it keeps the exact cart validation response shape                    0.03s  
+  ✓ it throttles the cart validation after 60 requests per minute        0.11s  
+
+   PASS  Tests\Feature\CheckoutShippingTest
+  ✓ it places an order with the delivery address and the shipping of it… 0.04s  
+  ✓ it stores the delivery copy and the shipping on the order row        0.04s  
+  ✓ it charges the order total with the shipping                         0.08s  
+  ✓ it requires a delivery address to place an order                     0.03s  
+  ✓ it refuses a delivery address that is not in the customer address b… 0.03s  
+  ✓ it refuses a delivery address that is not in the customer address b… 0.03s  
+  ✓ it ignores shipping and totals sent by the client                    0.04s  
+  ✓ it keeps the delivery copy when the address changes later with ('ed… 0.04s  
+  ✓ it keeps the delivery copy when the address changes later with ('de… 0.04s  
+  ✓ it throttles order placement after 20 requests per minute            0.12s  
+  ✓ it answers 404 to an unknown order with dataset "store"              0.03s  
+  ✓ it answers 404 to an unknown order with dataset "admin"              0.03s  
+
+   PASS  Tests\Feature\CheckoutTest
+  ✓ it places an order with every value in cents, decrements stock and…  0.07s  
+  ✓ it announces the placed order by id                                  0.04s  
+  ✓ it keeps the historical snapshot when the product changes later      0.04s  
+  ✓ it stores an order total equal to the items plus the shipping        0.04s  
+  ✓ it merges repeated products in the same cart                         0.05s  
+  ✓ it returns 409 and changes nothing when stock is insufficient        0.04s  
+  ✓ it rejects inactive and out of stock products                        0.04s  
+  ✓ it never lets stock go negative (spec scenario: stock 5, buy 4 then… 0.04s  
+  ✓ it locks the stock rows with SELECT ... FOR UPDATE                   0.04s  
+  ✓ it is protected by a database check constraint as a last line of de… 0.02s  
+  ✓ it requires authentication and valid items                           0.02s  
+  ✓ it lists only the orders of the authenticated customer               0.03s  
+  ✓ it shows an order with items and timeline                            0.03s  
+  ✓ it stores the customer id on the placed order                        0.03s  
+  ✓ it returns the order code on checkout                                0.04s  
+  ✓ it draws the order code again after a collision with (1)             0.04s  
+  ✓ it draws the order code again after a collision with (2)             0.04s  
+  ✓ it fails the whole order after three code collisions                 0.04s  
+  ✓ it keeps the query count of the checkout                             0.03s  
+
+   PASS  Tests\Feature\Database\UuidKeysTest
+  ✓ it types every business key and foreign key as uuid with ('users.id… 0.04s  
+  ✓ it types every business key and foreign key as uuid with ('customer… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('categori… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('products… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('stocks.i… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('orders.i… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('order_it… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('payments… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('customer… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('stocks.p… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('category… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('category… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('orders.c… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('order_it… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('order_it… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('payments… 0.03s  
+  ✓ it types every business key and foreign key as uuid with ('customer… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\Id… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\Id… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\Ca… 0.04s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\Ca… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\In… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\Or… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\Or… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('Modules\Paymen… 0.03s  
+  ✓ it assigns a version 7 uuid before the insert with ('App\Modules\Cu… 0.03s  
+  ✓ it keeps the delete rule of every foreign key with dataset "orders.… 0.02s  
+  ✓ it keeps the delete rule of every foreign key with dataset "order_i… 0.02s  
+  ✓ it keeps the delete rule of every foreign key with dataset "payment… 0.02s  
+  ✓ it keeps the delete rule of every foreign key with dataset "stocks.… 0.02s  
+  ✓ it keeps the delete rule of every foreign key with dataset "categor… 0.02s  
+  ✓ it keeps the delete rule of every foreign key with dataset "categor… 0.02s  
+  ✓ it keeps the delete rule of every foreign key with dataset "order_i… 0.02s  
+  ✓ it keeps the delete rule of every foreign key with dataset "custome… 0.03s  
+  ✓ it keeps every constraint of the business tables with ('customer_ad… 0.03s  
+  ✓ it keeps every constraint of the business tables with ('customer_ad… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('customers_e… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('order_items… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('order_items… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('orders_deli… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('orders_deli… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('orders_deli… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('orders_ship… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('orders_tota… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('orders_tota… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('payments_am… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('payments_de… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('products_pr… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('stocks_quan… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('users_email… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('users_role_… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('categories_… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('customers_e… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('stocks_prod… 0.02s  
+  ✓ it keeps every constraint of the business tables with ('users_email… 0.03s  
+  ✓ it keeps every constraint of the business tables with ('category_pr… 0.02s  
+  ✓ it keeps every constraint of the business tables: the composite key… 0.02s  
+  ✓ it keeps every constraint of the business tables: one approved paym… 0.02s  
+
+   PASS  Tests\Feature\DeliveryEstimateTest
+  ✓ it shows the delivery estimate after the payment is approved         0.07s  
+  ✓ it shows the same delivery block to the admin                        0.04s  
+  ✓ it shows the delivery block in the store and admin order lists       0.04s  
+
+   PASS  Tests\Feature\HorizonTest
+  ✓ it configures horizon like the queue worker with ('local')           0.02s  
+  ✓ it configures horizon like the queue worker with ('production')      0.02s  
+  ✓ it opens horizon for a staff admin                                   0.05s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "suppor… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "suppor… 0.02s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "suppor… 0.02s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "suppor… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "custom… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "custom… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "custom… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "custom… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "visito… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "visito… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "visito… 0.03s  
+  ✓ it refuses horizon to anyone but a staff admin with dataset "visito… 0.03s  
+  ✓ it schedules the horizon snapshot every five minutes                 0.02s  
+
+   PASS  Tests\Feature\Messaging\BrokerIsolationTest
+  ✓ it connects to the checkout vhost                                    0.13s  
+  ✓ it starts every broker test on an empty vhost @ repetition 1 of 2    0.05s  
+  ✓ it starts every broker test on an empty vhost @ repetition 2 of 2    0.06s  
+
+   PASS  Tests\Feature\Messaging\ConsumeEventsCommandTest
+  ✓ it delivers a message to its consumer once and acknowledges it aft… 14.30s  
+  ✓ it restores the envelope request id in the consumer process          1.30s  
+  ✓ it clears a stale request id in the consumer process                 1.27s  
+  ✓ it moves a message to the dead queue after three failed deliveries   1.35s  
+  ✓ it logs every failed delivery with its attempt                       1.27s  
+  ✓ it never calls the consumer for an envelope it cannot read with dat… 1.30s  
+  ✓ it never calls the consumer for an envelope it cannot read with dat… 1.26s  
+  ✓ it never calls the consumer for an envelope it cannot read with dat… 1.35s  
+  ✓ it never calls the consumer for an envelope it cannot read with dat… 1.27s  
+  ✓ it counts a closed connection as a failed delivery                   0.34s  
+  ✓ it holds one unacknowledged delivery at a time                      10.28s  
+  ✓ it retries the broker every five seconds until it connects           1.36s  
+  ✓ it stops after the delivery in progress when the restart signal cha… 0.26s  
+  ✓ it consumes the queued messages while the flag is redis              1.23s  
+  ✓ it declares the topology when it boots                               1.33s  
+  ✓ it connects again after it loses the connection while consuming      1.30s  
+
+   PASS  Tests\Feature\Messaging\ConsumerNamesTest
+  ✓ it subscribes the five consumers under their stable names with data… 0.12s  
+  ✓ it subscribes the five consumers under their stable names with data… 0.02s  
+  ✓ it subscribes the five consumers under their stable names with data… 0.02s  
+  ✓ it subscribes the five consumers under their stable names with data… 0.03s  
+  ✓ it subscribes the five consumers under their stable names with data… 0.02s  
+  ✓ it subscribes no consumer under any other name                       0.03s  
+  ✓ it refuses a consumer name out of the format with ('Ordering.mark_p… 0.03s  
+  ✓ it refuses a consumer name out of the format with ('ordering')       0.03s  
+  ✓ it refuses a consumer name out of the format with ('ordering.mark-p… 0.02s  
+  ✓ it refuses a consumer name out of the format with ('ordering.mark p… 0.03s  
+  ✓ it refuses one consumer name for two consumers                       0.03s  
+  ✓ it refuses two names for one consumer                                0.04s  
+
+   PASS  Tests\Feature\Messaging\DeadDeliveriesCommandsTest
+  ✓ it reports no dead delivery                                          0.17s  
+  ✓ it lists every dead delivery without taking it from the queue        0.31s  
+  ✓ it returns every dead delivery to its own consumer queue             0.38s  
+  ✓ it returns only the dead deliveries of the given message             0.36s  
+  ✓ it refuses to return a message that is not dead                      0.29s  
+  ✓ it keeps every dead delivery somewhere when the retry stops halfway  0.34s  
+  ✓ it sends a returned delivery back to the dead queue after three mor… 1.34s  
+  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.14s  
+  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.03s  
+
+   PASS  Tests\Feature\Messaging\EventTransportFlagTest
+  ✓ it resolves the event transport to redis when nothing is stored      0.03s  
+  ✓ it shows the current event transport                                 0.05s  
+  ✓ it switches the event transport to rabbitmq                          0.04s  
+  ✓ it refuses an unknown event transport with ('bogus')                 0.04s  
+  ✓ it refuses an unknown event transport with ('Redis')                 0.03s  
+  ✓ it refuses an unknown event transport with ('kafka')                 0.03s  
+  ✓ it changes nothing when the event transport already has the given v… 0.03s  
+  ✓ it logs who changed the event transport                              0.03s  
+  ✓ it changes the event transport with redis unreachable                0.04s  
+  ✓ it hands the envelope to the transport of the flag with dataset "re… 0.04s  
+  ✓ it hands the envelope to the transport of the flag with dataset "ra… 0.03s  
+  ✓ it publishes through the new transport on the next relay cycle       0.04s  
+  ✓ it logs each transport change once                                   0.04s  
+
+   PASS  Tests\Feature\Messaging\RabbitMqEventTransportTest
+  ✓ it declares the topology before the first message                    0.24s  
+  ✓ it publishes one persistent message with the envelope as json        0.30s  
+  ✓ it copies the message once into each consumer queue                  0.28s  
+  ✓ it publishes an event with no consumer without error                 0.28s  
+  ✓ it marks the message published once the broker confirms              0.34s  
+  ✓ it keeps the message pending when the broker is unreachable          0.18s  
+  ✓ it keeps the message pending when the broker refuses it              0.31s  
+  ✓ it throws when the broker does not confirm in five seconds           0.19s  
+
+   PASS  Tests\Feature\Middleware\EnsureUserIsAdminTest
+  ✓ it lets only the admin role through the admin-only middleware        0.03s  
+
+   PASS  Tests\Feature\Models\CustomerAccountTest
+  ✓ it ties orders to existing customers and keeps customers that have…  0.04s  
+  ✓ it rejects invalid customer e-mails in the database with dataset "u… 0.03s  
+  ✓ it rejects invalid customer e-mails in the database with dataset "p… 0.03s  
+  ✓ it rejects invalid customer e-mails in the database with dataset "d… 0.05s  
+
+   PASS  Tests\Feature\Models\CustomerAddressTest
+  ✓ it removes the address book together with the customer account       0.04s  
+  ✓ it rejects invalid postal codes and states in the address book tabl… 0.03s  
+  ✓ it rejects invalid postal codes and states in the address book tabl… 0.03s  
+  ✓ it rejects invalid postal codes and states in the address book tabl… 0.04s  
+  ✓ it rejects invalid postal codes and states in the address book tabl… 0.05s  
+  ✓ it rejects invalid postal codes and states in the address book tabl… 0.03s  
+  ✓ it requires every column of the address book table but the compleme… 0.02s  
+  ✓ it requires every column of the address book table but the compleme… 0.03s  
+  ✓ it requires every column of the address book table but the compleme… 0.03s  
+  ✓ it requires every column of the address book table but the compleme… 0.03s  
+  ✓ it requires every column of the address book table but the compleme… 0.03s  
+  ✓ it requires every column of the address book table but the compleme… 0.03s  
+  ✓ it requires every column of the address book table but the compleme… 0.03s  
+  ✓ it requires every column of the address book table but the compleme… 0.03s  
+
+   PASS  Tests\Feature\Models\CustomerTest
+  ✓ it is the buyer of an order, read from the customer account          0.04s  
+  ✓ it never writes to the customers table with dataset "save"           0.03s  
+  ✓ it never writes to the customers table with dataset "delete"         0.05s  
+
+   PASS  Tests\Feature\Models\OrderCodeTest
+  ✓ it guards the order code format in the orders table with dataset "n… 0.03s  
+  ✓ it guards the order code format in the orders table with dataset "s… 0.04s  
+  ✓ it guards the order code format in the orders table with dataset "n… 0.04s  
+  ✓ it guards the order code format in the orders table with dataset "a… 0.03s  
+  ✓ it guards the order code format in the orders table with dataset "a… 0.03s  
+  ✓ it guards the order code format in the orders table with dataset "a… 0.03s  
+  ✓ it guards the order code format in the orders table with dataset "a… 0.03s  
+  ✓ it guards the order code format in the orders table with dataset "a… 0.03s  
+  ✓ it guards the order code format in the orders table with dataset "a… 0.03s  
+  ✓ it guards the order code format in the orders table with dataset "a… 0.04s  
+  ✓ it guards the order code format in the orders table: names the form… 0.03s  
+  ✓ it guards the order code format in the orders table: names the form… 0.03s  
+  ✓ it guards the order code format in the orders table: names the form… 0.03s  
+  ✓ it guards the order code format in the orders table: names the form… 0.03s  
+  ✓ it guards the order code format in the orders table: names the form… 0.03s  
+  ✓ it guards the order code format in the orders table: names the form… 0.02s  
+  ✓ it guards the order code format in the orders table: names the form… 0.02s  
+  ✓ it refuses a repeated order code in the orders table                 0.05s  
+
+   PASS  Tests\Feature\Models\OrderDeliveryTest
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.04s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.02s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.02s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.02s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.02s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.04s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+  ✓ it guards the delivery copy and the shipping in the orders table wi… 0.03s  
+
+   PASS  Tests\Feature\MoneyInCentsTest
+  ✓ it stores every money column as bigint not null with dataset "produ… 0.04s  
+  ✓ it stores every money column as bigint not null with dataset "order… 0.04s  
+  ✓ it stores every money column as bigint not null with dataset "order… 0.04s  
+  ✓ it stores every money column as bigint not null with dataset "order… 0.03s  
+  ✓ it stores every money column as bigint not null with dataset "order… 0.06s  
+  ✓ it rejects a negative value in every money column with dataset "pro… 0.07s  
+  ✓ it rejects a negative value in every money column with dataset "ord… 0.04s  
+  ✓ it rejects a negative value in every money column with dataset "ord… 0.03s  
+  ✓ it rejects a negative value in every money column with dataset "ord… 0.04s  
+  ✓ it rejects a negative value in every money column with dataset "ord… 0.04s  
+  ✓ admin products → it updates the product price in cents               0.04s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "po… 0.08s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "po… 0.06s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "po… 0.08s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "po… 0.04s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "po… 0.04s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "po… 0.04s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "po… 0.05s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "pu… 0.03s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "pu… 0.04s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "pu… 0.03s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "pu… 0.03s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "pu… 0.03s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "pu… 0.03s  
+  ✓ admin products → it rejects an invalid price_cents with dataset "pu… 0.03s  
+  ✓ admin products → it explains invalid price_cents in reais            0.03s  
+  ✓ admin products → it accepts the maximum price_cents                  0.03s  
+  ✓ admin products → it exposes price_cents on every admin product rout… 0.03s  
+  ✓ it exposes price_cents as an integer on the public catalog           0.03s  
+  ✓ cart validation → it returns null cents for a product that does not… 0.03s  
+  ✓ cart validation → it keeps an unavailable line out of total_cents    0.03s  
+  ✓ cart validation → it ignores money fields sent by the client with (… 0.04s  
+  ✓ cart validation → it ignores money fields sent by the client with (… 0.03s  
+  ✓ cart validation → it ignores money fields sent by the client with (… 0.04s  
+  ✓ cart validation → it ignores money fields sent by the client with (… 0.03s  
+  ✓ cart validation → it ignores money fields sent by the client with (… 0.03s  
+  ✓ cart validation → it throttles cart validation at 60 requests per m… 0.13s  
+  ✓ it ignores money fields sent by the client on checkout with ('price… 0.07s  
+  ✓ it ignores money fields sent by the client on checkout with ('unit_… 0.05s  
+  ✓ it ignores money fields sent by the client on checkout with ('total… 0.04s  
+  ✓ it ignores money fields sent by the client on checkout with ('unit_… 0.04s  
+  ✓ it ignores money fields sent by the client on checkout with ('total… 0.04s  
+  ✓ it exposes order money in cents on every order route                 0.09s  
+  ✓ it seeds orders whose total_cents is the sum of their items plus th… 0.22s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.03s  
+  ✓ it keeps 401 for guests on the money routes with dataset "post /api… 0.02s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.02s  
+  ✓ it keeps 401 for guests on the money routes with dataset "put /api/… 0.02s  
+  ✓ it keeps 401 for guests on the money routes with dataset "patch /ap… 0.03s  
+  ✓ it keeps 401 for guests on the money routes with dataset "post /api… 0.02s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.03s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.02s  
+  ✓ it keeps 401 for guests on the money routes with dataset "post /api… 0.02s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.02s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.03s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.03s  
+  ✓ it keeps 401 for guests on the money routes with dataset "get /api/… 0.02s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.04s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.03s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.03s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.03s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.03s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.03s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.03s  
+  ✓ it keeps 401 for customer sessions on the admin money routes with (… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('get', '/api… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('get', '/api… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('put', '/api… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('patch', '/a… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('get', '/api… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('post', '/ap… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('get', '/api… 0.03s  
+  ✓ it keeps 404 for unknown ids on the money routes with ('get', '/api… 0.03s  
+  ✓ it keeps 422 for invalid payloads on the money routes                0.03s  
+
+   PASS  Tests\Feature\OrderStatusFlowTest
+  ✓ it subscribes exactly the five order consumers                       0.07s  
+  ✓ it delivers OrderPlaced through the queue                            0.07s  
+  ✓ it moves a placed order to awaiting payment                          0.06s  
+  ✓ it marks the order as paid and announces it, without scheduling the… 0.03s  
+  ✓ it schedules the delivery job with a delay when the order is paid    0.03s  
+  ✓ it announces the delivery estimate when the order is paid            0.03s  
+  ✓ it schedules the delivery from the business days in OrderPaid        0.03s  
+  ✓ it logs the scheduled delivery without the address                   0.03s  
+  ✓ it records the delivery estimate without changing the status         0.03s  
+  ✓ it keeps the first delivery estimate                                 0.03s  
+  ✓ it records the estimate of an order already delivered                0.03s  
+  ✓ it announces the delivery without changing the order status itself   0.03s  
+  ✓ it marks a paid order as delivered                                   0.02s  
+  ✓ it ignores out of order or duplicated executions (idempotency)       0.03s  
+  ✓ it announces OrderPaid only once for a duplicated payment approval   0.03s  
+  ✓ it runs the whole lifecycle with a synchronous queue                 0.06s  
+
+   FAIL  Tests\Feature\Outbox\EventDeliveryTest
+  ✓ it pushes one delivery per subscribed consumer with the whole envel… 0.03s  
+  ✓ it publishes an envelope with no subscribed consumer without pushin… 0.03s  
+  ✓ it rebuilds the event and calls the consumer once                    0.02s  
+  ✓ it restores the envelope request id while the consumer runs          0.04s  
+  ✓ it clears a stale request id when the envelope has none              0.03s  
+  ✓ it refuses an envelope version the event does not declare            0.02s  
+  ✓ it retries only the failing consumer three times and fails it alone  3.12s  
+  ✓ it refuses a consumer that does not match the subscribed event with… 0.07s  
+  ✓ it refuses a consumer that does not match the subscribed event with… 0.04s  
+  ✓ it refuses two event classes under the same name                     0.03s  
+  ✓ it delivers an envelope whose message was already pruned             0.04s  
+  ⨯ it registers no laravel listener for the module events               0.03s  
+
+   PASS  Tests\Feature\Outbox\EventOutboxTest
+  ✓ it creates the outbox table in the shape of door 1                   0.05s  
+  ✓ it records an event as one pending message inside a transaction      0.03s  
+  ✓ it leaves no message when the recording transaction rolls back       0.03s  
+  ✓ it refuses to record an event outside a transaction                  0.02s  
+  ✓ it accepts every scalar and null in the payload with dataset "strin… 0.02s  
+  ✓ it accepts every scalar and null in the payload with dataset "int"   0.03s  
+  ✓ it accepts every scalar and null in the payload with dataset "float… 0.03s  
+  ✓ it accepts every scalar and null in the payload with dataset "bool"  0.02s  
+  ✓ it accepts every scalar and null in the payload with dataset "null"  0.02s  
+  ✓ it refuses a payload value that is not a scalar or null with datase… 0.02s  
+  ✓ it refuses a payload value that is not a scalar or null with datase… 0.02s  
+  ✓ it refuses a payload value that is not a scalar or null with datase… 0.02s  
+  ✓ it refuses a resource in the payload                                 0.02s  
+  ✓ it records the context request id on the message                     0.04s  
+  ✓ it records the request id of the checkout request                    0.04s  
+  ✓ it records a null request id without a context request id            0.02s  
+
+   PASS  Tests\Feature\Outbox\OrderEventsOutboxTest
+  ✓ it keeps neither the approval nor the message when the outbox fails  0.04s  
+  ✓ it keeps the order awaiting payment when recording order paid fails  0.03s  
+  ✓ it pushes no delivery job when recording the schedule fails          0.03s  
+  ✓ it recovers a placed order after the transport comes back            0.05s  
+  ✓ it recovers an approved payment after the transport comes back       0.05s  
+
+   PASS  Tests\Feature\Outbox\OutboxRelayTest
+  ✓ it publishes every pending message in order with once                0.03s  
+  ✓ it stops at the first transport failure and keeps the rest pending   0.03s  
+  ✓ it exits with 1 when the transport fails with once                   0.03s  
+  ✓ it claims the pending messages with for update skip locked           0.03s  
+  ✓ it hands the transport an envelope built from every column of the r… 0.03s  
+  ✓ it claims publishes and marks the messages in one transaction        0.03s  
+  ✓ it hands a message again when the relay stops before the commit      0.03s  
+  ✓ it waits 500 ms after a cycle with no pending message                0.03s  
+  ✓ it waits 5 seconds after a transport failure                         0.03s  
+  ✓ it prunes published messages older than 7 days and keeps pending on… 0.03s  
+  ✓ it prunes again only after an hour                                   0.06s  
+  ✓ it exits after the cycle when the queue restart signal changes       0.03s  
+  ✓ it prints one warning line when the transport refuses a message      0.03s  
+  ✓ it keeps relaying while the cache with the restart signal is unreac… 0.03s  
+
+   PASS  Tests\Feature\PaymentTest
+  ✓ it approves the payment of an order awaiting payment                 0.03s  
+  ✓ it answers the payment attempt without card data                     0.03s  
+  ✓ it answers 404 to the payment of an unknown order                    0.03s  
+  ✓ it records the approved payment and announces it once                0.04s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.03s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.03s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.04s  
+  ✓ it approves a new attempt after a declined one                       0.04s  
+  ✓ it rejects an invalid card token without charging with dataset "mis… 0.03s  
+  ✓ it rejects an invalid card token without charging with dataset "not… 0.03s  
+  ✓ it rejects an invalid card token without charging with dataset "65…  0.03s  
+  ✓ it accepts a card token of exactly 64 characters                     0.03s  
+  ✓ it rejects payment for orders that are not awaiting payment with (A… 0.03s  
+  ✓ it rejects payment for orders that are not awaiting payment with (A… 0.03s  
+  ✓ it rejects payment for orders that are not awaiting payment with (A… 0.03s  
+  ✓ it rejects a second payment while the queue has not moved the order  0.03s  
+  ✓ it loses the race to a concurrent approval with 409                  0.06s  
+  ✓ it charges the order total and ignores amounts in the request        0.03s  
+  ✓ it forbids paying an order of another customer                       0.04s  
+  ✓ it validates the payment body before checking the order owner        0.03s  
+  ✓ it allows only one approved payment per order in the database        0.03s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
+  ✓ it ties payments to existing orders and keeps orders that have paym… 0.03s  
+  ✓ it logs each payment attempt without the card token with ('fake_car… 0.04s  
+  ✓ it logs each payment attempt without the card token with ('fake_car… 0.03s  
+  ✓ it throttles payment attempts after 20 per minute                    0.08s  
+
+   PASS  Tests\Feature\ProductCatalogTest
+  ✓ it lists active and inactive products with availability              0.05s  
+  ✓ it filters products by category slug                                 0.03s  
+  ✓ it sorts products with dataset "alphabetical"                        0.03s  
+  ✓ it sorts products with dataset "lowest price"                        0.04s  
+  ✓ it sorts products with dataset "highest price"                       0.03s  
+  ✓ it rejects an invalid sort option                                    0.02s  
+  ✓ it paginates products                                                0.04s  
+  ✓ it shows an available product                                        0.03s  
+  ✓ it does not show unavailable products with ('inactive')              0.03s  
+  ✓ it does not show unavailable products with ('out of stock')          0.04s  
+  ✓ it lists categories                                                  0.03s  
+  ✓ it lists the catalog with the same query count for 1 and 12 product… 0.06s  
+  ✓ it reads the stock of the catalog page through the inventory         0.04s  
+  ✓ it renders a product without a stock row as unavailable              0.03s  
+
+   PASS  Tests\Feature\ProductResponseShapeTest
+  ✓ it renders every product with exactly the keys of today with datase… 0.04s  
+  ✓ it renders every product with exactly the keys of today with datase… 0.06s  
+  ✓ it renders every product with exactly the keys of today with datase… 0.04s  
+  ✓ it renders every product with exactly the keys of today with datase… 0.04s  
+  ✓ it renders every product with exactly the keys of today with datase… 0.04s  
+  ✓ it renders every product with exactly the keys of today with datase… 0.04s  
+  ✓ it renders every product with exactly the keys of today with datase… 0.03s  
+  ✓ it lists the admin products newest first fifteen per page            0.05s  
+  ✓ it returns the new product as available with its stock and categori… 0.04s  
+
+   PASS  Tests\Feature\Queries\CatalogMetricsQueryTest
+  ✓ it counts products by status                                         0.03s  
+  ✓ it answers zero for a status without products                        0.02s  
+
+   PASS  Tests\Feature\Queries\CustomerMetricsQueryTest
+  ✓ it counts only customer accounts for the dashboard                   0.03s  
+
+   PASS  Tests\Feature\Queries\OrderMetricsQueryTest
+  ✓ it counts all the orders for the dashboard                           0.03s  
+  ✓ it counts orders per day since a date                                0.03s  
+  ✓ it counts orders per month since a date                              0.03s  
+  ✓ it counts the orders created exactly at the start date               0.04s  
+
+   PASS  Tests\Feature\Queries\ProductCatalogQueryTest
+  ✓ it finds catalog products by id for other modules                    0.03s  
+
+   PASS  Tests\Feature\Queries\ProductQueryTest
+  ✓ it filters the catalog by category slug                              0.03s  
+  ✓ it sorts the catalog with id as tie breaker with dataset "name"      0.03s  
+  ✓ it sorts the catalog with id as tie breaker with dataset "price asc… 0.03s  
+  ✓ it sorts the catalog with id as tie breaker with dataset "price des… 0.03s  
+  ✓ it includes inactive products in the catalog with categories and st… 0.03s  
+  ✓ it paginates the catalog with the given page size                    0.03s  
+  ✓ it lists products for the admin newest first                         0.03s  
+  ✓ it finds a product with its categories and stock                     0.03s  
+  ✓ it completes a written product with its categories and stock withou… 0.03s  
+
+   PASS  Tests\Feature\Queries\StockLevelsQueryTest
+  ✓ it reads the stock row of each product for the product pages         0.03s  
+  ✓ it reads the stock quantities of the given products without locking  0.03s  
+
+   PASS  Tests\Feature\Queries\StockListQueryTest
+  ✓ it paginates stocks by quantity ascending                            0.03s  
+  ✓ it keeps a stock row whose product is gone with a null product       0.03s  
+
+   PASS  Tests\Feature\Queries\StockMetricsQueryTest
+  ✓ it counts products in stock and the total units                      0.03s  
+  ✓ it returns zero units when there is no stock                         0.03s  
+
+   PASS  Tests\Feature\RateLimitBurstTest
+  ✓ it lets exactly the limit through when 30 requests arrive at the sa… 1.29s  
+  ✓ it gives the window expiry to a counter left without one             0.08s  
+
+   PASS  Tests\Feature\RateLimitTest
+  ✓ it names a counter of its own on every throttled api route           0.05s  
+  ✓ it keeps every other throttled route open to a guest who exhausted…  0.05s  
+  ✓ it keeps every other throttled route open to a guest who exhausted…  0.04s  
+  ✓ it keeps every other throttled route open to a guest who exhausted…  0.04s  
+  ✓ it keeps every other throttled route open to a guest who exhausted…  0.10s  
+  ✓ it keeps every other throttled route open to a guest who exhausted…  0.09s  
+  ✓ it keeps every other throttled route open to a customer who exhaust… 0.05s  
+  ✓ it keeps every other throttled route open to a customer who exhaust… 0.05s  
+  ✓ it keeps every other throttled route open to a customer who exhaust… 0.05s  
+  ✓ it keeps every other throttled route open to a customer who exhaust… 0.07s  
+  ✓ it keeps every other throttled route open to a customer who exhaust… 0.11s  
+  ✓ it keeps every other throttled route open to a customer who exhaust… 0.05s  
+  ✓ it keeps every other throttled route open to a customer who exhaust… 0.04s  
+
+   PASS  Tests\Feature\RateLimiterStoreTest
+  ✓ it leaves the rate limiter on the default store without CACHE_LIMIT… 0.03s  
+
+   PASS  Tests\Feature\Repositories\BaseRepositoryTest
+  ✓ it creates a model through mass assignment                           0.03s  
+  ✓ it updates a model and returns the same instance                     0.03s  
+  ✓ it deletes a model                                                   0.03s  
+  ✓ it counts the rows of its model                                      0.03s  
+
+   PASS  Tests\Feature\Repositories\CategoryRepositoryTest
+  ✓ it lists categories ordered by name                                  0.03s  
+  ✓ it lists categories with their product count                         0.03s  
+  ✓ it tells whether a category has products                             0.03s  
+
+   PASS  Tests\Feature\Repositories\CustomerAccountRepositoryTest
+  ✓ it paginates customer accounts newest first                          0.04s  
+
+   PASS  Tests\Feature\Repositories\CustomerAddressRepositoryTest
+  ✓ it finds a delivery address only in the customer own book with ('ow… 0.05s  
+  ✓ it finds a delivery address only in the customer own book with ('ad… 0.08s  
+  ✓ it finds a delivery address only in the customer own book with ('un… 0.08s  
+  ✓ it changes an address only in the customer own book with ('own addr… 0.04s  
+  ✓ it changes an address only in the customer own book with ('address…  0.04s  
+  ✓ it changes an address only in the customer own book with ('unknown…  0.03s  
+
+   PASS  Tests\Feature\Repositories\OrderRepositoryTest
+  ✓ it paginates all orders for the admin newest first with customer an… 0.04s  
+  ✓ it paginates only the orders of the given customer                   0.03s  
+  ✓ it returns the most recent orders of a customer, using the id as ti… 0.03s  
+  ✓ it finds an order for payment only among the customer own orders     0.03s  
+  ✓ it finds an order only among the customer own orders                 0.03s  
+  ✓ it counts the orders of a customer                                   0.03s  
+  ✓ it tells the catalog whether a product was ever ordered              0.03s  
+  ✓ it creates an order with its items                                   0.03s  
+  ✓ it counts the orders of several customers in a single query          0.05s  
+  ✓ it moves an order to the new status when it is in the expected one   0.03s  
+  ✓ it does nothing when the order is not in the expected status         0.03s  
+
+   PASS  Tests\Feature\Repositories\ProductRepositoryTest
+  ✓ it syncs the product categories                                      0.03s  
+
+   PASS  Tests\Feature\Repositories\StockRepositoryTest
+  ✓ it creates the stock row of a product                                0.04s  
+  ✓ it locks the stock rows of the given products keyed by product id    0.03s  
+  ✓ it locks a single stock row by id                                    0.02s  
+  ✓ it fails when locking a missing stock row                            0.02s  
+  ✓ it decrements the stock quantity                                     0.03s  
+
+   PASS  Tests\Feature\Repositories\UserRepositoryTest
+  ✓ it creates a user with an explicit role with (App\Modules\Identity</>… 0.03s  
+  ✓ it creates a user with an explicit role with (App\Modules\Identity</>… 0.02s  
+  ✓ it updates a user together with the role                             0.03s  
+  ✓ it paginates users newest first                                      0.03s  
+
+   PASS  Tests\Feature\RequestIdTest
+  ✓ it generates a request id for every response                         0.03s  
+  ✓ it reuses a valid request id sent by an upstream proxy               0.03s  
+  ✓ it replaces request ids that are not safe to log with dataset "too…  0.03s  
+  ✓ it replaces request ids that are not safe to log with dataset "inva… 0.03s  
+  ✓ it returns the request id in the error body                          0.03s  
+
+   PASS  Tests\Feature\Requests\AccountRequestRulesTest
+  ✓ it keeps the email and password rules out of the account form reque… 0.03s  
+  ✓ it keeps the email and password rules out of the account form reque… 0.02s  
+  ✓ it keeps the email and password rules out of the account form reque… 0.04s  
+  ✓ it keeps the email and password rules out of the account form reque… 0.02s  
+  ✓ it keeps the email and password rules out of the account form reque… 0.03s  
+  ✓ it keeps the email and password rules out of the account form reque… 0.02s  
+  ✓ it keeps the email and password rules out of the account form reque… 0.02s  
+  ✓ it normalizes the email with the trait of its own module with datas… 0.02s  
+  ✓ it normalizes the email with the trait of its own module with datas… 0.03s  
+  ✓ it normalizes the email with the trait of its own module with datas… 0.02s  
+  ✓ it normalizes the email with the trait of its own module with datas… 0.02s  
+  ✓ it normalizes the email with the trait of its own module with datas… 0.02s  
+  ✓ it normalizes the email with the trait of its own module with datas… 0.04s  
+  ✓ it normalizes the email with the trait of its own module with datas… 0.03s  
+
+   PASS  Tests\Feature\Requests\RequestToDtoTest
+  ✓ it converts cart items into typed DTOs grouped by product            0.03s  
+  ✓ it converts the product payload into a CreateProductDTO              0.03s  
+  ✓ it maps an empty password to null on profile updates                 0.03s  
+  ✓ it converts the stock operation into its enum                        0.02s  
+  ✓ it defaults the catalog sort to name                                 0.02s  
+
+   PASS  Tests\Feature\SeederTest
+  ✓ it seeds a complete demo environment                                 0.16s  
+  ✓ it seeds the admin and the support staff members                     0.16s  
+  ✓ it seeds the demo customers into the customers table                 0.16s  
+  ✓ it produces the same data on every run                               0.57s  
+  ✓ it seeds an address for every customer                               0.36s  
+  ✓ it seeds orders with the delivery copy and the shipping of the rate… 0.17s  
+  ✓ it seeds the delivery estimate only for paid orders                  0.27s  
+
+   PASS  Tests\Feature\ShippingQuoteTest
+  ✓ it quotes the shipping for a state without a session                 0.05s  
+  ✓ it normalizes the state of the quote                                 0.03s  
+  ✓ it normalizes a state with spaces in the quote                       0.03s  
+  ✓ it rejects a state that is not a string in the quote                 0.04s  
+  ✓ it rejects a quote without a valid state with dataset "missing stat… 0.04s  
+  ✓ it rejects a quote without a valid state with dataset "unknown stat… 0.04s  
+  ✓ it throttles the shipping quote after 60 requests per minute         0.10s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.05s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.02s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.04s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.04s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.06s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.06s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+  ✓ it resolves the shipping quoter to the fulfillment rate table with…  0.03s  
+
+   PASS  Tests\Feature\Spike\ModulePaymentFactoryTest
+  ✓ it creates a payment through the module factory                      0.05s  
+
+   PASS  Tests\Feature\Spike\ModulePaymentRouteTest
+  ✓ it answers 401 to a guest on the module payment route                0.04s  
+  ✓ it answers 404 to an unknown order on the module payment route       0.04s  
+
+   PASS  Tests\Feature\UseCases\Category\CategoryUseCasesTest
+  ✓ it creates a category with the product count loaded                  0.04s  
+  ✓ it updates a category and regenerates its slug                       0.03s  
+  ✓ it does not delete a category that has products                      0.03s  
+  ✓ it deletes an empty category                                         0.02s  
+  ✓ it deletes a category by id and refuses an unknown one               0.03s  
+  ✓ it refuses to update an unknown category                             0.02s  
+
+   PASS  Tests\Feature\UseCases\Customer\CustomerAddressUseCasesTest
+  ✓ it accepts the tenth address in the use case                         0.03s  
+  ✓ it refuses the eleventh address in the use case                      0.03s  
+
+   PASS  Tests\Feature\UseCases\Order\PlaceOrderUseCaseTest
+  ✓ it places the order with the quote of the delivery state             0.03s  
+  ✓ it refuses an unknown delivery address before touching the stock     0.03s  
+  ✓ it draws the order code up to three times with dataset "no collisio… 0.03s  
+  ✓ it draws the order code up to three times with dataset "one collisi… 0.04s  
+  ✓ it draws the order code up to three times with dataset "two collisi… 0.04s  
+  ✓ it draws the order code up to three times with dataset "three colli… 0.04s  
+
+   PASS  Tests\Feature\UseCases\Payment\PayOrderUseCaseTest
+  ✓ it records PaymentApproved for an order awaiting payment             0.04s  
+  ✓ it records no PaymentApproved for orders that are not awaiting paym… 0.03s  
+  ✓ it records no PaymentApproved for orders that are not awaiting paym… 0.03s  
+  ✓ it records no PaymentApproved for orders that are not awaiting paym… 0.03s  
+  ✓ it keeps the declined payment after raising the decline              0.03s  
+  ✓ it raises a conflict when a concurrent approval wins the race        0.03s  
+  ✓ it refuses another customer order before checking its status         0.03s  
+
+   PASS  Tests\Feature\UseCases\Product\ProductUseCasesTest
+  ✓ it creates a product with its categories, stock and a default image  0.03s  
+  ✓ it returns the written product data from every product write         0.03s  
+  ✓ it keeps the image url when one is given                             0.03s  
+  ✓ it rolls back the product when the categories cannot be synced       0.03s  
+  ✓ it rolls back the product when the stock cannot be opened            0.03s  
+  ✓ it updates the product and its categories without touching the stoc… 0.03s  
+  ✓ it changes the product status                                        0.04s  
+  ✓ it does not delete a product that appears in orders                  0.04s  
+  ✓ it deletes a product without orders together with its stock          0.03s  
+  ✓ it deletes a product by id and refuses an unknown one                0.03s  
+  ✓ it refuses to update or change the status of an unknown product      0.02s  
+
+   PASS  Tests\Feature\UseCases\Stock\AdjustStockUseCaseTest
+  ✓ it returns the written stock row from the adjustment                 0.04s  
+
+   PASS  Tests\Feature\UseCases\User\StaffUseCasesTest
+  ✓ it decides when a staff update may change the role with dataset "ow… 0.02s  
+  ✓ it decides when a staff update may change the role with dataset "ow… 0.03s  
+  ✓ it decides when a staff update may change the role with dataset "ot… 0.02s  
+  ✓ it decides when a staff member may be removed                        0.02s  
+  ✓ it deletes a staff member by id and refuses an unknown one           0.02s  
+  ✓ it refuses to update an unknown staff member                         0.02s  
+
+   PASS  Tests\Feature\UseCases\User\UserUseCasesTest
+  ✓ it registers a customer account                                      0.03s  
+  ✓ it finds no profile for an unknown customer                          0.02s  
+  ✓ it creates customers with an empty purchase history                  0.02s  
+  ✓ it updates the own profile keeping the password when none is sent    0.02s  
+  ✓ it changes the customer password when a new one is sent              0.03s  
+  ✓ it lists accounts with the order count of each one                   0.03s  
+  ✓ it shows an account with its order count and only the most recent o… 0.03s  
+
+   PASS  Tests\Feature\UuidIdsTest
+  ✓ it returns every id as a uuid string with dataset "categories"       0.03s  
+  ✓ it returns every id as a uuid string with dataset "admin product"    0.04s  
+  ✓ it returns every id as a uuid string with dataset "addresses"        0.03s  
+  ✓ it returns every id as a uuid string with dataset "account"          0.03s  
+  ✓ it returns every id as a uuid string with dataset "admin customer"   0.03s  
+  ✓ it returns every id as a uuid string with dataset "auth me"          0.03s  
+  ✓ it returns every id as a uuid string with dataset "staff member"     0.03s  
+  ✓ it returns every id as a uuid string with dataset "stocks"           0.03s  
+  ✓ it returns every id as a uuid string with dataset "admin order"      0.03s  
+  ✓ it returns every id as a uuid string with dataset "cart validation"  0.03s  
+  ✓ it returns every id as a uuid string with dataset "payment"          0.03s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/cart… 0.03s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/cart… 0.03s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/cart… 0.03s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/cart… 0.04s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/orde… 0.03s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/orde… 0.03s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/orde… 0.03s  
+  ✓ it refuses a malformed product id in the cart body with ('/api/orde… 0.03s  
+  ✓ it refuses a malformed address id before touching the stock with da… 0.03s  
+  ✓ it refuses a malformed address id before touching the stock with da… 0.03s  
+  ✓ it refuses a malformed address id before touching the stock with da… 0.03s  
+  ✓ it refuses a malformed address id before touching the stock with da… 0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses a malformed category id without querying the categories…  0.03s  
+  ✓ it refuses an unknown category id on the product                     0.03s  
+  ✓ it answers 404 without a query for a malformed id in the path with…  0.03s  
+  ✓ it answers 404 without a query for a malformed id in the path with…  0.03s  
+  ✓ it answers 404 without a query for a malformed id in the path with…  0.03s  
+  ✓ it keeps the canonical id expression in the shared kernel            0.02s  
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\DomainEventsTest > it implements DomainEv…   
+  Failed asserting that two arrays are identical.
+   Array &0 [
+       0 => 'Fulfillment',
+       1 => 'Ordering',
+  -    2 => 'Payment',
+   ]
+  
+
+  at tests/Unit/Architecture/DomainEventsTest.php:23
+     19▕         ->toImplement(DomainEvent::class);
+     20▕ }
+     21▕ 
+     22▕ it('implements DomainEvent in every module event: every module with events is covered', function () use ($modulesWithEvents) {
+  ➜  23▕     expect($modulesWithEvents)->toBe(['Fulfillment', 'Ordering', 'Payment']);
+     24▕ });
+     25▕ 
+     26▕ foreach ([
+     27▕     'Illuminate\Foundation\Events\Dispatchable',
+
+  1   tests/Unit/Architecture/DomainEventsTest.php:23
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\ModuleBoundariesTest > it generates the p…   
+  Failed asserting that an array contains 'Gateways'.
+
+  at tests/Unit/Architecture/ModuleBoundariesTest.php:205
+    201▕ it('generates the private directory rules from the folders that exist', function () {
+    202▕     $private = array_unique(array_merge(...array_map('privateDirectoriesOf', MODULES)));
+    203▕ 
+    204▕     expect(PUBLIC_DIRECTORIES)->toBe(['Contracts', 'Events'])
+  ➜ 205▕         ->and($private)->toContain('Consumers', 'Exceptions', 'Gateways', 'Http', 'Jobs', 'Models', 'Repositories', 'Services', 'UseCases')
+    206▕         ->and($private)->not->toContain('Contracts')
+    207▕         ->and($private)->not->toContain('Events')
+    208▕         ->and($private)->not->toContain('DTOs')
+    209▕         ->and($private)->not->toContain('Enums')
+
+  1   tests/Unit/Architecture/ModuleBoundariesTest.php:205
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\ModuleBoundariesTest > it computes the vo…   
+  Failed asserting that an array contains 'Modules\Payment\Contracts\PaymentGateway'.
+
+  at tests/Unit/Architecture/ModuleBoundariesTest.php:243
+    239▕ });
+    240▕ 
+    241▕ it('computes the vocabulary of a module from its own contracts and events', function () {
+    242▕     expect(facadeOf('Ordering'))->toContain(CustomerOrderHistory::class, OrderPlaced::class)
+  ➜ 243▕         ->and(facadeOf('Payment'))->toContain(PaymentGateway::class, PaymentApproved::class)
+    244▕         ->and(vocabularyOf('Inventory'))->toContain(StockQuantities::class)
+    245▕         ->and(vocabularyOf('Inventory'))->not->toContain(ProductIds::class)
+    246▕         ->and(vocabularyOf('Catalog'))->toContain(ProductIds::class);
+    247▕ });
+
+  1   tests/Unit/Architecture/ModuleBoundariesTest.php:243
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\ModuleBoundariesTest > it computes the vo…   
+  Failed asserting that an array contains 'Modules\Payment\Enums\DeclineReason'.
+
+  at tests/Unit/Architecture/ModuleBoundariesTest.php:281
+    277▕ 
+    278▕ it('computes the vocabulary the contracts expose today', function () {
+    279▕     expect(vocabularyOf('Identity'))->toContain(Email::class, Password::class)
+    280▕         ->and(vocabularyOf('Ordering'))->toContain(OrderStatus::class)
+  ➜ 281▕         ->and(vocabularyOf('Payment'))->toContain(DeclineReason::class);
+    282▕ 
+    283▕     foreach ([ValidatedCart::class, OrderLines::class, ProductQuantities::class] as $private) {
+    284▕         expect(vocabularyOf('Ordering'))->not->toContain($private);
+    285▕     }
+
+  1   tests/Unit/Architecture/ModuleBoundariesTest.php:281
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\ModuleBoundariesTest > it does not use an…   
+  Failed asserting that 6 is equal to 7 or is greater than 7.
+
+  at tests/Unit/Architecture/ModuleBoundariesTest.php:312
+    308▕     }
+    309▕ }
+    310▕ 
+    311▕ it('does not use another module root class: every module root is covered', function () {
+  ➜ 312▕     expect(count(array_merge(...array_map('rootClassesOf', MODULES))))->toBeGreaterThanOrEqual(7);
+    313▕ });
+    314▕ 
+    315▕ it('declares no boundary exception', function () {
+    316▕     $constants = array_keys(get_defined_constants(true)['user'] ?? []);
+
+  1   tests/Unit/Architecture/ModuleBoundariesTest.php:312
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\ModuleBoundariesTest > it keeps only inte…   
+  Failed asserting that two arrays are identical.
+       1 => 'Identity',
+       2 => 'Inventory',
+       3 => 'Ordering',
+  -    4 => 'Payment',
+   ]
+  
+
+  at tests/Unit/Architecture/ModuleBoundariesTest.php:331
+    327▕         ->toBeInterfaces();
+    328▕ }
+    329▕ 
+    330▕ it('keeps only interfaces in every module contracts: every module is covered', function () use ($modulesWithContracts) {
+  ➜ 331▕     expect($modulesWithContracts)->toBe(['Catalog', 'Identity', 'Inventory', 'Ordering', 'Payment']);
+    332▕ });
+    333▕ 
+    334▕ // Contracts speak data: no Eloquent model nor Eloquent collection crosses a module boundary.
+    335▕ it('speaks only data in every contract signature', function () {
+
+  1   tests/Unit/Architecture/ModuleBoundariesTest.php:331
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\ModuleBoundariesTest > it repositories do…   
+  Failed asserting that two arrays are identical.
+       1 => 'Customers',
+       2 => 'Inventory',
+       3 => 'Ordering',
+  -    4 => 'Payment',
+   ]
+  
+
+  at tests/Unit/Architecture/ModuleBoundariesTest.php:553
+    549▕         ->not->toUse("App\\Modules\\{$module}\\Services");
+    550▕ }
+    551▕ 
+    552▕ it('repositories do not use the module services: every module with both layers is covered', function () use ($modulesWithRepositoriesAndServices) {
+  ➜ 553▕     expect($modulesWithRepositoriesAndServices)->toBe(['Catalog', 'Customers', 'Inventory', 'Ordering', 'Payment']);
+    554▕ });
+    555▕ 
+    556▕ it('resolves the catalog order history to the order repository', function () {
+    557▕     expect(app(ProductOrderHistory::class))->toBeInstanceOf(OrderRepository::class);
+
+  1   tests/Unit/Architecture/ModuleBoundariesTest.php:553
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\ModuleBoundariesTest > it keeps every mod…   
+  Expecting [] not to be empty .
+
+  at tests/Unit/Architecture/ModuleBoundariesTest.php:573
+    569▕     expect(app(PaymentGateway::class))->toBeInstanceOf(FakePaymentGateway::class);
+    570▕ });
+    571▕ 
+    572▕ it('keeps every module named by these rules', function (string $module) {
+  ➜ 573▕     expect(glob(app_path("Modules/{$module}/*")))->not->toBeEmpty();
+    574▕ })->with(MODULES);
+    575▕ 
+    576▕ // Value objects: immutable by construction, and the account rules live in them only.
+    577▕ arch('identity value objects are final and readonly')
+
+  1   tests/Unit/Architecture/ModuleBoundariesTest.php:573
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\Architecture\OrderCodeBoundariesTest > it keeps the or…   
+  Failed asserting that 5 is equal to 6 or is greater than 6.
+
+  at tests/Unit/Architecture/OrderCodeBoundariesTest.php:16
+     12▕     $contracts = glob("{$modules}/*/Contracts/*.php");
+     13▕     $carriers = [...glob("{$modules}/*/Events/*.php"), ...glob("{$modules}/*/Jobs/*.php")];
+     14▕ 
+     15▕     expect(count($contracts))->toBeGreaterThanOrEqual(11)
+  ➜  16▕         ->and(count($carriers))->toBeGreaterThanOrEqual(6);
+     17▕ 
+     18▕     $classOf = fn (string $file) => 'App\\Modules\\'.str_replace('/', '\\', substr($file, strlen($modules) + 1, -4));
+     19▕ 
+     20▕     foreach ($contracts as $file) {
+
+  1   tests/Unit/Architecture/OrderCodeBoundariesTest.php:16
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Outbox\EventDeliveryTest > it registers no laravel…    
+  Failed asserting that actual size 4 matches expected size 5.
+
+  at tests/Feature/Outbox/EventDeliveryTest.php:231
+    227▕         fn (string $file) => 'App\\Modules\\'.basename(dirname($file, 2)).'\\Events\\'.basename($file, '.php'),
+    228▕         glob(app_path('Modules/*/Events/*.php')),
+    229▕     );
+    230▕ 
+  ➜ 231▕     expect($events)->toHaveCount(5);
+    232▕ 
+    233▕     foreach ($events as $event) {
+    234▕         expect(class_exists($event))->toBeTrue()
+    235▕             ->and(Event::hasListeners($event))->toBeFalse("{$event} has a Laravel listener");
+
+  1   tests/Feature/Outbox/EventDeliveryTest.php:231
+
+
+  Tests:    10 failed, 1846 passed (8232 assertions)
+  Duration: 108.11s
+
+
+make: *** [test] Error 1
