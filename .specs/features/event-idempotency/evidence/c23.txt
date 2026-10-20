@@ -1,0 +1,10 @@
+ok    README describes the deliveries table
+ok    README describes the Fulfillment guard (delivered_at makes the retry a no-op)
+ok    README does not say the DeliverOrder retry announces the delivery again
+ok    README names the redelivery test per consumer
+ok    README lists the 15 frozen migration names
+ok    AGENTS.md states the redelivery test rule and the producer pattern
+ok    AGENTS.md freezes 15 migration names
+ok    domain analysis cites the deliveries table
+ok    domain analysis marks problem 18 as solved
+c23-docs: 0 failure(s)
