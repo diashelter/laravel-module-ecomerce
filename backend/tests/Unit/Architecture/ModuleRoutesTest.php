@@ -42,7 +42,7 @@ it('uses only the controllers of its own module in its routes file', function (s
  * tree is passing because it looks at nothing.
  */
 it('fails on a deliberate route violation', function () {
-    $fixture = __DIR__.'/Fixtures/Routes/foreign-controller/routes/api.php';
+    $fixture = __DIR__.'/Fixtures/Routes/foreign-controller.php';
 
     expect(ModuleLayout::routeViolations($fixture, 'Ordering'))->toBe(['Modules\Catalog\Http\Controllers\ProductController']);
 });

@@ -1,0 +1,41 @@
+running (7m08.0s), 01/50 VUs, 2510 complete and 0 interrupted iterations
+backoffice ✓ [ 100% ] 0/2 VUs    7m0s
+checkout   ↓ [ 100% ] 01/10 VUs  7m0s
+storefront ✓ [ 100% ] 00/38 VUs  7m0s
+
+running (7m09.0s), 01/50 VUs, 2510 complete and 0 interrupted iterations
+backoffice ✓ [ 100% ] 0/2 VUs    7m0s
+checkout   ↓ [ 100% ] 01/10 VUs  7m0s
+storefront ✓ [ 100% ] 00/38 VUs  7m0s
+
+running (7m10.0s), 01/50 VUs, 2510 complete and 0 interrupted iterations
+backoffice ✓ [ 100% ] 0/2 VUs    7m0s
+checkout   ↓ [ 100% ] 01/10 VUs  7m0s
+storefront ✓ [ 100% ] 00/38 VUs  7m0s
+
+k6 · perfil load · 430.86 s
+
+Limites de aprovação:
+  FALHA http_req_duration{name:POST /api/orders}: p(95)<70
+  FALHA http_req_duration{flow:storefront}: p(95)<40
+  ok    order_payable_wait: p(95)<2450
+  ok    unexpected_errors: rate<0.01
+
+Checks: 46 de 46 sem falha
+
+Métricas:
+  http_reqs: count=18659.00 rate=43.31
+  http_req_duration: max=906.06 p(90)=241.49 p(95)=279.44 p(99)=371.57 count=18659.00 avg=153.81 min=31.43 med=143.90
+  http_req_duration{flow:storefront}: count=13577.00 avg=151.95 min=31.43 med=142.06 max=593.28 p(90)=238.41 p(95)=275.74 p(99)=366.30
+  http_req_duration{name:POST /api/orders}: min=50.86 med=154.26 max=477.90 p(90)=243.69 p(95)=274.59 p(99)=332.15 count=555.00 avg=163.41
+  unexpected_errors: rate=0.00 passes=0.00 fails=18659.00
+  order_payable_wait: p(90)=1438.20 p(95)=1520.00 p(99)=1699.60 count=449.00 avg=986.73 min=312.00 med=961.00 max=1829.00
+
+running (7m10.9s), 00/50 VUs, 2511 complete and 0 interrupted iterations
+backoffice ✓ [ 100% ] 0/2 VUs    7m0s
+checkout   ✓ [ 100% ] 00/10 VUs  7m0s
+storefront ✓ [ 100% ] 00/38 VUs  7m0s
+time="2026-10-20T01:58:09Z" level=error msg="thresholds on metrics 'http_req_duration{flow:storefront}, http_req_duration{name:POST /api/orders}' have been crossed"
+
+make: *** [load-test] Error 99
+FAIL: make load-test TYPE=load exited 2 (a threshold of lib/baseline.js was crossed)

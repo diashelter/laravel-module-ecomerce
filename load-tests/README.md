@@ -160,6 +160,34 @@ A HEL-13 mede o mesmo perfil `load` com o relay publicando por cada transporte (
 - **Rodadas descartadas, todas do mesmo dia.** A máquina (8 GB, com 4,7 a 4,9 GB de swap em uso e uma VM do Docker que chegou a 300% de CPU sem nenhum container no ar) deixou a maioria das rodadas fora dos 20%: o p95 da vitrine foi de 24 a 949 ms entre rodadas do mesmo transporte e do mesmo código, e o do `POST /api/orders`, de 35 a 1.372 ms. As rodadas do redis às 14:29 e às 14:37 diferiram 29% na vitrine; as do rabbitmq às 15:10 e às 15:18, 83% na espera. Só entraram os pares que passaram nos três p95.
 - **Duas rodadas do rabbitmq caíram no arranque** com `Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces`, com o host a mais de 15 de carga. O `make load-test` agora tenta subir o broker de novo uma vez.
 
+### Os módulos como pacotes (HEL-12)
+
+A HEL-12 trocou os módulos de `App\Modules` por pacotes do `internachi/modular`. O `load` no commit `0966d0b`, duas rodadas seguidas, ficou **fora dos limites** da `lib/baseline.js` (a vitrine e o `POST /api/orders`), e o mesmo `load` em `main` (`f1dd960`), medido logo antes na mesma máquina, ficou dentro. Por isso não há linha nova na tabela por transporte: ainda não existe um commit com a medida aprovada.
+
+| Rodada | Commit | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Limites |
+|---|---|---|---|---|---|
+| controle, `main` | f1dd960 | 24.8 | 38.1 | 1352 | dentro |
+| módulos como pacotes, rodada 1 | 0966d0b | 272.8 | 297.2 | 1550.5 | vitrine e `POST /api/orders` acima |
+| módulos como pacotes, rodada 2 | 0966d0b | 275.7 | 274.6 | 1520.0 | vitrine e `POST /api/orders` acima |
+
+As duas rodadas dos pacotes diferem menos de 20% entre si, então o resultado não é ruído da máquina. As quatro rodadas foram feitas com a carga média da máquina entre 4 e 6 e com o `db`, o `redis` e o `rabbitmq` da pilha de dev no ar, o que não é a condição pedida acima; o controle foi medido nas mesmas condições.
+
+**A causa medida.** A biblioteca descobre os módulos no sistema de arquivos a cada boot da aplicação quando não existe o cache de módulos, e cada requisição do PHP-FPM faz esse boot. Numa pilha de carga recém-criada, 100 requisições seguidas a `/api/products`, sem concorrência:
+
+| Descoberta de módulos | Mediana por requisição |
+|---|---|
+| requisição sem `modules:cache` | 54.4 ms |
+| requisição com `modules:cache` | 16.2 ms |
+
+Custo de descobrir os módulos a cada boot do `artisan`, como a mediana de 20 execuções de `php artisan --version` num worktree descartável:
+
+| Descoberta de módulos | Mediana de 20 execuções |
+|---|---|
+| sem `modules:cache` | 222.2 ms |
+| com `modules:cache` | 190.3 ms |
+
+O CLI mostra só uma parte do custo (cerca de 32 ms), porque o PHP-FPM lê a mesma árvore de dentro de um volume montado do macOS, e o custo se multiplica com 50 VUs. Em produção, sem volume montado, o custo deve ser menor, mas isso não foi medido. O `modules:cache` grava `bootstrap/cache/app-modules.php`, que a pilha de carga não pode escrever (regra do `AGENTS.md`), e a biblioteca não aceita outro caminho: o que fazer com isso está em aberto.
+
 ## As provas dos scripts
 
 As decisões dos scripts (frações da mistura, divisão dos VUs, forma e limites dos perfis, espera até pagar, tags) são provadas pelo próprio k6, sem rede:
