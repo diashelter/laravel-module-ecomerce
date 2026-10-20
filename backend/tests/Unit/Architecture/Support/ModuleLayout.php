@@ -44,6 +44,22 @@ final class ModuleLayout
         return 'Modules\\'.Str::studly($module).'\\'.str_replace('/', '\\', substr($rest, 0, -4));
     }
 
+    /**
+     * The classes a module's routes file names that are not controllers of that same module: a routes
+     * file is the module's own HTTP entry point, so it never reaches another module's Http.
+     *
+     * @return list<string>
+     */
+    public static function routeViolations(string $routesFile, string $module): array
+    {
+        preg_match_all('/Modules\\\\[A-Za-z\\\\]+/', (string) file_get_contents($routesFile), $matches);
+
+        return array_values(array_unique(array_filter(
+            $matches[0],
+            fn (string $reference) => ! str_starts_with($reference, "Modules\\{$module}\\Http\\Controllers\\"),
+        )));
+    }
+
     /** @return list<string> the folders a module may have directly under src */
     public static function allowedFolders(string $module): array
     {
