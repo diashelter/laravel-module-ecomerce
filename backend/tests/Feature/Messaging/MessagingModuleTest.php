@@ -41,5 +41,5 @@ it('registers the five event commands from its own provider', function () {
     }
 
     expect(file_get_contents((new ReflectionClass(AppServiceProvider::class))->getFileName()))
-        ->not->toContain('RelayOutboxCommand', 'EventTransportSelector', 'EventTransport::class');
+        ->not->toContain('RelayOutboxCommand', 'EventTransportSelector', 'EventTransport::class', 'EventOutbox', 'EventSubscription', 'OutboxMessageRepository');
 });

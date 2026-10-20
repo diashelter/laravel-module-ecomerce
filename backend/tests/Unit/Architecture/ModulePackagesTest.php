@@ -2,6 +2,7 @@
 
 use App\Providers\AppServiceProvider;
 use App\Providers\HorizonServiceProvider;
+use Illuminate\Support\Str;
 use InterNACHI\Modular\Support\ModuleRegistry;
 use Tests\Unit\Architecture\Support\ModuleLayout;
 
@@ -59,4 +60,33 @@ it('keeps every class of a module in an allowed src folder', function (string $m
 
     expect(is_dir($src))->toBeTrue()
         ->and(ModuleLayout::foldersOutside($src, ModuleLayout::allowedFolders($module)))->toBe([]);
+})->with(ModuleLayout::modules());
+
+it('declares the module library and the path repository', function () {
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($composer['require']['internachi/modular'])->toBe('^3.0');
+
+    $paths = array_values(array_filter($composer['repositories'], fn (array $repository) => $repository['type'] === 'path'));
+
+    expect($paths)->toHaveCount(1)
+        ->and($paths[0]['url'])->toBe('app-modules/*')
+        ->and($paths[0]['options']['symlink'])->toBeTrue();
+
+    foreach (ModuleLayout::modules() as $module) {
+        expect($composer['require']['modules/'.Str::kebab($module)])->toBe('*');
+    }
+});
+
+it('gives every module the manifest of the design', function (string $module) {
+    $manifest = json_decode((string) file_get_contents(dirname(ModuleLayout::srcOf($module)).'/composer.json'), true, flags: JSON_THROW_ON_ERROR);
+    $expected = ["Modules\\{$module}\\" => 'src/'];
+
+    if (is_dir(dirname(ModuleLayout::srcOf($module)).'/database/factories')) {
+        $expected["Modules\\{$module}\\Database\\Factories\\"] = 'database/factories/';
+    }
+
+    expect($manifest['name'])->toBe('modules/'.Str::kebab($module))
+        ->and($manifest['autoload']['psr-4'])->toBe($expected)
+        ->and($manifest['extra']['laravel']['providers'])->toBe(["Modules\\{$module}\\Providers\\{$module}ServiceProvider"]);
 })->with(ModuleLayout::modules());

@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/module-layout/plan.md`
 
-21 checks in 5 slices · 6 one-way doors (dependência, namespace e caminho, fachada em `src`, pastas de `src`, fachada do `Messaging`, manifesto do pacote) · 0 open
+22 checks in 5 slices · 6 one-way doors (dependência, namespace e caminho, fachada em `src`, pastas de `src`, fachada do `Messaging`, manifesto do pacote) · 0 open
 
 Notação das provas. `BUILD` é o worktree `.claude/worktrees/hel-12-module-layout`, na branch `helterdias/hel-12-implementar-um-padrao-de-modularidade-melhor-ao-sistema`, criada de `main` em f1dd960 (a mesma linha de base de 1928 testes de `.specs/features/library-spike/evidence/baseline-make-test.txt`). `make test-filter FILTER="<regex>"` roda em `BUILD` e usa o banco `ecommerce_testing_hel_12_module_layout`. As provas de comando são scripts em `.specs/features/module-layout/proofs/`, escritos a partir do check e nunca da implementação, que saem com 0 só quando a afirmação vale e gravam a saída em `.specs/features/module-layout/evidence/c<NN>.txt`. Os testes novos nomeados abaixo são escritos antes do código que os satisfaz.
 
@@ -20,6 +20,9 @@ Proof: `make -C .claude/worktrees/hel-12-module-layout test-filter FILTER="keeps
 
 **C3** - `backend/bootstrap/providers.php` lista só `AppServiceProvider` e `HorizonServiceProvider` (AC 3)
 Proof: `make -C .claude/worktrees/hel-12-module-layout test-filter FILTER="registers no module provider in bootstrap providers"` - `tests/Unit/Architecture/ModulePackagesTest.php`
+
+**C22** - O `backend/composer.json` exige `internachi/modular` `^3.0` e o repositório `path` `app-modules/*` com `symlink`, e o `composer.json` de cada um dos 10 pacotes tem o nome `modules/<kebab>`, o psr-4 de `src/` (mais o de `database/factories/` só quando há factories, e nenhum de `Tests` nem de `Seeders`) e o provider em `extra.laravel.providers` (portas 1 e 6 da Landing; acrescentado na rodada 1 da verificação, que achou as portas sem prova)
+Proof: `make -C .claude/worktrees/hel-12-module-layout test-filter FILTER="declares the module library and the path repository|gives every module the manifest of the design"` - `tests/Unit/Architecture/ModulePackagesTest.php`, uma linha de dataset por módulo
 
 **C4** - `make:module sample` numa cópia descartável muda, fora de `app-modules/sample`, só `backend/composer.json` e `backend/composer.lock` (AC 4)
 Proof: `bash .specs/features/module-layout/proofs/c04-make-module.sh`
@@ -89,6 +92,7 @@ Proof: `bash .specs/features/module-layout/proofs/c21-domain-analysis.sh`
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
 | critérios do plano (21) | AC 1 C1 · AC 2 C2 · AC 3 C3 · AC 4 C4 · AC 5 C5 · AC 6 C6 · AC 7 C7 · AC 8 C8 · AC 9 C9 · AC 10 C10 · AC 11 C11 · AC 12 C12 · AC 13 C13 · AC 14 C14 · AC 15 C15 · AC 16 C16 · AC 17 C17 · AC 18 C18 · AC 19 C19 · AC 20 C20 · AC 21 C21 | - |
+| portas da Landing (6) | dependência e repositório C22 · namespace e caminho C1 C2 · fachada no primeiro nível de `src` C6 · pastas de `src` C5 · fachada do `Messaging` C11 · manifesto do pacote C22 | - |
 | módulos (10) | backoffice C1 C5 · catalog C1 C5 · customers C1 C5 · fulfillment C1 C5 · identity C1 C5 · inventory C1 C5 · messaging C1 C5 C7 C11 · ordering C1 C5 · payment C1 C5 · shared C1 C5 | - |
 | pastas permitidas de `src` (8) | `Contracts` C5 · `Events` C5 · `Core` C5 C7 · `Persistence` C5 C7 · `Http` C5 C7 · `Providers` C5 · `Gateways` C5 · `Console` C5 | - |
 | regras de arquitetura novas (4) | pasta permitida C5 C10 · `Core` e `Persistence` sem `Http` C7 C10 · infraestrutura sem negócio C9 C10 · `Shared` sem `Messaging` C9 C10 | - |
