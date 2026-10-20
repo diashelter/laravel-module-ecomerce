@@ -133,3 +133,7 @@ Tamanho, em tokens, pela conta `wc -c` dividida por quatro, sobre o que cada sli
 - S5 = 35k (leitura de partes de `README.md`, `AGENTS.md` e `docs/domain-analysis.md`: 119 links a reescrever e os trechos de estrutura)
 - total ≈ 105k, abaixo do budget de 150k - one builder, sem pergunta
 - Mechanism: one builder
+
+- **Boundary:** C1-C21 fechados no worktree `hel-12-module-layout` até `76c8b56`; provas rodadas pelo autor, falta o Verifier independente
+- **Settled mid-build:** nenhum esclarecimento novo do usuário; o design foi corrigido antes do build: um módulo novo ainda muda o `composer.json` e o `composer.lock` da raiz, escritos pelo gerador (Success, Key decision 2 e a linha de módulo novo da Module Layout)
+- **Abandoned:** a primeira rodada do script de movimentação, que quebrou na substituição do `namespace` por causa das barras invertidas na string de troca (a árvore foi revertida com `git reset --hard` e o script corrigido); a primeira versão da prova de C1, que contava a linha de cabeçalho da tabela como módulo; a primeira versão do teste de pacotes, que exigia as pastas `load-tests` e `.github` dentro do container `api` (hoje a prova de C2 as confere pelo host)

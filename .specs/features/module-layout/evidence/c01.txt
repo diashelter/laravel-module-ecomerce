@@ -1,0 +1,18 @@
+You have 10 modules installed.
+
++-------------+-------------------------+---------------------------------------------------------+
+| Module      | Path                    | Namespaces                                              |
++-------------+-------------------------+---------------------------------------------------------+
+| customers   | app-modules/customers   | Modules\Customers, Modules\Customers\Database\Factories |
+| identity    | app-modules/identity    | Modules\Identity, Modules\Identity\Database\Factories   |
+| payment     | app-modules/payment     | Modules\Payment, Modules\Payment\Database\Factories     |
+| catalog     | app-modules/catalog     | Modules\Catalog, Modules\Catalog\Database\Factories     |
+| fulfillment | app-modules/fulfillment | Modules\Fulfillment                                     |
+| shared      | app-modules/shared      | Modules\Shared                                          |
+| backoffice  | app-modules/backoffice  | Modules\Backoffice                                      |
+| ordering    | app-modules/ordering    | Modules\Ordering, Modules\Ordering\Database\Factories   |
+| inventory   | app-modules/inventory   | Modules\Inventory, Modules\Inventory\Database\Factories |
+| messaging   | app-modules/messaging   | Modules\Messaging, Modules\Messaging\Database\Factories |
++-------------+-------------------------+---------------------------------------------------------+
+modules: backoffice catalog customers fulfillment identity inventory messaging ordering payment shared
+OK

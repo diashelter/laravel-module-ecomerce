@@ -1,0 +1,3 @@
+  Tests:    2003 passed (8689 assertions)
+baseline files outside Architecture: 95
+OK - 0 failures; all 95 files outside Architecture keep their baseline count
