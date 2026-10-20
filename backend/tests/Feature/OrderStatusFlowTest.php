@@ -12,6 +12,7 @@ use Modules\Fulfillment\Events\OrderDelivered;
 use Modules\Messaging\Contracts\EventOutbox;
 use Modules\Messaging\Contracts\EventSubscriptions;
 use Modules\Messaging\Core\DeliverEvent;
+use Modules\Messaging\Core\EventEnvelope;
 use Modules\Ordering\Core\Consumers\MarkOrderAsAwaitingPayment;
 use Modules\Ordering\Core\Consumers\MarkOrderAsDelivered;
 use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
@@ -238,5 +239,39 @@ it('runs the whole lifecycle with a synchronous queue', function () {
     foreach (['payment.payment_approved', 'ordering.order_paid', 'fulfillment.delivery_scheduled', 'fulfillment.order_delivered'] as $name) {
         expect(outboxMessages($name))->toHaveCount(1)
             ->and(outboxMessages($name)->sole()->request_id)->toBe('trace-payment-0001');
+    }
+});
+
+it('runs the lifecycle once when OrderPaid is delivered twice', function () {
+    $user = customer();
+    $product = productWithStock(3);
+    $orderId = $this->actingAs($user)
+        ->postJson('/api/orders', ['items' => [['product_id' => $product->id, 'quantity' => 1]], 'address_id' => addressOf($user)->id])
+        ->assertCreated()
+        ->json('data.id');
+    relayOnce();
+    $this->postJson("/api/orders/{$orderId}/payment", ['card_token' => 'fake_card_approved'])->assertAccepted();
+
+    // Two relay cycles take the payment to OrderPaid and publish it: the sync queue runs the
+    // scheduling, and the DeliverOrder it queues, inside that cycle.
+    relayOnce();
+    relayOnce();
+    $orderPaid = outboxMessages('ordering.order_paid')->sole();
+    $redelivered = new EventEnvelope(
+        $orderPaid->id,
+        $orderPaid->name,
+        $orderPaid->version,
+        $orderPaid->payload,
+        CarbonImmutable::instance($orderPaid->occurred_at),
+        $orderPaid->request_id,
+    );
+
+    deliverEnvelope($redelivered, ScheduleOrderDelivery::class);
+    relayUntilIdle();
+
+    expect(Order::find($orderId)->status)->toBe(OrderStatus::Delivered);
+
+    foreach (['payment.payment_approved', 'ordering.order_paid', 'fulfillment.delivery_scheduled', 'fulfillment.order_delivered'] as $name) {
+        expect(outboxMessages($name))->toHaveCount(1, $name);
     }
 });
