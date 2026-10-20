@@ -2,6 +2,7 @@
 
 > Plan from this document. Each slice below carries its own shape - copy it, do not re-derive it.
 > Status: confirmed by diashelter, 2026-10-19, com as respostas padrão de cada slice `open`.
+> Rodada 2 (2026-10-19): Module Layout e Messaging estão entregues na PR 27. As slices Module Routes, Module Migrations e Load Baseline seguem numa branch empilhada sobre a da PR 27, numa só spec (`.specs/features/module-routes-migrations`), confirmada por diashelter.
 
 ## Situation
 
@@ -55,8 +56,8 @@ Cada módulo vira um pacote Composer em `app-modules/<nome>`, com o namespace `M
 |---|---|---|
 | [Module Map](#module-map) | a decisão por módulo, com a evidência, em `docs/domain-analysis.md` | clear |
 | [Library Spike](#library-spike) | as 5 perguntas sobre a biblioteca respondidas num módulo de verdade (2026-10-19) | clear |
-| [Module Layout](#module-layout) | os 10 pacotes em `app-modules`, com `Core`, `Persistence`, `Http` e o provider | open - 4 defaults taken |
-| [Messaging](#messaging) | o módulo `Messaging`, tirado do `Shared` | open - 2 defaults taken |
+| [Module Layout](#module-layout) | os 10 pacotes em `app-modules`, com `Core`, `Persistence`, `Http` e o provider | done - PR 27 (4 defaults taken) |
+| [Messaging](#messaging) | o módulo `Messaging`, tirado do `Shared` | done - PR 27 (2 defaults taken) |
 | [Module Routes](#module-routes) | as rotas de cada módulo no módulo, sem arquivo central | clear |
 | [Module Migrations](#module-migrations) | as migrations e factories de cada módulo no módulo | open - 1 default taken |
 | [Load Baseline](#load-baseline) | a comparação de carga antes e depois | clear |
@@ -182,7 +183,7 @@ Open, default taken:
 
 ### Module Migrations
 
-**Delivers** cada migration no módulo dono, sem renomear, e as factories com os models. **Status: open.** É a segunda porta (Key decision 5).
+**Delivers** cada migration no módulo dono, sem renomear; as factories já foram com os models na PR 27. **Status: open - 1 default taken.** É a segunda porta (Key decision 5).
 
 | Tabela | Módulo |
 |---|---|
