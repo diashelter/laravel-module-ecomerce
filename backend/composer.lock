@@ -3379,7 +3379,7 @@
             "dist": {
                 "type": "path",
                 "url": "app-modules/inventory",
-                "reference": "b232ad036e2f66b12fba649cc4bc049311a4d5e3"
+                "reference": "98c771823f81a03d1ed3e479240deaf363beb2d8"
             },
             "type": "library",
             "extra": {
@@ -3392,7 +3392,6 @@
             "autoload": {
                 "psr-4": {
                     "Modules\\Inventory\\": "src/",
-                    "Modules\\Inventory\\Tests\\": "tests/",
                     "Modules\\Inventory\\Database\\Factories\\": "database/factories/"
                 }
             },

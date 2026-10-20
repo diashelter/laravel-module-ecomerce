@@ -2,7 +2,7 @@
 
 ## Problem
 
-Os testes de todos os módulos moram em `backend/tests`, misturados aos fluxos que juntam módulos. Dos 114 arquivos, 28 testam um módulo que já sobe sozinho e usam só esse módulo, mas nenhum deles mora dentro do módulo que testa.
+Os testes de todos os módulos moram em `backend/tests`, misturados aos fluxos que juntam módulos. Dos 114 arquivos, 27 testam um módulo que já sobe sozinho e usam só esse módulo, mas nenhum deles mora dentro do módulo que testa.
 
 O Payment e o Ordering não existem um sem o outro:
 
@@ -25,7 +25,7 @@ O projeto não tem produção, então não há métrica de dor.
 
 Quando isto entregar:
 
-- os testes de 6 módulos moram em `app-modules/<módulo>/tests` e passam com só aquele módulo, o `Shared` e o `Messaging` instalados;
+- os testes de 5 módulos moram em `app-modules/<módulo>/tests` e passam com só aquele módulo, o `Shared` e o `Messaging` instalados;
 - o Payment é o primeiro módulo de negócio que roda sozinho e pode ser removido sem quebrar os outros;
 - a porta do consumidor, o adaptador no `Integration`, o `503` sem fornecedor e o evento lido pelo nome existem para as próximas slices copiarem.
 
@@ -65,7 +65,7 @@ Caminho de um teste de módulo (door 6):
 | domain | termo existente: `PaymentApproved` (`Modules\Payment\Events`) continua sendo a classe do produtor, e o Ordering para de importá-la. Quem ramifica nela: `OrderStatusFlowTest`, `OrderEventsOutboxTest`, `ConsumerRedeliveryTest`, `ConsumerNamesTest` e `OrderEventPayloadTest`, todos da suíte de composição |
 | domain | regras existentes do `AGENTS.md` que mudam: "nunca edite uma migration já executada" ganha a sua única exceção; "não há exceção de fronteira" ganha o `Integration`; os testes deixam de morar só em `backend/tests`; a lista de pastas permitidas por módulo ganha as do `Integration` |
 | domain | design: a linha de factories da slice Module Tests do `.design/module-isolation.md` é corrigida (assunção 2) |
-| tests | 28 arquivos mudam para `app-modules/<módulo>/tests`; os helpers do `Pest.php` que são de um módulo vão para o `tests/Helpers.php` dele, e as fixtures do Messaging vão com os testes do Messaging |
+| tests | 27 arquivos mudam para `app-modules/<módulo>/tests`; os helpers do `Pest.php` que são de um módulo vão para o `tests/Helpers.php` dele, e as fixtures do Messaging vão com os testes do Messaging |
 | tests | testes de arquitetura que mudam de forma: `ModulePackagesTest` (11 pacotes; o manifesto ganha o namespace `Tests`), `ModuleMigrationsTest` (16 nomes), `ModuleMigrationsForeignKeyTest` (5 chaves entre módulos, e nenhuma em `payments.order_id`) e `ModuleBoundariesTest` (o Payment isolado, o `Integration` como a única exceção) |
 | tests | o caso `ties payments to existing orders and keeps orders that have payments` e a linha `payments.order_id restricts` do `UuidKeysTest` deixam de valer por decisão (Key decision 5 do design) e são substituídos pelo critério 21 |
 | stored data | a chave `payments_order_id_foreign` sai dos bancos já migrados pela migration nova; nenhuma linha muda, e um banco novo nunca cria a chave |
@@ -110,16 +110,16 @@ Os testes que já usam só o próprio módulo moram nele e passam com só ele in
 
 **Acceptance Criteria**
 
-1. The system SHALL keep the 28 test files of the table *Arquivos movidos* only under `app-modules/<módulo>/tests/Unit` (os que hoje estão em `tests/Unit`) or `app-modules/<módulo>/tests/Feature` (os que hoje estão em `tests/Feature`), and none of them under `backend/tests`
+1. The system SHALL keep the 27 test files of the table *Arquivos movidos* only under `app-modules/<módulo>/tests/Unit` (os que hoje estão em `tests/Unit`) or `app-modules/<módulo>/tests/Feature` (os que hoje estão em `tests/Feature`), and none of them under `backend/tests`
 2. WHEN `make test` runs THEN the system SHALL run the module tests and the `backend/tests` suite in the same run, the `Feature` ones with `RefreshDatabase` and the `Unit` ones without it, with no new command, flag or variable
 3. WHEN `make test-filter FILTER=<nome>` matches the name of a test that lives in a module THEN the system SHALL run that test
-4. WHEN the tests of `Identity`, `Messaging`, `Shared`, `Catalog`, `Inventory` or `Payment` run with every business module except that one removed THEN the system SHALL run `migrate:fresh` and pass all of that module's tests
+4. WHEN the tests of `Identity`, `Messaging`, `Shared`, `Catalog` or `Payment` run with every business module except that one removed THEN the system SHALL run `migrate:fresh` and pass all of that module's tests
 5. The system SHALL map `Modules\<Módulo>\Tests\` to `tests/` in the `composer.json` of each package that has a `tests` folder, and in no root `composer.json` key
 6. IF a file under `app-modules/<A>/tests` names a class of another business module THEN the architecture suite SHALL fail, and it SHALL fail on a deliberate violation
 7. The system SHALL keep the count of `it(`/`test(` declarations summed over `backend/tests` and `app-modules/*/tests` at least 637 minus the one case replaced by criterion 21
 8. The system SHALL let a module test sign in as a customer with the test identity of `Modules\Shared\Tests` on the `customer` guard, with an `id` that is a canonical UUID v7
 
-**Independent test:** `make test` verde, a pasta `tests` de cada um dos 6 módulos verde numa cópia com os outros módulos de negócio removidos e nenhum dos 28 arquivos em `backend/tests`.
+**Independent test:** `make test` verde, a pasta `tests` de cada um dos 5 módulos verde numa cópia com os outros módulos de negócio removidos e nenhum dos 27 arquivos em `backend/tests`.
 
 ### S2: Payment ↔ Ordering (P1)
 
@@ -142,7 +142,7 @@ O pagamento e a reação à aprovação funcionam sem que o Payment e o Ordering
 21. The system SHALL have no foreign key on `payments.order_id`, after `migrate:fresh` and after `migrate` on a database migrated before this change, and SHALL keep the other 5 foreign keys between modules unchanged
 22. WHEN the Payment package is removed THEN the system SHALL run `migrate:fresh`, answer `404` to `POST /api/orders/{order}/payment`, and pass the `tests` folder of every remaining module that has one
 23. WHEN both modules are installed THEN `OrdersToPay` SHALL resolve to the `Integration` adapter, which SHALL return an `OrderToPay` with `awaitingPayment` true only for an order in `awaiting_payment`, and `null` for an unknown order or an order of another customer
-24. WHEN this change lands THEN `AGENTS.md`, `README.md`, `docs/domain-analysis.md` and `.design/module-isolation.md` SHALL describe the `Integration` package, the port of the consumer, the `503` without a provider, the migration exception, the module test folders and the 6 modules whose tests live in them, with no mention left of `Modules\Ordering` in the Payment module or of the `payments.order_id` foreign key
+24. WHEN this change lands THEN `AGENTS.md`, `README.md`, `docs/domain-analysis.md` and `.design/module-isolation.md` SHALL describe the `Integration` package, the port of the consumer, the `503` without a provider, the migration exception, the module test folders and the 5 modules whose tests live in them, with no mention left of `Modules\Ordering` in the Payment module or of the `payments.order_id` foreign key
 
 **Independent test:** `make test` verde; numa cópia sem o Ordering, a suíte do Payment verde e o `POST` respondendo `503`; numa cópia sem o Payment, `migrate:fresh` e as suítes dos módulos verdes.
 
@@ -154,7 +154,6 @@ O pagamento e a reação à aprovação funcionam sem que o Payment e o Ordering
 | Messaging (7) | `Feature/Messaging/BrokerIsolationTest.php`, `Feature/Messaging/DeadDeliveriesCommandsTest.php`, `Feature/Messaging/EventTransportFlagTest.php`, `Feature/Messaging/MessagingModuleTest.php`, `Feature/Messaging/RabbitMqEventTransportTest.php`, `Feature/Outbox/EventDeliveryTest.php`, `Feature/Outbox/OutboxRelayTest.php` |
 | Shared (2) | `Feature/RateLimitBurstTest.php`, `Feature/RateLimiterStoreTest.php` |
 | Catalog (4) | `Feature/Queries/CatalogMetricsQueryTest.php`, `Unit/Services/CategoryServiceTest.php`, `Unit/Services/ProductServiceTest.php`, `Unit/ValueObjects/ProductAvailabilityTest.php` |
-| Inventory (1) | `Unit/Services/StockServiceTest.php` |
 | Payment (4) | `Feature/PaymentTest.php`, `Feature/UseCases/Payment/PayOrderUseCaseTest.php`, `Unit/Services/PaymentServiceTest.php`, `Unit/Gateways/FakePaymentGatewayTest.php` |
 
 ## Out of scope
@@ -164,7 +163,7 @@ O pagamento e a reação à aprovação funcionam sem que o Payment e o Ordering
 | as travessias Fulfillment ↔ Ordering, Catalog e Inventory, Customers, Identity e Backoffice | são as slices seguintes do design, cada uma com o seu plano |
 | o job de prova de remoção no CI | é a slice Removal Proof; aqui a remoção é a prova dos critérios 4, 16 e 22, rodada localmente |
 | a identidade de teste de equipe (papel `admin` ou `support`) | nenhum teste movido entra como equipe sem o Identity; ela vem com a slice Identity |
-| os cerca de 86 arquivos que ainda cruzam módulos | mudam de lugar na slice da sua travessia, ou ficam na suíte de composição |
+| os cerca de 87 arquivos que ainda cruzam módulos | mudam de lugar na slice da sua travessia, ou ficam na suíte de composição |
 
 ## Assumptions
 
@@ -177,6 +176,8 @@ O pagamento e a reação à aprovação funcionam sem que o Payment e o Ordering
 | 5. a prova sem um módulo | roda numa cópia descartável do `backend/` sem o diretório e sem o `require` do módulo, com o estado do Composer e a descoberta de pacotes refeitos | é a remoção de verdade; desligar só a descoberta deixaria as classes carregáveis e a prova passaria sem valer (ver o design) | n |
 | 6. o `down()` da migration que apaga a chave | não faz nada | recriar a chave falharia num banco sem `orders` ou com pagamento de pedido inexistente | n |
 | 7. `PayableOrders` e `OrderForPayment` | continuam no Ordering como o contrato que ele oferece, usado só pelo `Integration` | o Ordering decide o que oferece, e o adaptador traduz para a porta do Payment | n |
+
+| 8. o `StockServiceTest` (Inventory) usa só o próprio módulo | fica em `backend/tests` até a slice Catalog e Inventory | a migration de `stocks` cria a chave `stocks.product_id` para `products`, do Catalog, então o Inventory não migra sozinho (achado pela prova C6 durante a construção) | y - diashelter, 2026-10-20 |
 
 **Open questions:** none - all resolved or logged above.
 
@@ -194,7 +195,7 @@ O pagamento e a reação à aprovação funcionam sem que o Payment e o Ordering
 | document `AGENTS.md`, `README.md`, `docs/domain-analysis.md`, `.design/module-isolation.md` | structure, depth and what the reader does next | AC 24 |
 | collection testes do backend | grouping criterion | AC 1 - por módulo e, dentro dele, `Unit` ou `Feature` |
 | collection testes do backend | naming | existing - os arquivos mantêm o nome e o nome dos casos |
-| collection testes do backend | duplicates | AC 1 - nenhum dos 28 arquivos fica também em `backend/tests` |
+| collection testes do backend | duplicates | AC 1 - nenhum dos 27 arquivos fica também em `backend/tests` |
 | collection testes do backend | the exception that does not fit | assunções 1 e 3 - os testes que usam mais de um módulo, ou um módulo que ainda não sobe sozinho, ficam na suíte de composição |
 | collection testes do backend | ordering | n/a - o PHPUnit decide a ordem dos arquivos e nenhum teste depende dela |
 

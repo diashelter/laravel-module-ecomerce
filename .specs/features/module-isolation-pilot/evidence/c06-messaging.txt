@@ -1,8 +1,8 @@
-Preparing worktree (detached HEAD 73399e3)
-HEAD is now at 73399e3 feat(payment): read the order through a port of the payment module
+Preparing worktree (detached HEAD 441e377)
+HEAD is now at 441e377 test(messaging): keep the module events listener check in the composition suite
 removal copy messaging-alone without: backoffice catalog customers fulfillment identity inventory ordering payment
- Container ecommerce-api-run-6dc0136f02c4 Creating 
- Container ecommerce-api-run-6dc0136f02c4 Created 
+ Container ecommerce-api-run-4ee9ee331751 Creating 
+ Container ecommerce-api-run-4ee9ee331751 Created 
 ./composer.json has been updated
 Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/identity modules/inventory modules/ordering modules/payment
 Loading composer repositories with package information
@@ -23,6 +23,7 @@ Generating optimized autoload files
 Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Allowed located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/Consumers/Allowed.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/UseCases/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\InfrastructureUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/infrastructure-uses-business/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+Class Tests\Unit\Architecture\Fixtures\Layout\ModuleTestUsesComposition\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/module-test-uses-composition/tests/Feature/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\ModuleTestUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/module-test-uses-business/tests/Feature/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\SharedUsesMessaging\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/shared-uses-messaging/src/Support/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\FolderOutside\Stray located in ./tests/Unit/Architecture/Fixtures/Layout/folder-outside/src/Controllers/Stray.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
@@ -60,87 +61,88 @@ Use the `composer fund` command to find out more!
 No security vulnerability advisories found.
 Banco de testes: ecommerce_testing_removal_messaging_alone (vhost do RabbitMQ: ecommerce_testing_removal_messaging_alone)
 packages left: integration messaging shared 
- Container ecommerce-api-run-58717aeea4fd Creating 
- Container ecommerce-api-run-58717aeea4fd Created 
+ Container ecommerce-api-run-d56fe0da7232 Creating 
+ Container ecommerce-api-run-d56fe0da7232 Created 
+
+  Dropping all tables ........................................... 35.37ms DONE
 
    INFO  Preparing database.  
 
-  Creating migration table ...................................... 10.28ms DONE
+  Creating migration table ....................................... 8.92ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000001_create_cache_table ........................... 7.34ms DONE
-  0001_01_01_000002_create_jobs_table ........................... 11.99ms DONE
-  2026_10_15_000001_create_outbox_messages_table ................. 5.11ms DONE
-  2026_10_18_170032_create_features_table ........................ 3.39ms DONE
+  0001_01_01_000001_create_cache_table ........................... 8.10ms DONE
+  0001_01_01_000002_create_jobs_table ............................ 9.55ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 4.30ms DONE
+  2026_10_18_170032_create_features_table ........................ 3.24ms DONE
 
 migrate:fresh: ok
- Container ecommerce-api-run-3e9f77684272 Creating 
- Container ecommerce-api-run-3e9f77684272 Created 
+ Container ecommerce-api-run-72a0f875c3d2 Creating 
+ Container ecommerce-api-run-72a0f875c3d2 Created 
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\BrokerIsolationTest
-  ✓ it connects to the checkout vhost                                    0.38s  
-  ✓ it starts every broker test on an empty vhost @ repetition 1 of 2    0.04s  
-  ✓ it starts every broker test on an empty vhost @ repetition 2 of 2    0.05s  
+  ✓ it connects to the checkout vhost                                    0.49s  
+  ✓ it starts every broker test on an empty vhost @ repetition 1 of 2    0.07s  
+  ✓ it starts every broker test on an empty vhost @ repetition 2 of 2    0.06s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\DeadDeliveriesCommandsTest
-  ✓ it reports no dead delivery                                          0.12s  
-  ✓ it lists every dead delivery without taking it from the queue        0.22s  
-  ✓ it returns every dead delivery to its own consumer queue             0.17s  
-  ✓ it returns only the dead deliveries of the given message             0.22s  
-  ✓ it refuses to return a message that is not dead                      0.15s  
-  ✓ it keeps every dead delivery somewhere when the retry stops halfway  0.30s  
-  ✓ it sends a returned delivery back to the dead queue after three mor… 1.36s  
-  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.10s  
+  ✓ it reports no dead delivery                                          0.23s  
+  ✓ it lists every dead delivery without taking it from the queue        0.31s  
+  ✓ it returns every dead delivery to its own consumer queue             0.19s  
+  ✓ it returns only the dead deliveries of the given message             0.24s  
+  ✓ it refuses to return a message that is not dead                      0.18s  
+  ✓ it keeps every dead delivery somewhere when the retry stops halfway  0.49s  
+  ✓ it sends a returned delivery back to the dead queue after three mor… 1.25s  
+  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.14s  
   ✓ it refuses the dead delivery commands without the broker with ('eve… 0.03s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\EventTransportFlagTest
   ✓ it resolves the event transport to redis when nothing is stored      0.04s  
   ✓ it shows the current event transport                                 0.04s  
-  ✓ it switches the event transport to rabbitmq                          0.04s  
+  ✓ it switches the event transport to rabbitmq                          0.03s  
   ✓ it refuses an unknown event transport with ('bogus')                 0.03s  
   ✓ it refuses an unknown event transport with ('Redis')                 0.03s  
   ✓ it refuses an unknown event transport with ('kafka')                 0.03s  
-  ✓ it changes nothing when the event transport already has the given v… 0.04s  
-  ✓ it logs who changed the event transport                              0.03s  
+  ✓ it changes nothing when the event transport already has the given v… 0.05s  
+  ✓ it logs who changed the event transport                              0.04s  
   ✓ it changes the event transport with redis unreachable                0.04s  
-  ✓ it hands the envelope to the transport of the flag with dataset "re… 0.07s  
-  ✓ it hands the envelope to the transport of the flag with dataset "ra… 0.03s  
-  ✓ it publishes through the new transport on the next relay cycle       0.04s  
-  ✓ it logs each transport change once                                   0.05s  
+  ✓ it hands the envelope to the transport of the flag with dataset "re… 0.08s  
+  ✓ it hands the envelope to the transport of the flag with dataset "ra… 0.04s  
+  ✓ it publishes through the new transport on the next relay cycle       0.06s  
+  ✓ it logs each transport change once                                   0.06s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\MessagingModuleTest
   ✓ it exposes exactly four messaging contracts                          0.03s  
-  ✓ it registers the five event commands from its own provider           0.05s  
+  ✓ it registers the five event commands from its own provider           0.06s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\RabbitMqEventTransportTest
-  ✓ it declares the topology before the first message                    0.13s  
-  ✓ it publishes one persistent message with the envelope as json        0.18s  
-  ✓ it copies the message once into each consumer queue                  0.21s  
-  ✓ it publishes an event with no consumer without error                 0.18s  
-  ✓ it marks the message published once the broker confirms              0.17s  
+  ✓ it declares the topology before the first message                    0.14s  
+  ✓ it publishes one persistent message with the envelope as json        0.16s  
+  ✓ it copies the message once into each consumer queue                  0.17s  
+  ✓ it publishes an event with no consumer without error                 0.14s  
+  ✓ it marks the message published once the broker confirms              0.16s  
   ✓ it keeps the message pending when the broker is unreachable          0.08s  
-  ✓ it keeps the message pending when the broker refuses it              0.10s  
-  ✓ it throws when the broker does not confirm in five seconds           0.08s  
+  ✓ it keeps the message pending when the broker refuses it              0.11s  
+  ✓ it throws when the broker does not confirm in five seconds           0.10s  
 
-   FAIL  Appmodules\messaging\tests\Feature\Outbox\EventDeliveryTest
+   PASS  Appmodules\messaging\tests\Feature\Outbox\EventDeliveryTest
   ✓ it pushes one delivery per subscribed consumer with the whole envel… 0.06s  
-  ✓ it publishes an envelope with no subscribed consumer without pushin… 0.03s  
-  ✓ it rebuilds the event and calls the consumer once                    0.03s  
-  ✓ it restores the envelope request id while the consumer runs          0.02s  
-  ✓ it clears a stale request id when the envelope has none              0.02s  
-  ✓ it refuses an envelope version the event does not declare            0.03s  
-  ✓ it retries only the failing consumer three times and fails it alone  3.08s  
+  ✓ it publishes an envelope with no subscribed consumer without pushin… 0.04s  
+  ✓ it rebuilds the event and calls the consumer once                    0.04s  
+  ✓ it restores the envelope request id while the consumer runs          0.03s  
+  ✓ it clears a stale request id when the envelope has none              0.05s  
+  ✓ it refuses an envelope version the event does not declare            0.06s  
+  ✓ it retries only the failing consumer three times and fails it alone  3.11s  
   ✓ it refuses a consumer that does not match the subscribed event with… 0.05s  
   ✓ it refuses a consumer that does not match the subscribed event with… 0.03s  
-  ✓ it refuses two event classes under the same name                     0.08s  
+  ✓ it refuses two event classes under the same name                     0.02s  
   ✓ it delivers an envelope whose message was already pruned             0.03s  
-  ⨯ it registers no laravel listener for the module events               0.04s  
 
    PASS  Appmodules\messaging\tests\Feature\Outbox\OutboxRelayTest
   ✓ it publishes every pending message in order with once                0.04s  
   ✓ it stops at the first transport failure and keeps the rest pending   0.03s  
-  ✓ it exits with 1 when the transport fails with once                   0.04s  
+  ✓ it exits with 1 when the transport fails with once                   0.03s  
   ✓ it claims the pending messages with for update skip locked           0.03s  
   ✓ it hands the transport an envelope built from every column of the r… 0.03s  
   ✓ it claims publishes and marks the messages in one transaction        0.03s  
@@ -152,27 +154,9 @@ migrate:fresh: ok
   ✓ it exits after the cycle when the queue restart signal changes       0.03s  
   ✓ it prints one warning line when the transport refuses a message      0.03s  
   ✓ it keeps relaying while the cache with the restart signal is unreac… 0.03s  
-  ────────────────────────────────────────────────────────────────────────────  
-   FAILED  Appmodules\messaging\tests\Feature\Outbox\EventDeliveryTest > it…    
-  Failed asserting that actual size 0 matches expected size 5.
 
-  at app-modules/messaging/tests/Feature/Outbox/EventDeliveryTest.php:232
-    228▕         ModuleLayout::classOf(...),
-    229▕         ModuleLayout::filesMatching('Events/*.php'),
-    230▕     );
-    231▕ 
-  ➜ 232▕     expect($events)->toHaveCount(5);
-    233▕ 
-    234▕     foreach ($events as $event) {
-    235▕         expect(class_exists($event))->toBeTrue()
-    236▕             ->and(Event::hasListeners($event))->toBeFalse("{$event} has a Laravel listener");
+  Tests:    60 passed (322 assertions)
+  Duration: 9.62s
 
-  1   app-modules/messaging/tests/Feature/Outbox/EventDeliveryTest.php:232
-
-
-  Tests:    1 failed, 60 passed (323 assertions)
-  Duration: 9.02s
-
-
-pest app-modules/messaging/tests:   Tests:    1 failed, 60 passed (323 assertions) (exit 1)
-FAIL: the tests of messaging do not pass alone
+pest app-modules/messaging/tests:   Tests:    60 passed (322 assertions) (exit 0)
+PASS: the tests of messaging pass with only messaging, shared, messaging and integration installed

@@ -21,8 +21,8 @@ Plan: `.specs/features/module-isolation-pilot/plan.md`
 
 ### S1 - Module Tests · 55 files · 123 KB · ~31k
 
-**C1** - Os 28 arquivos da tabela *Arquivos movidos* do plano existem em `backend/app-modules/<módulo>/tests/<Tipo>/<caminho relativo>`, sendo `<Tipo>` o primeiro nível do caminho antigo, e nenhum deles existe mais em `backend/tests` (AC 1)
-Proof: `bash .specs/features/module-isolation-pilot/proofs/c01-moved-files.sh` - table-driven sobre os 28 caminhos
+**C1** - Os 27 arquivos da tabela *Arquivos movidos* do plano existem em `backend/app-modules/<módulo>/tests/<Tipo>/<caminho relativo>`, sendo `<Tipo>` o primeiro nível do caminho antigo, e nenhum deles existe mais em `backend/tests` (AC 1)
+Proof: `bash .specs/features/module-isolation-pilot/proofs/c01-moved-files.sh` - table-driven sobre os 27 caminhos
 
 **C2** - Um único `make test` executa, na mesma execução e com exit 0, o caso `approves the fake approved card` (Payment, em `app-modules`) e o caso `shows the delivery estimate after the payment is approved` (composição, em `backend/tests`) (AC 2)
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c02-make-test.sh`
@@ -41,7 +41,6 @@ Proof: `bash .specs/features/module-isolation-pilot/proofs/c06-module-alone.sh i
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c06-module-alone.sh messaging`
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c06-module-alone.sh shared`
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c06-module-alone.sh catalog`
-Proof: `bash .specs/features/module-isolation-pilot/proofs/c06-module-alone.sh inventory`
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c06-module-alone.sh payment`
 
 **C7** - O `composer.json` de cada pacote que tem pasta `tests` mapeia `Modules\<Módulo>\Tests\` para `tests/`, os que não têm não mapeiam, e nenhuma chave `autoload` ou `autoload-dev` do `composer.json` da raiz menciona um namespace `Modules\...\Tests` (AC 5, porta 6)
@@ -120,7 +119,7 @@ Proof: `bash .specs/features/module-isolation-pilot/proofs/c27-migrate-existing.
 **C28** - A migration nova `2026_10_21_000001_drop_payments_order_id_foreign` mora em `app-modules/payment/database/migrations`, a `2026_10_06_000001_create_payments_table` mantém o nome, e o conjunto congelado passa a ter 16 nomes (porta 5)
 Proof: `make test-filter FILTER="places each module migration in its owner package|keeps the sixteen frozen migration names"` - `tests/Unit/Architecture/ModuleMigrationsTest.php`
 
-**C29** - Numa cópia sem o Payment, o `migrate:fresh` sai com 0, `POST /api/orders/{order}/payment` responde `404`, e a pasta `tests` de cada módulo restante que tem uma (Identity, Messaging, Shared, Catalog e Inventory) passa (AC 22)
+**C29** - Numa cópia sem o Payment, o `migrate:fresh` sai com 0, `POST /api/orders/{order}/payment` responde `404`, e a pasta `tests` de cada módulo restante que tem uma (Identity, Messaging, Shared e Catalog) passa (AC 22)
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c29-without-payment.sh`
 
 **C30** - Com os dois módulos instalados, `OrdersToPay` resolve para o adaptador do `Integration`. Ele devolve um `OrderToPay` com o id, o id do cliente e o total do pedido, e `awaitingPayment` verdadeiro só em `awaiting_payment` (tabela sobre os 4 status). Para um pedido desconhecido ou de outro cliente, devolve `null` (AC 23)
@@ -132,7 +131,7 @@ Proof: `make test-filter FILTER="declares the order port of the payment module"`
 **C32** - Um cliente sem sessão recebe `401` no `POST /api/orders/{order}/payment`, e a 21ª tentativa no mesmo minuto recebe `429` (autorização e limite, existentes)
 Proof: `make test-filter FILTER="requires a signed-in customer to pay|throttles payment attempts after 20 per minute"` - `app-modules/payment/tests/Feature/PaymentTest.php`
 
-**C33** - O `AGENTS.md`, o `README.md`, o `docs/domain-analysis.md` e o `.design/module-isolation.md` descrevem o pacote `Integration` e a sua exceção de fronteira, a porta do consumidor (`OrdersToPay`), o `503` `SERVICE_UNAVAILABLE`, a exceção da migration editada, as pastas `app-modules/<módulo>/tests` e os 6 módulos com testes nelas, e o conjunto congelado de 16 migrations. Nenhum deles diz mais que os testes ficam só em `backend/tests`, que são 15 migrations congeladas ou que `payments.order_id` tem chave estrangeira. Os links relativos novos resolvem (AC 24)
+**C33** - O `AGENTS.md`, o `README.md`, o `docs/domain-analysis.md` e o `.design/module-isolation.md` descrevem o pacote `Integration` e a sua exceção de fronteira, a porta do consumidor (`OrdersToPay`), o `503` `SERVICE_UNAVAILABLE`, a exceção da migration editada, as pastas `app-modules/<módulo>/tests` e os 5 módulos com testes nelas, e o conjunto congelado de 16 migrations. Nenhum deles diz mais que os testes ficam só em `backend/tests`, que são 15 migrations congeladas ou que `payments.order_id` tem chave estrangeira. Os links relativos novos resolvem (AC 24)
 Proof: `bash .specs/features/module-isolation-pilot/proofs/c33-docs.sh`
 
 **C34** - `make test` sai com 0, sem nenhum teste pulado ou incompleto (regressão; inclui o teste de log `logs each payment attempt without the card token`, que vai com o `PaymentTest`)
@@ -154,8 +153,8 @@ Proof: `make test-filter FILTER="creates a payment without creating an order"` -
 
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
-| arquivos movidos (28) | C1, table-driven sobre os 28 caminhos da tabela do plano | - |
-| módulos com testes que sobem sozinhos (6) | `Identity` C6 · `Messaging` C6 · `Shared` C6 · `Catalog` C6 · `Inventory` C6 · `Payment` C6 | - |
+| arquivos movidos (27) | C1, table-driven sobre os 27 caminhos da tabela do plano | - |
+| módulos com testes que sobem sozinhos (5) | `Identity` C6 · `Messaging` C6 · `Shared` C6 · `Catalog` C6 · `Payment` C6 | - |
 | tipos de teste num módulo (2) | `Feature` com `RefreshDatabase` C3 · `Unit` sem banco C3 | - |
 | `POST /api/orders/{order}/payment` statuses (8) | `202` C14 · `401` C32 · `402` C19 · `404` C16 · `409` C17 · `422` C20 · `429` C32 · `503` C21 | - |
 | regra "pode ser pago", combinações (4) | aguarda e sem aprovado C17 · aguarda e com aprovado C17 · não aguarda e sem aprovado C17 · não aguarda e com aprovado C17 (table-driven) | - |
@@ -217,3 +216,5 @@ Progresso do builder:
 
 - C3, C7 e C10 verdes no `make test` do commit `test(modules): move the isolated tests into their modules` (2106 testes); os 28 arquivos já estão nos módulos, e o C1 fecha quando a sua prova rodar
 - C8, C11 a C20, C21 (a primeira prova), C22 a C26, C28, C30, C31, C32, C37 e C38 verdes no `make test` do commit `feat(payment): read the order through a port of the payment module` (2253 testes); a linha `payments.order_id restricts` do `UuidKeysTest` saiu pela Key decision 5 do design, como o `Impact` do plano registra
+- Renegociado com diashelter em 2026-10-20: o Inventory saiu de C1 e C6 (27 arquivos, 5 módulos), porque a prova C6 mostrou que o `migrate:fresh` dele falha sem o Catalog (chave `stocks.product_id`); o `StockServiceTest` voltou para `backend/tests` (assunção 8 do plano). A prova C6 também achou um caso de composição no `EventDeliveryTest` do Messaging, que voltou para `tests/Feature/Outbox/ModuleEventsListenersTest.php`
+- C6 verde para `payment`, `identity`, `messaging`, `shared` e `catalog` (evidência em `evidence/c06-<módulo>.txt`)
