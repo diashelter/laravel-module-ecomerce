@@ -559,7 +559,7 @@ foreach ($modulesWithRepositoriesAndServices as $module) {
 }
 
 it('repositories do not use the module services: every module with both layers is covered', function () use ($modulesWithRepositoriesAndServices) {
-    expect($modulesWithRepositoriesAndServices)->toBe(['Catalog', 'Customers', 'Inventory', 'Ordering', 'Payment']);
+    expect($modulesWithRepositoriesAndServices)->toBe(['Catalog', 'Customers', 'Fulfillment', 'Inventory', 'Ordering', 'Payment']);
 });
 
 it('resolves the catalog order history to the order repository', function () {

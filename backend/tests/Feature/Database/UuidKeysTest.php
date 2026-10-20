@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Catalog\Persistence\Models\Category;
 use Modules\Catalog\Persistence\Models\Product;
 use Modules\Customers\Persistence\Models\CustomerAddress;
+use Modules\Fulfillment\Persistence\Models\Delivery;
 use Modules\Identity\Persistence\Models\CustomerAccount;
 use Modules\Identity\Persistence\Models\User;
 use Modules\Inventory\Persistence\Models\Stock;
@@ -13,10 +14,10 @@ use Modules\Payment\Persistence\Models\Payment;
 
 const UUID_KEY_COLUMNS = [
     'users.id', 'customers.id', 'categories.id', 'products.id', 'stocks.id', 'orders.id',
-    'order_items.id', 'payments.id', 'customer_addresses.id',
+    'order_items.id', 'payments.id', 'customer_addresses.id', 'deliveries.id',
     'stocks.product_id', 'category_product.product_id', 'category_product.category_id',
     'orders.customer_id', 'order_items.order_id', 'order_items.product_id',
-    'payments.order_id', 'customer_addresses.customer_id',
+    'payments.order_id', 'customer_addresses.customer_id', 'deliveries.order_id',
 ];
 
 it('types every business key and foreign key as uuid', function (string $column) {
@@ -51,6 +52,7 @@ it('assigns a version 7 uuid before the insert', function (string $model, string
     [OrderItem::class, 'order_items'],
     [Payment::class, 'payments'],
     [CustomerAddress::class, 'customer_addresses'],
+    [Delivery::class, 'deliveries'],
 ]);
 
 it('keeps the delete rule of every foreign key', function (string $table, string $column, string $rule) {
@@ -66,6 +68,7 @@ it('keeps the delete rule of every foreign key', function (string $table, string
     'orders.customer_id restricts' => ['orders', 'customer_id', 'r'],
     'order_items.product_id restricts' => ['order_items', 'product_id', 'r'],
     'payments.order_id restricts' => ['payments', 'order_id', 'r'],
+    'deliveries.order_id restricts' => ['deliveries', 'order_id', 'r'],
     'stocks.product_id cascades' => ['stocks', 'product_id', 'c'],
     'category_product.product_id cascades' => ['category_product', 'product_id', 'c'],
     'category_product.category_id cascades' => ['category_product', 'category_id', 'c'],
