@@ -74,7 +74,7 @@ A alternativa mais pesada é a integração só por eventos, com réplicas locai
 
 1. **Um módulo de negócio usa só a si mesmo, o `Shared` e os quatro contratos públicos do `Messaging`. O `Integration` é o único pacote que usa mais de um módulo de negócio, e só pelas fachadas deles.**
    - O `Integration` é infraestrutura, como o `Shared` e o `Messaging`: a biblioteca o descobre e ele não é removível.
-   - O `ModuleBoundariesTest` o nomeia como a única exceção, com uma expectativa por namespace.
+   - O `ModuleBoundariesTest` o trata como mais uma origem das regras de fachada, e o `ModuleLayersTest` o nomeia como o único pacote que pode nomear um módulo isolado, numa varredura dos arquivos de cada pacote (`src`, `routes`, `database` e `tests`). A varredura substituiu a expectativa por namespace prevista aqui na rodada 1: uma expectativa do Pest por namespace só vê as classes de `src`, e a factory e os testes de um módulo isolado também não podem nomear outro.
    - O código de execução da raiz (`bootstrap`, `config`, `app/`) não nomeia classes de módulos de negócio. A única exceção são os models de usuário dos guards, em `config/auth.php` (slice Identity).
    - A suíte de composição e os seeders da raiz podem nomear qualquer módulo.
 2. **Toda travessia é uma porta do consumidor, no vocabulário dele. O que o fornecedor oferece continua no `Contracts` dele, e o `Integration` tem um adaptador por porta.**
@@ -158,7 +158,7 @@ Alternatives considered: pôr o namespace de teste de cada módulo no `autoload-
 | Pedido que não aguarda pagamento | nada é cobrado | `409` `Este pedido não está aguardando pagamento.` |
 | Cobrança recusada | a tentativa recusada é gravada | `402` |
 | Ordering ausente | nada é cobrado nem gravado | `503` |
-| Payment ausente | a rota não existe; os pedidos ficam em `awaiting_payment`; a suíte do Ordering passa | `404` |
+| Payment ausente | a rota não existe; os pedidos ficam em `awaiting_payment`; a pasta de testes de cada módulo restante passa. O Ordering ainda não tem a sua: os testes dele esperam a slice Fulfillment ↔ Ordering, porque o Ordering e o Fulfillment assinam os eventos um do outro ao subir (correção da rodada 1) | `404` |
 | Suíte do Payment sem o Ordering | passa, com um duplo da porta de pedidos a pagar | — |
 
 A porta do Payment (`OrdersToPay`, que devolve um `OrderToPay`) descreve o pedido a pagar com o id, o id do cliente, o total em centavos e se ele aguarda pagamento. O status completo do Ordering não atravessa.

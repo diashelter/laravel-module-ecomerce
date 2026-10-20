@@ -16,7 +16,11 @@ required = {
     'the 5 modules with tests': lambda t: any(all(m in p for m in ('Identity', 'Messaging', 'Shared', 'Catalog', 'Payment')) and 'test' in p for p in t.split('\n\n')),
     'the 16 frozen migrations': lambda t: re.search(r'\b16 (nomes|migrations)', t) is not None,
 }
-stale = [r'congela os 15', r'\b15 nomes', r'continuam em `backend/tests`', r'`payments\.order_id` também usa `restrict`', r'Mover os testes para os módulos exigiria']
+stale = [r'congela os 15', r'\b15 nomes', r'continuam em `backend/tests`', r'`payments\.order_id` também usa `restrict`', r'Mover os testes para os módulos exigiria',
+         # the Payment reading Ordering's contract directly (found by the first verification round)
+         r'Payment → Ordering: PayableOrders', r'o Payment lê o pedido pelo contrato `PayableOrders`', r'O Payment lê o pedido pelo contrato',
+         r'Ordering \(lido pelo Payment\)', r'OrderForPayment`, para o Payment',
+         r'^\| Tentativas de pagamento presas ao pedido por `restrictOnDelete`']
 bad = 0
 for doc in docs:
     text = open(os.path.join(root, doc), encoding='utf-8').read()
@@ -24,7 +28,7 @@ for doc in docs:
         if not check(text):
             bad += 1; print(f'{doc}: does not describe {name}')
     for pattern in stale:
-        for m in re.finditer(pattern, text):
+        for m in re.finditer(pattern, text, re.M):
             bad += 1; print(f'{doc}: stale claim {m.group(0)!r}')
     base = os.path.dirname(os.path.join(root, doc))
     for m in re.finditer(r'\]\(([^)\s]+)\)', text):

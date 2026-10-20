@@ -88,8 +88,8 @@ Score = (
 
  A facade de cada módulo é o seu Contracts mais os seus Events (dados, nunca models):
  Ordering → Catalog: ProductCatalog            Ordering → Inventory: StockLevels, StockReservation
- Catalog → Inventory: StockInitializer,        Payment → Ordering: PayableOrders
-   StockLevels (estoque da vitrine)
+ Catalog → Inventory: StockInitializer,        Payment → Ordering: só pela porta OrdersToPay do
+   StockLevels (estoque da vitrine)              Payment, que o Integration liga ao PayableOrders
  Customers → Ordering: CustomerOrderHistory    Customers → Identity: CustomerAccounts
  Inventory → Catalog: ProductCatalog (produtos da lista de estoque)
 
@@ -105,7 +105,7 @@ Score = (
 | Inventory | Ordering | Open Host Service: contratos `StockReservation` (bloqueio e débito de estoque) e `StockLevels` (quantidades sem bloqueio, para o carrinho), que devolvem `StockQuantities` |
 | Inventory | Catalog | Open Host Service: contrato `StockInitializer` (abertura do estoque de um produto novo) e `StockLevels::stocksFor` (a linha de estoque de cada produto da página, `ProductStocks`, lida pela consulta da vitrine e do cadastro) |
 | Catalog | Inventory | Open Host Service: contrato `ProductCatalog` (`CatalogProducts`), lido pela consulta da lista de estoque do admin; o Inventory não conhece o model `Product` |
-| Ordering | Payment | Customer/Supplier: o Payment lê o pedido pelo contrato `PayableOrders` (`OrderForPayment`: cliente, total e status) e decide se ele pode ser pago |
+| Ordering | Payment | Customer/Supplier com a porta do consumidor: o Payment pede o pedido pela própria porta `OrdersToPay` (`OrderToPay`: cliente, total e se aguarda pagamento), que o pacote `Integration` liga ao `PayableOrders` do Ordering; o Payment decide se ele pode ser pago, e os dois não se nomeiam |
 | Ordering | Customers | Open Host Service: contrato `CustomerOrderHistory` (contagens e `OrderSummaries`) para as telas da conta e de clientes |
 | Identity | Customers | Open Host Service: contrato `CustomerAccounts` (`CustomerProfile`); as regras da conta ficam no Identity |
 | Payment | Ordering | Evento de domínio `PaymentApproved` (`payment.payment_approved`, com o `order_id`), gravado no outbox na transação da tentativa aprovada: o Ordering marca o pedido como pago |
@@ -137,7 +137,7 @@ Score = (
 - [`ValueObjects`](../backend/app-modules/ordering/src/Core/ValueObjects/): `ProductQuantities`, `OrderLines`/`OrderLine`, `ValidatedCart`/`ValidatedCartLine`, `CustomerIds`, `OrderCountsByCustomer` e `OrderCountsByPeriod` (a contagem por dia ou mês do `OrderMetrics`), listas tipadas que calculam os próprios totais. As do carrinho e das linhas do pedido são privadas ao Ordering: nenhuma assinatura de contrato ou evento as expõe (problema 12).
 - [`ValueObjects`](../backend/app-modules/ordering/src/Core/ValueObjects/) do vocabulário que os contratos trocam: `DeliveryAddress` (a cópia de um endereço) e `ShippingQuote` (preço em centavos e prazo em dias úteis), e o enum `BrazilianState` (as 27 UFs).
 - [Contratos](../backend/app-modules/ordering/src/Contracts/) definidos pelo Ordering: `DeliveryAddressBook` (`find(customerId, addressId): ?DeliveryAddress`, implementado pelo Customers) e `ShippingQuoter` (`quote(BrazilianState): ShippingQuote`, implementado pelo Fulfillment).
-- Contratos publicados pelo Ordering e implementados pelo `OrderRepository`: `PayableOrders` (`findForPayment(orderId): ?OrderForPayment`, para o Payment) e `CustomerOrderHistory` (`countForCustomer`, `countPerCustomer`, `recentForCustomer(...): OrderSummaries`, para o Customers). O `OrderMetrics` (`totalOrders`, `countPerDaySince` e `countPerMonthSince`, que devolvem `OrderCountsByPeriod`, para o dashboard) é implementado pela consulta `OrderMetricsQuery`, porque só lê.
+- Contratos publicados pelo Ordering e implementados pelo `OrderRepository`: `PayableOrders` (`findForPayment(customerId, orderId): ?OrderForPayment`, que o adaptador do `Integration` traduz para a porta `OrdersToPay` do Payment) e `CustomerOrderHistory` (`countForCustomer`, `countPerCustomer`, `recentForCustomer(...): OrderSummaries`, para o Customers). O `OrderMetrics` (`totalOrders`, `countPerDaySince` e `countPerMonthSince`, que devolvem `OrderCountsByPeriod`, para o dashboard) é implementado pela consulta `OrderMetricsQuery`, porque só lê.
 - `CheckoutService` (Service): valida o atendimento do pedido e monta os itens.
 - `CartValidationService` (Service): revalida o carrinho antes do checkout.
 - `PurchaseAvailabilityService` (Service): só as mensagens do carrinho e do checkout (`Produto indisponível.` e `Estoque insuficiente. Disponível: N.`), montadas sobre o `ProductAvailability` do Catalog. A regra "pode ser comprado" morava aqui e passou ao Catalog na HEL-6 (problema 15).
@@ -343,7 +343,7 @@ A camada de eventos (HEL-9, problema 14, e HEL-13, problema 16) é o módulo [`M
 | Backoffice | Catalog, Inventory, Identity, Ordering | Baixo | ✅ O dashboard lê os contratos `CatalogMetrics`, `StockMetrics`, `CustomerMetrics` e `OrderMetrics`, e nenhum repositório de outro módulo (HEL-6) | Manter: um número novo no dashboard é um método novo no contrato do dono |
 | Ordering | Inventory | Alto (necessário) | ✅ O checkout usa só o contrato `StockReservation` e o carrinho o `StockLevels`, por id e com `StockQuantities`, na mesma transação | Manter: a consistência sob concorrência exige a transação única |
 | Ordering | Catalog | Baixo | ✅ O snapshot de nome e preço está correto, e o Ordering lê os produtos pelo contrato `ProductCatalog`, sem o model `Product` nem o `ProductRepository` | Customer/Supplier: o Catalog publica preço e status |
-| Ordering | Payment | Baixo | ✅ O Payment lê o pedido pelo contrato `PayableOrders` e só grava `PaymentApproved` (com o id) no outbox, na transação da tentativa aprovada; o Ordering muda o status. O Payment tem modelo próprio (`Payment`) e cobra pela porta `PaymentGateway` | Manter a integração por contrato e eventos |
+| Ordering | Payment | Baixo | ✅ O Payment lê o pedido pela própria porta `OrdersToPay`, ligada pelo `Integration` ao `PayableOrders`, e só grava `PaymentApproved` (com o id) no outbox, na transação da tentativa aprovada; o Ordering o lê com a sua classe (`Core/InboundEvents`) e muda o status. O Payment tem modelo próprio (`Payment`), cobra pela porta `PaymentGateway`, não nomeia o Ordering e `payments` não aponta para `orders` | Manter a porta do consumidor e os eventos lidos pelo nome |
 | Payment | Fulfillment | Nenhum | ✅ Não se conhecem: o Fulfillment reage a `OrderPaid`, publicado pelo Ordering | Manter a integração por eventos |
 | Identity | Ordering | Baixo | ✅ O Ordering referencia o cliente só por id (`orders.customer_id`) e lê nome e e-mail pelo `Customer`. O `User` da equipe é proibido no Ordering, no Payment e no Fulfillment (`ModuleBoundariesTest`), e o cliente autenticado entra no Ordering só como id, com o dono conferido na busca | Conformist: manter o `Customer` somente leitura |
 | Catalog | Ordering | Baixo | ✅ A exclusão pergunta pelo contrato `ProductOrderHistory`, definido pelo Catalog e implementado pelo Ordering | Manter a inversão de dependência |
@@ -671,7 +671,8 @@ A facade de cada módulo é o seu `Contracts/` mais os seus `Events/`, o primeir
 | Quantidades em estoque (`StockQuantities`) | Inventory | A quantidade de cada produto, com 0 para o produto sem linha de estoque |
 | Pedido | Ordering | Compra confirmada, com itens congelados (snapshot) |
 | Tentativa de pagamento (`Payment`) | Payment | Uma cobrança de um pedido pelo gateway, aprovada ou recusada |
-| Pedido para pagamento (`OrderForPayment`) | Ordering (lido pelo Payment) | O que o Payment sabe de um pedido: cliente, total e status |
+| Pedido para pagamento (`OrderForPayment`) | Ordering (lido pelo adaptador do `Integration`) | O que o Ordering oferece de um pedido a pagar: cliente, total e status |
+| Pedido a pagar (`OrderToPay`) | Payment | O que o Payment sabe de um pedido, pela porta `OrdersToPay`: cliente, total e se aguarda pagamento |
 | Pedido resumido (`OrderSummary`) | Ordering (lido pelo Customers) | Um pedido do histórico do cliente: id, status, total e data |
 | Pagamento recusado | Payment | Tentativa negada pelo gateway, com motivo; o pedido continua aguardando pagamento |
 | Pagamento aprovado | Payment | Pedido que pode seguir para a entrega |
@@ -729,7 +730,7 @@ Os 5 passos organizaram o código e tornaram as fronteiras explícitas e verific
 | ✅ Resolvida: leituras do estoque pela relação `Product::stock()` | Vitrine e cadastro do admin (`ProductResource`), lista de estoque (`Stock::product`) | Resolvida na HEL-6 (problema 15): as relações saíram, e a consulta de cada módulo pede ao dono pelo contrato (`StockLevels::stocksFor` e `ProductCatalog`) |
 | Estoque excluído por `cascadeOnDelete` | FK `stocks.product_id` | É a regra 1:1 garantida pelo banco |
 | ✅ Resolvida: Catalog e Inventory usavam uma regra do Ordering na vitrine e na lista de estoque (achado ao resolver o problema 7) | `ProductResource`, `ProductController` e `StockResource` usavam o `PurchaseAvailabilityService` | Resolvida na HEL-6 (problema 15): a regra mora no `ProductAvailability` do Catalog, e o Ordering ficou só com as mensagens |
-| Tentativas de pagamento presas ao pedido por `restrictOnDelete` | FK `payments.order_id` | O Payment grava na própria tabela, mas referencia `orders`; pedidos nunca são apagados, então a FK só protege o histórico |
+| ✅ Resolvida: tentativas de pagamento presas ao pedido por `restrictOnDelete` | FK `payments.order_id` | Resolvida na isolação dos módulos (problema 19): a chave saiu, porque o Payment roda sem o Ordering; o pedido é conferido pela porta `OrdersToPay` antes de qualquer linha ser gravada, e pedidos e pagamentos continuam sem rota de exclusão |
 | ✅ Resolvida: eventos carregavam o model `Order` | `OrderPlaced`, `PaymentApproved`, `OrderPaid`, `OrderDelivered`, `DeliveryScheduled`, `DeliverOrder` | Resolvida no problema 11: carregam o `orderId` e os valores de que o consumidor precisa. O envelope e o outbox vieram na HEL-9 (problema 14) |
 | ✅ Resolvida: o dashboard lia os repositories de vários módulos | O caso de uso do dashboard e o `DashboardService` (que usa o enum `ProductStatus` do Catalog) | Resolvida na HEL-6 (problema 15): o `DashboardQuery` lê os contratos de métricas, e o `ProductStatus` entrou no vocabulário do Catalog |
 | ✅ Resolvida: um módulo usa `Http`, `ValueObjects`, `Enums` e `DTOs` de outro | O Customers usava as regras de e-mail e senha e o resource da conta do Identity, e o Customers e o Fulfillment, o trait de UF do Ordering | Resolvida no problema 12 (HEL-10): só o vocabulário que as assinaturas de `Contracts` e `Events` expõem é público, o `Http` é privado e cada módulo tem os próprios adaptadores |

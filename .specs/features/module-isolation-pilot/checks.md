@@ -80,14 +80,14 @@ Proof: `make test-filter FILTER="answers 404 before the status for another custo
 
 **C17** - Um pedido que não aguarda pagamento, ou que já tem pagamento aprovado, recebe `409` com `Este pedido não está aguardando pagamento.` e o gateway é chamado zero vezes. A regra decide sobre as 4 combinações de "aguarda pagamento" × "já tem aprovado", e só "aguarda e não tem" passa (AC 13)
 Proof: `make test-filter FILTER="rejects payment for orders that are not awaiting payment|rejects a second payment while the queue has not moved the order"` - `app-modules/payment/tests/Feature/PaymentTest.php`
-Proof: `make test-filter FILTER="decides whether an order can be paid"` - `app-modules/payment/tests/Unit/PaymentServiceTest.php`, table-driven sobre as 4 combinações
+Proof: `make test-filter FILTER="decides whether an order can be paid"` - `app-modules/payment/tests/Unit/Services/PaymentServiceTest.php`, table-driven sobre as 4 combinações
 
 **C18** - Quando uma aprovação concorrente grava primeiro, a tentativa perdedora responde `409`, fica uma só linha `approved` e nenhum `payment.payment_approved` dela (concorrência, existente)
 Proof: `make test-filter FILTER="loses the race to a concurrent approval with 409"` - `app-modules/payment/tests/Feature/PaymentTest.php`
-Proof: `make test-filter FILTER="raises a conflict when a concurrent approval wins the race"` - `app-modules/payment/tests/Feature/PayOrderUseCaseTest.php`
+Proof: `make test-filter FILTER="raises a conflict when a concurrent approval wins the race"` - `app-modules/payment/tests/Feature/UseCases/Payment/PayOrderUseCaseTest.php`
 
 **C19** - Uma cobrança recusada responde `402`, mantém a linha `declined` em `payments` e não grava `payment.payment_approved`; com o Ordering real, o pedido continua `awaiting_payment` (AC 14)
-Proof: `make test-filter FILTER="declines the payment and keeps the order awaiting payment|keeps the declined payment after raising the decline"` - `app-modules/payment/tests/Feature/PaymentTest.php` e `app-modules/payment/tests/Feature/PayOrderUseCaseTest.php`
+Proof: `make test-filter FILTER="declines the payment and keeps the order awaiting payment|keeps the declined payment after raising the decline"` - `app-modules/payment/tests/Feature/PaymentTest.php` e `app-modules/payment/tests/Feature/UseCases/Payment/PayOrderUseCaseTest.php`
 Proof: `make test-filter FILTER="keeps the order awaiting payment after a declined payment"` - `tests/Feature/PaymentFlowTest.php`
 
 **C20** - Um corpo inválido recebe `422` antes de a porta de pedidos ser consultada, para qualquer id: com uma porta que falharia o teste se chamada, e com a porta indisponível (AC 15)
@@ -107,7 +107,7 @@ Proof: `make test-filter FILTER="redelivers PaymentApproved to MarkOrderAsPaid"`
 **C24** - Para cada nome de evento inscrito, a classe leitora e a classe produtora (a de `Modules\<Prefixo>\Events` com o mesmo nome) declaram a mesma versão, e o payload que a produtora grava, lido pela leitora e regravado, dá o mesmo payload. Um par de fixtures que diverge numa chave é acusado (AC 19, porta 3)
 Proof: `make test-filter FILTER="reads every subscribed event from the payload its producer writes|detects a reader that disagrees with its producer"` - `tests/Unit/Architecture/OrderEventPayloadTest.php`
 
-**C25** - Nenhum arquivo fora de `Modules\Ordering\Core\Consumers` e `Modules\Ordering\Providers` (e da própria pasta) nomeia `Modules\Ordering\Core\InboundEvents`; a regra falha com a fixture de violação proposital (AC 20)
+**C25** - Nenhum arquivo de código de `app-modules/*/src` fora de `Modules\Ordering\Core\Consumers` e `Modules\Ordering\Providers` (e da própria pasta) nomeia `Modules\Ordering\Core\InboundEvents` (os testes de composição podem nomeá-la, como o C22 faz); a regra falha com a fixture de violação proposital (AC 20)
 Proof: `make test-filter FILTER="keeps the inbound events inside the consumers and the provider|fails on a deliberate violation"` - `tests/Unit/Architecture/ModuleLayersTest.php`
 
 **C26** - Depois do `migrate:fresh`, `payments.order_id` não tem chave estrangeira, e as outras 5 chaves entre módulos (`orders.customer_id`, `order_items.product_id`, `stocks.product_id`, `customer_addresses.customer_id`, `deliveries.order_id`) apontam para as mesmas tabelas de antes (AC 21, porta 5)
@@ -224,3 +224,4 @@ Progresso do builder:
 - **Boundary:** C1 a C38 fechados no commit `test(module-isolation): record the final proofs of the pilot`
 - **Settled mid-build:** diashelter tirou o Inventory de C1 e C6 (o `StockServiceTest` ficou na raiz, assunção 8); o C9 passou a usar a contagem real da base (628) e a conferir cada caso pelo nome, com as duas renomeações que o C11 e o C28 pedem; a linha `payments.order_id restricts` do `UuidKeysTest` saiu pela Key decision 5; o caso de listeners do `EventDeliveryTest` voltou para a composição (`Outbox/ModuleEventsListenersTest`), e a regra do C8 passou a acusar também o apoio da suíte da raiz
 - **Abandoned:** trocar o `foreignUuid('order_id')` por `uuid('order_id')` na migration editada; voltou ao literal aprovado na porta 5 (só sai o `->constrained()->restrictOnDelete()`)
+- Rodada 1 da verificação: FAIL só por documentação (C33). Correções: as 6 linhas da `docs/domain-analysis.md` que ainda descreviam o Payment lendo o `PayableOrders` ou a chave `payments.order_id`, com a prova do C33 ampliada para pegá-las; a linha "Payment ausente" do design alinhada ao C29 (o Ordering ainda não tem pasta de testes); a Key decision 1 do design e o `Impact` do plano descrevendo a regra de isolamento pela varredura do `ModuleLayersTest`; os caminhos de C17, C18 e C19 e o escopo de C25 (código de `app-modules/*/src`)
