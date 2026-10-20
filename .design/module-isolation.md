@@ -2,6 +2,7 @@
 
 > Plan from this document. Each slice below carries its own shape - copy it, do not re-derive it.
 > Status: confirmed by diashelter, 2026-10-20 (construir, com o piloto Payment ↔ Ordering primeiro).
+> Rodada 1 (2026-10-20): Module Tests e Payment ↔ Ordering construídos na branch `helterdias/module-isolation-pilot` (plano em `.specs/features/module-isolation-pilot`). O Payment pede o pedido pela porta `OrdersToPay`, o pacote `Integration` a liga ao `PayableOrders` ou a uma porta que responde `503 SERVICE_UNAVAILABLE`, a `2026_10_06_000001_create_payments_table` perdeu a referência a `orders` (o `ModuleMigrationsTest` passou a congelar 16 migrations) e os testes de 5 módulos (Identity, Messaging, Shared, Catalog e Payment) moram em `app-modules/<módulo>/tests`. Dois achados da prova de remoção mudaram a slice Module Tests (ver a slice).
 
 ## Situation
 
@@ -16,7 +17,7 @@ Construção. A HEL-12 fez de cada módulo um pacote, mas o módulo ainda não �
 
 Números que decidiram, contados no repositório em 2026-10-20:
 
-- **Testes:** dos 114 arquivos (637 casos), 29 tocam um só módulo e 68 tocam de 2 a 8, por import, por helper do `Pest.php` ou por rota. Outros 13 são de arquitetura e 4 são do kernel.
+- **Testes:** dos 114 arquivos (628 declarações de teste), 29 tocam um só módulo e 68 tocam de 2 a 8, por import, por helper do `Pest.php` ou por rota. Outros 13 são de arquitetura e 4 são do kernel.
 - **Código:** 112 linhas `use` ligam módulos de negócio em 14 pares, por 14 contratos e 4 eventos.
 - **Banco:** 6 chaves estrangeiras ligam os módulos, e o model `Customer` do Ordering lê a tabela `customers` do Identity.
 - **Factories:** 7 delas criam linhas de outro módulo.
@@ -104,8 +105,8 @@ A alternativa mais pesada é a integração só por eventos, com réplicas locai
 
 | Slice | Delivers | Status |
 |---|---|---|
-| [Module Tests](#module-tests) | os testes de cada módulo no módulo, rodando sozinhos, e o `backend/tests` como suíte de composição | clear |
-| [Payment ↔ Ordering](#payment--ordering) | pagamento e aprovação sem import entre os dois, com o pacote `Integration`, o primeiro adaptador e o primeiro `503` | clear |
+| [Module Tests](#module-tests) | os testes de cada módulo no módulo, rodando sozinhos, e o `backend/tests` como suíte de composição | done - rodada 1 (27 arquivos em 5 módulos) |
+| [Payment ↔ Ordering](#payment--ordering) | pagamento e aprovação sem import entre os dois, com o pacote `Integration`, o primeiro adaptador e o primeiro `503` | done - rodada 1 |
 | [Removal Proof](#removal-proof) | o job de remoção no CI, começando pelo Backoffice e pelo Payment | open — 1 default taken |
 | [Backoffice](#backoffice) | o dashboard sobre portas próprias | clear |
 | [Fulfillment ↔ Ordering](#fulfillment--ordering) | frete no checkout, agendamento e entrega sem import entre os dois, e o `BrazilianState` no `Shared` | clear |
@@ -138,11 +139,11 @@ Derivable from the repository, left to the plan, tudo como o Payment fica depois
 | Teste que precisa de um produto, estoque, conta ou pedido de outro módulo | usa o duplo da porta do próprio módulo; nenhuma factory, model ou helper de outro módulo |
 | Teste que entra autenticado | usa a identidade de teste do `Shared` (o id e, para a equipe, o papel) |
 | Fluxo entre módulos reais, arquitetura, compatibilidade de payload, adaptador ou seeder | fica em `backend/tests` e só roda com todos os módulos |
-| Factory que hoje cria a linha de outro módulo (as 7) | gera o id da outra tabela sem criar a linha |
+| Factory que hoje cria a linha de outro módulo (as 7) | gera o id da outra tabela sem criar a linha, na slice da sua travessia, quando a chave estrangeira sai (a `PaymentFactory` no piloto): antes disso, o id sem linha falharia na chave |
 | `make test`, `make test-filter`, worktree e CI | rodam as suítes dos módulos e a de composição, sem nenhum passo novo |
 | Helper de teste de um módulo | só os testes do próprio módulo o usam |
 
-Esta slice move os 29 arquivos de um só módulo e os 4 do kernel. Cada arquivo que cruza módulos muda de lugar na slice da sua travessia.
+Esta slice moveu 27 arquivos para 5 módulos (Identity, Messaging, Shared, Catalog e Payment). Um arquivo só muda de lugar quando o módulo dele sobe e migra sozinho: o Ordering e o Fulfillment assinam os eventos um do outro ao subir, e a migration de `stocks` aponta para `products`, do Catalog, então os testes desses três esperam a slice da sua travessia. Cada arquivo que cruza módulos muda de lugar na slice da sua travessia.
 
 Alternatives considered: pôr o namespace de teste de cada módulo no `autoload-dev` da raiz. Isso deixaria o código de teste fora do autoload de produção do pacote, mas exigiria uma linha na raiz por módulo, contra a decisão 2 da HEL-12.
 
@@ -160,7 +161,7 @@ Alternatives considered: pôr o namespace de teste de cada módulo no `autoload-
 | Payment ausente | a rota não existe; os pedidos ficam em `awaiting_payment`; a suíte do Ordering passa | `404` |
 | Suíte do Payment sem o Ordering | passa, com um duplo da porta de pedidos a pagar | — |
 
-A porta do Payment descreve o pedido a pagar com o id, o id do cliente, o total em centavos e se ele aguarda pagamento. O status completo do Ordering não atravessa.
+A porta do Payment (`OrdersToPay`, que devolve um `OrderToPay`) descreve o pedido a pagar com o id, o id do cliente, o total em centavos e se ele aguarda pagamento. O status completo do Ordering não atravessa.
 
 ```mermaid
 sequenceDiagram
