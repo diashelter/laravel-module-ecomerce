@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/event-idempotency/plan.md`
 
-23 checks em 3 slices · 4 one-way doors (a chave de "já agendei", o estado "entregue", o padrão do produtor, o nome da migration) · 0 open
+24 checks em 3 slices · 4 one-way doors (a chave de "já agendei", o estado "entregue", o padrão do produtor, o nome da migration) · 0 open
 
 Notação das provas. `make test-filter FILTER="<regex>"` roda no checkout da construção (no worktree, o Makefile já usa o código e o banco de testes dele) e passa no `--filter` do Pest o trecho do nome do teste. Os testes novos nomeados abaixo são escritos antes do código que os satisfaz e a partir deste texto, nunca lendo a implementação. As provas de comando são scripts em `.specs/features/event-idempotency/proofs/`, que saem com 0 só quando a afirmação vale e gravam a saída em `.specs/features/event-idempotency/evidence/c<NN>.txt`. Nos testes de reentrega, "entregar duas vezes" é chamar o `EventDelivery` duas vezes com o mesmo `EventEnvelope`, como o `DeliverEvent` e o `events:consume` fazem, e nunca o `handle()` direto.
 
@@ -52,8 +52,8 @@ Proof: `make test-filter FILTER="keeps the first delivered_at and announces noth
 **C13** - Se gravar o `OrderDelivered` falha depois de `delivered_at` ser preenchido, `delivered_at` volta a nulo e nenhuma mensagem fica; o retry seguinte, com o outbox sadio, entrega o pedido (AC 10)
 Proof: `make test-filter FILTER="rolls back delivered_at when the event cannot be recorded"` - `tests/Feature/Fulfillment/DeliverOrderTest.php`
 
-**C14** - O `DeliverOrder` para um pedido sem linha cria a linha com `delivered_at` preenchido e `estimated_delivery_on` igual à data de hoje, e grava um `OrderDelivered` (AC 11)
-Proof: `make test-filter FILTER="creates the delivered row for an order that has none"` - `tests/Feature/Fulfillment/DeliverOrderTest.php`
+**C14** - O `DeliverOrder` para um pedido sem linha não grava linha nem `OrderDelivered` (AC 11, revisto na review do PR)
+Proof: `make test-filter FILTER="changes nothing for an order without a delivery row"` - `tests/Feature/Fulfillment/DeliverOrderTest.php`
 
 **C15** - Depois de agendar e entregar um pedido pelo Fulfillment, `orders.status` e `orders.updated_at` são os de antes (o Fulfillment nunca altera o pedido) (AC 12)
 Proof: `make test-filter FILTER="leaves the order row untouched"` - `tests/Feature/Fulfillment/DeliverOrderTest.php`
@@ -115,7 +115,7 @@ Proof: `make load-test TYPE=smoke`
 - idempotency: C3, C4, C12, C16, C17, C18, C19, C20, C21, C22
 - authorization: n/a - nenhuma rota nem contrato novo; os consumidores e o job rodam nos workers
 - concurrency: C7 (simulada na mesma conexão, não em dois processos; a unicidade do banco em C8 é o que arbitra de verdade)
-- data lifecycle: C8 (o pedido com linha não pode ser apagado), C14 (a linha do pedido que estava na fila antes da mudança); a poda de 7 dias do outbox não afeta a guarda, que é a linha
+- data lifecycle: C8 (o pedido com linha não pode ser apagado), C14 (o job do pedido que estava na fila antes da mudança não grava nada); a poda de 7 dias do outbox não afeta a guarda, que é a linha
 - dependency failure: C6 (a fila fora do ar depois do commit)
 - state transitions: C1, C3, C4, C11, C12, C15
 - observability: n/a - o plano não pede log novo; os logs de hoje ("Delivery scheduled." e "Carrier delivered the order.") continuam, e se eles saem numa reentrega que não fez nada é decisão do diff

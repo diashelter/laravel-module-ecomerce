@@ -3285,7 +3285,7 @@
             "dist": {
                 "type": "path",
                 "url": "app-modules/fulfillment",
-                "reference": "6841f3df3fb2847b06210f53f6924d27065de732"
+                "reference": "07b6a5ac414b29ae3aec63591e90cc74cdbe5278"
             },
             "type": "library",
             "extra": {
@@ -3297,7 +3297,8 @@
             },
             "autoload": {
                 "psr-4": {
-                    "Modules\\Fulfillment\\": "src/"
+                    "Modules\\Fulfillment\\": "src/",
+                    "Modules\\Fulfillment\\Database\\Factories\\": "database/factories/"
                 }
             },
             "license": [

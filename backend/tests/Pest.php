@@ -15,6 +15,8 @@ use Modules\Customers\Persistence\Models\CustomerAddress;
 use Modules\Identity\Persistence\Models\CustomerAccount;
 use Modules\Identity\Persistence\Models\User;
 use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Messaging\Contracts\DomainEvent;
+use Modules\Messaging\Core\EventDelivery;
 use Modules\Messaging\Core\EventEnvelope;
 use Modules\Messaging\Core\EventTransport;
 use Modules\Messaging\Core\RabbitMq\RabbitMqConnector;
@@ -431,4 +433,23 @@ function storeFlag(string $value): void
 function consumeUntilEmpty(): int
 {
     return Artisan::call('events:consume', ['--stop-when-empty' => true]);
+}
+
+/** The envelope the relay would build for an event, with a fresh message id (override `id` to redeliver the same message). */
+function envelopeOf(DomainEvent $event, array $overrides = []): EventEnvelope
+{
+    return new EventEnvelope(...array_merge([
+        'id' => unknownId(),
+        'name' => $event::eventName(),
+        'version' => $event::eventVersion(),
+        'payload' => $event->toPayload(),
+        'occurredAt' => CarbonImmutable::now(),
+        'requestId' => null,
+    ], $overrides));
+}
+
+/** One delivery of the envelope to the consumer through the rules both transports share (the DeliverEvent job and events:consume call the same class). */
+function deliverEnvelope(EventEnvelope $envelope, string $consumer): void
+{
+    app(EventDelivery::class)->deliver($envelope, $consumer);
 }

@@ -111,7 +111,7 @@ sequenceDiagram
 Alternatives considered: consultar `outbox_messages` por `DeliveryScheduled` do pedido - ganha se o outbox virar a fonte de verdade de "já anunciei", mas vaza o interior do `Shared` e a mensagem some em 7 dias. Consultar o Ordering por `estimated_delivery_on` - ganha se a data chegasse ao pedido de forma síncrona, o que não acontece.
 
 Open, default taken:
-1. Pedidos pagos antes desta mudança, com um `DeliverOrder` já na fila e sem linha em `deliveries` - o `DeliverOrder` sem linha cria a linha já entregue e anuncia o `OrderDelivered` uma vez. Só afeta bancos de desenvolvimento.
+1. Pedidos pagos antes desta mudança, com um `DeliverOrder` já na fila e sem linha em `deliveries` - o `DeliverOrder` sem linha não muda nada e não anuncia (o pedido continua pago). Só afeta bancos de desenvolvimento. O default inicial (criar a linha já entregue) saiu na review do PR: era código permanente para uma janela de segundos depois da migration e gravava o dia UTC como data prevista. Gravar a linha volta quando um backfill de produção precisar.
 
 ### DeliverOrder
 
@@ -122,7 +122,7 @@ Open, default taken:
 | Primeira execução | Preenche `delivered_at` e grava `OrderDelivered` na mesma transação | um `OrderDelivered` em `outbox_messages` |
 | Retry ou job duplicado | `delivered_at` já preenchido: não grava nada | nenhuma linha nova em `outbox_messages` |
 | Falha depois de preencher `delivered_at` e antes do commit | A transação desfaz; o retry entrega | `tries = 3` do job |
-| Pedido sem linha em `deliveries` | Ver a pergunta aberta do slice Delivery | |
+| Pedido sem linha em `deliveries` | Não grava nada (ver a pergunta aberta do slice Delivery) | nenhuma linha nova em `outbox_messages` |
 
 ### Redelivery tests
 
@@ -130,7 +130,7 @@ Open, default taken:
 
 | State | What should happen | Caller sees |
 |---|---|---|
-| Mesmo envelope entregue duas vezes a cada um dos cinco consumidores | O estado do banco e a contagem de linhas em `outbox_messages` e de jobs na fila são iguais depois da primeira e da segunda | teste verde |
+| Mesmo envelope entregue duas vezes a cada um dos cinco consumidores | O estado do banco e a contagem de linhas em `outbox_messages` são iguais depois da primeira e da segunda; o `OrderPaid` de um pedido ainda não entregue enfileira o `DeliverOrder` de novo (Key decision 2) | teste verde |
 | O `DeliverOrder` executado duas vezes | Um só `OrderDelivered` | teste verde |
 | Mesma mensagem pelos dois transportes | O resultado é o mesmo no `QueueEventTransport` e no `RabbitMqEventTransport` | teste verde |
 | Ciclo completo com `OrderPaid` reentregue no meio | Termina com um evento de cada nome e o pedido entregue | `OrderStatusFlowTest` continua verde |

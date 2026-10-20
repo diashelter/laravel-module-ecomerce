@@ -3,10 +3,16 @@
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
+use Modules\Fulfillment\Persistence\Models\Delivery;
 use Modules\Messaging\Contracts\EventSubscriptions;
 use Modules\Messaging\Core\RabbitMq\RabbitMqConnector;
+use Modules\Ordering\Core\Enums\OrderStatus;
+use Modules\Ordering\Events\OrderPaid;
+use Modules\Ordering\Persistence\Models\Order;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Tests\Feature\Outbox\Fixtures\FailingConsumer;
@@ -281,4 +287,20 @@ it('connects again after it loses the connection while consuming', function () {
     Sleep::assertSleptTimes(1);
     Sleep::assertSequence([Sleep::for(5)->seconds()]);
     expect(readyMessages('testing.spy_consumer'))->toBe(0);
+});
+
+it('consumes OrderPaid twice from rabbitmq without announcing twice', function () {
+    // A requeue after a lost acknowledgement hands the consumer the same envelope again.
+    storeFlag('rabbitmq');
+    Queue::fake();
+    $order = Order::factory()->status(OrderStatus::PaymentApproved)->create();
+    $envelope = envelopeOf(new OrderPaid($order->id, 2));
+    publishToBroker($envelope);
+    publishToBroker($envelope);
+
+    expect(consumeUntilEmpty())->toBe(0);
+
+    expect(Delivery::query()->where('order_id', $order->id)->count())->toBe(1)
+        ->and(outboxMessages('fulfillment.delivery_scheduled'))->toHaveCount(1)
+        ->and(DB::table('outbox_messages')->count())->toBe(1);
 });

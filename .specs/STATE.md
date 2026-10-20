@@ -9,10 +9,11 @@
 
 ## Handoff
 
-**Feature**: event-idempotency
-**Where**: plan.md escrito e validado; checks.md ainda não existe
+**Feature**: event-idempotency (HEL-16)
+**Where**: implementada e verificada (`verification.md`: PASS, 24/24 checks, 5 de 5 mutantes mortos, `validate_verification.py` com exit 0)
 **In progress**: nada
-**Next step**: o usuário revisa `.specs/features/event-idempotency/plan.md`; depois, escrever `checks.md`
+**Next step**: abrir o PR da branch `helterdias/hel-16-event-idempotency` (nada foi enviado ao remoto); antes, `make migrate` e `make queue-restart` no ambiente de dev
 **Blockers**: none
-**Uncommitted**: `.specs/features/event-idempotency/plan.md`, `.specs/STATE.md`
-**Branch**: main
+**Uncommitted**: none
+**Branch**: helterdias/hel-16-event-idempotency
+**Achados não bloqueantes da verificação**: C21 só exercita o ramo "já entregue"; C14 não distinguia fusos e `.design/event-idempotency.md:133` contradizia a Key decision 2; os dois saíram na review do PR #29 (o `DeliverOrder` sem linha não grava nada, e a linha 133 diz que o job pode ser enfileirado de novo)

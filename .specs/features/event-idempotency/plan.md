@@ -35,7 +35,7 @@ O padrão novo, copiado por todo produtor depois (door 3): o evento só é grava
 | domain | termo existente: o Fulfillment era um módulo sem estado e passa a ter a camada `Persistence`; quem ramifica nisso: `ModuleLayersTest`, `ModuleBoundariesTest` e `ModuleMigrationsTest`, que congela os 14 nomes de migration e passa a congelar 15 |
 | domain | termo existente: a promessa "os consumidores são idempotentes" do README (linhas sobre inbox e sobre o retry do `DeliverOrder`), do `AGENTS.md` e de `docs/domain-analysis.md` passa a valer por uma regra escrita e um teste por consumidor |
 | stored data | tabela nova `deliveries`; nenhuma tabela existente muda, e a migration nova roda em cada banco com `make migrate` |
-| stored data | pedidos pagos antes da mudança, com um `DeliverOrder` já na fila e sem linha: o job cria a linha já entregue (assunção 1) |
+| stored data | pedidos pagos antes da mudança, com um `DeliverOrder` já na fila e sem linha: o job não muda nada (assunção 1, revista na review do PR) |
 | stored data | um pedido entregue antes da mudança não tem linha: um `OrderPaid` dele reentregue depois cria a linha, anuncia `DeliveryScheduled` e agenda o job uma vez, o mesmo efeito de hoje, que o Ordering absorve. Só afeta bancos de desenvolvimento |
 
 ## Relations
@@ -89,7 +89,7 @@ Um retry ou um job duplicado de `DeliverOrder` não grava outro `OrderDelivered`
 8. WHEN o `DeliverOrder` roda para um pedido com `delivered_at` nulo THEN the system SHALL preencher `delivered_at` e gravar um `OrderDelivered` em `outbox_messages` na mesma transação
 9. WHEN o `DeliverOrder` roda de novo para um pedido com `delivered_at` preenchido THEN the system SHALL manter `delivered_at` e gravar zero mensagens
 10. IF a transação do `DeliverOrder` falha depois de preencher `delivered_at` THEN the system SHALL desfazer as duas escritas, e o retry (`tries = 3`) SHALL entregar o pedido
-11. WHEN o `DeliverOrder` roda para um pedido sem linha em `deliveries` THEN the system SHALL criar a linha já entregue, com `estimated_delivery_on` igual à data de hoje, e gravar um `OrderDelivered`
+11. WHEN o `DeliverOrder` roda para um pedido sem linha em `deliveries` THEN the system SHALL não gravar linha nem `OrderDelivered` (revisto na review do PR: antes criava a linha já entregue)
 12. The system SHALL NOT alterar `orders.status` a partir do Fulfillment
 
 **Independent test:** rodar o job duas vezes para o mesmo pedido e contar as mensagens `fulfillment.order_delivered`.
@@ -126,7 +126,7 @@ Cada consumidor tem um teste que entrega o mesmo envelope duas vezes pelo caminh
 
 | Assumption | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
-| `DeliverOrder` para um pedido sem linha | cria a linha já entregue, com a data de hoje em `estimated_delivery_on`, e anuncia o `OrderDelivered` uma vez | a coluna da data não tem valor nulo; o design confirmou o comportamento e só afeta bancos de desenvolvimento | y (comportamento), n (a data de hoje) |
+| `DeliverOrder` para um pedido sem linha | não grava linha nem `OrderDelivered` | só afeta bancos de desenvolvimento; a review do PR tirou a criação da linha já entregue, que gravava o dia UTC como data prevista | y |
 | `DeliverOrder` duplicado enquanto o pedido não foi entregue | os jobs extras rodam e viram no-op pela guarda de `delivered_at` | é o preço de reparar um enfileiramento perdido sem uma coluna a mais; está na Key decision 2 do design | y |
 | nome e posição da migration | `2026_10_20_000001_create_deliveries_table`, e o `ModuleMigrationsTest` ganha o nome na lista de donos e passa a congelar 15 | o teste congela nomes já executados; um nome novo exige estender a lista, não afrouxá-la | n |
 | "hoje" e `delivered_at` | o relógio da aplicação (`now()`), no fuso da aplicação | é o que o restante do código usa | n |
