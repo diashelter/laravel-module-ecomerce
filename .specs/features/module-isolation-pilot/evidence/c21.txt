@@ -1,8 +1,8 @@
-Preparing worktree (detached HEAD 91be57d)
-HEAD is now at 91be57d docs(specs): record the module isolation decision and handoff
+Preparing worktree (detached HEAD 40058c5)
+HEAD is now at 40058c5 fix(architecture): catch module tests calling outside helpers
 removal copy payment-without-ordering without: backoffice catalog customers fulfillment identity inventory ordering
- Container ecommerce-api-run-a623cbcc0f39 Creating 
- Container ecommerce-api-run-a623cbcc0f39 Created 
+ Container ecommerce-api-run-8d5433b74ab5 Creating 
+ Container ecommerce-api-run-8d5433b74ab5 Created 
 ./composer.json has been updated
 Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/identity modules/inventory modules/ordering
 Loading composer repositories with package information
@@ -23,7 +23,6 @@ Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Allow
 Class Tests\Unit\Architecture\Fixtures\Layout\InboundEventOutsideConsumers\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/inbound-event-outside-consumers/packages/ordering/src/Core/UseCases/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\InfrastructureUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/infrastructure-uses-business/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\ModuleTestUsesComposition\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/module-test-uses-composition/tests/Feature/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
-Class Tests\Unit\Architecture\Fixtures\Layout\ModuleTestUsesBusiness\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/module-test-uses-business/tests/Feature/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\SharedUsesMessaging\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/shared-uses-messaging/src/Support/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\FolderOutside\Stray located in ./tests/Unit/Architecture/Fixtures/Layout/folder-outside/src/Controllers/Stray.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
 Class Tests\Unit\Architecture\Fixtures\Layout\CoreUsesHttp\Offender located in ./tests/Unit/Architecture/Fixtures/Layout/core-uses-http/src/Core/Offender.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
@@ -60,30 +59,30 @@ Use the `composer fund` command to find out more!
 
 No security vulnerability advisories found.
 Banco de testes: ecommerce_testing_removal_payment_without_ordering (vhost do RabbitMQ: ecommerce_testing_removal_payment_without_ordering)
- Container ecommerce-api-run-f85598d5ff5f Creating 
- Container ecommerce-api-run-f85598d5ff5f Created 
+ Container ecommerce-api-run-52d15bbafee2 Creating 
+ Container ecommerce-api-run-52d15bbafee2 Created 
 
    INFO  Preparing database.  
 
-  Creating migration table ...................................... 15.05ms DONE
+  Creating migration table ...................................... 27.75ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000001_create_cache_table .......................... 16.93ms DONE
-  0001_01_01_000002_create_jobs_table ........................... 22.51ms DONE
-  2026_10_06_000001_create_payments_table ........................ 8.57ms DONE
-  2026_10_15_000001_create_outbox_messages_table ................. 5.81ms DONE
-  2026_10_18_170032_create_features_table ........................ 6.24ms DONE
-  2026_10_21_000001_drop_payments_order_id_foreign ............... 0.95ms DONE
+  0001_01_01_000001_create_cache_table .......................... 28.35ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 22.36ms DONE
+  2026_10_06_000001_create_payments_table ....................... 10.95ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 9.27ms DONE
+  2026_10_18_170032_create_features_table ........................ 5.76ms DONE
+  2026_10_21_000001_drop_payments_order_id_foreign ............... 1.09ms DONE
 
- Container ecommerce-api-run-bbf6602c7297 Creating 
- Container ecommerce-api-run-bbf6602c7297 Created 
+ Container ecommerce-api-run-38c7f8019d4e Creating 
+ Container ecommerce-api-run-38c7f8019d4e Created 
 
    PASS  Appmodules\payment\tests\Feature\WithoutOrderingProofTest
-  ✓ it answers 503 for the payment without the ordering module installe… 0.90s  
+  ✓ it answers 503 for the payment without the ordering module installe… 0.94s  
 
   Tests:    1 passed (7 assertions)
-  Duration: 1.18s
+  Duration: 1.90s
 
 proof test:   Tests:    1 passed (7 assertions) (exit 0)
 PASS: without the ordering module the payment answers 503 and writes nothing

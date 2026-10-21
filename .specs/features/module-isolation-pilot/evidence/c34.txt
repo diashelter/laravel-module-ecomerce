@@ -1,2 +1,2 @@
-make test exit 0:   Tests:    2254 passed (9264 assertions)
+make test exit 0:   Tests:    2256 passed (9266 assertions)
 PASS: the whole suite passes with nothing skipped

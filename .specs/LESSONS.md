@@ -176,6 +176,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C33, proofs/c33-docs.sh:27 (verification round 4) (docs)
 - last seen: 2026-10-21T10:51:29Z
 
+### L-028 - A docs proof for an enumerated list must match the list itself, not any paragraph that names the same members elsewhere.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: module-isolation-pilot
+- evidence: R5-M5, proofs/c33-docs.sh:16 (verification round 5) (docs)
+- last seen: 2026-10-21T12:18:09Z
+
+### L-029 - A planted violation must fail only through the surface it plants; boilerplate that alone trips the rule makes the fixture prove nothing.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `backend/tests/Unit/Architecture` · harmful: 0
+- features: module-isolation-pilot
+- evidence: C8 class-name mutant survives at 8418897 (verification round 5) (backend/tests/Unit/Architecture)
+- last seen: 2026-10-21T12:18:09Z
+
+### L-030 - A rule that matches calls by declared name must collect declarations from every file that can declare one, not only the conventional ones.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `backend/tests/Unit/Architecture` · harmful: 0
+- features: module-isolation-pilot
+- evidence: ModuleLayout.php:189-198 (verification round 5) (backend/tests/Unit/Architecture)
+- last seen: 2026-10-21T12:18:09Z
+
+### L-031 - Count tests from the runner's output, not from declarations in the tree, or never-run fixtures inflate the count.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `tests` · harmful: 0
+- features: module-isolation-pilot
+- evidence: C9, proofs/c09-test-count.sh:13 (verification round 5) (tests)
+- last seen: 2026-10-21T12:18:09Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

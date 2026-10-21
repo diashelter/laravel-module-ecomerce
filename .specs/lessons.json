@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 28,
+  "next_id": 32,
   "lessons": [
     {
       "id": "L-001",
@@ -490,6 +490,78 @@
       ],
       "created": "2026-10-21T10:51:29Z",
       "last_seen": "2026-10-21T10:51:29Z"
+    },
+    {
+      "id": "L-028",
+      "key": "surviving_mutant::a docs proof for an enumerated list must match the list itself not any paragraph that names the same members elsewhere",
+      "text": "A docs proof for an enumerated list must match the list itself, not any paragraph that names the same members elsewhere.",
+      "signal": "surviving_mutant",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "module-isolation-pilot"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "R5-M5, proofs/c33-docs.sh:16 (verification round 5) (docs)"
+      ],
+      "created": "2026-10-21T12:18:09Z",
+      "last_seen": "2026-10-21T12:18:09Z"
+    },
+    {
+      "id": "L-029",
+      "key": "surviving_mutant::a planted violation must fail only through the surface it plants boilerplate that alone trips the rule makes the fixture prove nothing",
+      "text": "A planted violation must fail only through the surface it plants; boilerplate that alone trips the rule makes the fixture prove nothing.",
+      "signal": "surviving_mutant",
+      "scope": "backend/tests/Unit/Architecture",
+      "status": "candidate",
+      "features": [
+        "module-isolation-pilot"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C8 class-name mutant survives at 8418897 (verification round 5) (backend/tests/Unit/Architecture)"
+      ],
+      "created": "2026-10-21T12:18:09Z",
+      "last_seen": "2026-10-21T12:18:09Z"
+    },
+    {
+      "id": "L-030",
+      "key": "spec_precision_gap::a rule that matches calls by declared name must collect declarations from every file that can declare one not only the conventional ones",
+      "text": "A rule that matches calls by declared name must collect declarations from every file that can declare one, not only the conventional ones.",
+      "signal": "spec_precision_gap",
+      "scope": "backend/tests/Unit/Architecture",
+      "status": "candidate",
+      "features": [
+        "module-isolation-pilot"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "ModuleLayout.php:189-198 (verification round 5) (backend/tests/Unit/Architecture)"
+      ],
+      "created": "2026-10-21T12:18:09Z",
+      "last_seen": "2026-10-21T12:18:09Z"
+    },
+    {
+      "id": "L-031",
+      "key": "spec_precision_gap::count tests from the runner s output not from declarations in the tree or never run fixtures inflate the count",
+      "text": "Count tests from the runner's output, not from declarations in the tree, or never-run fixtures inflate the count.",
+      "signal": "spec_precision_gap",
+      "scope": "tests",
+      "status": "candidate",
+      "features": [
+        "module-isolation-pilot"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C9, proofs/c09-test-count.sh:13 (verification round 5) (tests)"
+      ],
+      "created": "2026-10-21T12:18:09Z",
+      "last_seen": "2026-10-21T12:18:09Z"
     }
   ]
 }
