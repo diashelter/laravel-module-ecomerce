@@ -143,14 +143,15 @@ final class ModuleLayout
 
     /**
      * Files of a module's tests that name another business module, the composition package or the support of
-     * the composition suite (backend/tests, but its TestCase): the tests of a module run with only that
-     * module, Shared and Messaging installed.
+     * the composition suite (backend/tests, but its TestCase), or that call a helper declared by one of them:
+     * the tests of a module run with only that module, Shared and Messaging installed.
      *
      * @return list<string>
      */
     public static function testsViolations(string $tests, string $module): array
     {
         $violations = [];
+        $foreignHelpers = self::foreignHelpersOf($module);
 
         foreach (self::phpFilesIn($tests) as $file) {
             foreach (self::referencesIn($file) as [$referencedModule]) {
@@ -164,9 +165,44 @@ final class ModuleLayout
             foreach (array_diff($matches[1], ['TestCase']) as $support) {
                 $violations[] = substr($file, strlen($tests) + 1).' -> Tests\\'.$support;
             }
+
+            // A plain function call, never a method, a static call, a closure in a variable or a declaration.
+            preg_match_all('/(?<![\w$>:])(?<!function )([a-z][A-Za-z0-9_]*)\(/', (string) file_get_contents($file), $calls);
+
+            foreach (array_intersect_key($foreignHelpers, array_flip($calls[1])) as $helper => $owner) {
+                $violations[] = substr($file, strlen($tests) + 1)." -> {$helper}() of {$owner}";
+            }
         }
 
         return array_values(array_unique($violations));
+    }
+
+    /**
+     * The test helpers a module's tests may not call, with the owner of each: the ones of tests/Pest.php and
+     * of the other business modules and the composition package. tests/Pest.php loads every helper for every
+     * test, so a call to one names no class and would pass the rules above.
+     *
+     * @return array<string, string>
+     */
+    private static function foreignHelpersOf(string $module): array
+    {
+        $files = [base_path('tests/Pest.php') => 'the composition suite'];
+
+        foreach (array_diff([...self::BUSINESS, ...self::COMPOSITION], [$module]) as $owner) {
+            $files[self::packageOf($owner).'/tests/Helpers.php'] = $owner;
+        }
+
+        $helpers = [];
+
+        foreach (array_filter($files, is_file(...), ARRAY_FILTER_USE_KEY) as $file => $owner) {
+            preg_match_all('/^function ([A-Za-z_][A-Za-z0-9_]*)\(/m', (string) file_get_contents($file), $declared);
+
+            foreach ($declared[1] as $helper) {
+                $helpers[$helper] = $owner;
+            }
+        }
+
+        return $helpers;
     }
 
     /**
