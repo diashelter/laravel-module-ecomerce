@@ -6,6 +6,20 @@ python3 - "$ROOT" <<'PY' | tee -a "$OUT"
 import os, re, sys
 root = sys.argv[1]
 docs = ['AGENTS.md', 'README.md', 'docs/domain-analysis.md', '.design/module-isolation.md']
+# The modules with tests are an explicit list ("o Identity, o Messaging, ... e o Payment"), never a paragraph
+# that names them somewhere (found by the fifth round: AGENTS.md passed with Payment left out of its list).
+WITH_TESTS = {'Identity', 'Messaging', 'Shared', 'Catalog', 'Payment'}
+KNOWN = WITH_TESTS | {'Backoffice', 'Customers', 'Fulfillment', 'Inventory', 'Ordering', 'Integration'}
+LIST = re.compile(r'(?:(?:o |a |os )?`?[A-Z][A-Za-z]+`?, )+(?:o |a |os )?`?[A-Z][A-Za-z]+`? e (?:o |a |os )?`?[A-Z][A-Za-z]+`?')
+def lists_of_modules_with_tests(text):
+    """[line, members] of each list naming at least 3 of the modules with tests and at most one other module."""
+    found = []
+    for number, line in enumerate(text.split('\n'), 1):
+        for m in LIST.finditer(line):
+            members = [w for w in re.findall(r'[A-Z][A-Za-z]+', m.group(0)) if w in KNOWN]
+            if len(WITH_TESTS.intersection(members)) >= 3 and len(set(members) - WITH_TESTS) <= 1:
+                found.append((number, members))
+    return found
 required = {
     'the Integration package': lambda t: '`Integration`' in t or 'Integration' in t,
     'its boundary exception': lambda t: any('Integration' in p and 'exceção' in p for p in t.split('\n\n')),
@@ -13,7 +27,7 @@ required = {
     'the 503 SERVICE_UNAVAILABLE': lambda t: 'SERVICE_UNAVAILABLE' in t and '503' in t,
     'the edited migration': lambda t: '2026_10_06_000001_create_payments_table' in t,
     'the module test folders': lambda t: 'app-modules/<módulo>/tests' in t,
-    'the 5 modules with tests': lambda t: any(all(m in p for m in ('Identity', 'Messaging', 'Shared', 'Catalog', 'Payment')) and 'test' in p for p in t.split('\n\n')),
+    'the 5 modules with tests': lambda t: any(sorted(members) == sorted(WITH_TESTS) for _, members in lists_of_modules_with_tests(t)),
     'the 16 frozen migrations': lambda t: re.search(r'\b16 (nomes|migrations)', t) is not None,
 }
 stale = [r'congela os 15', r'\b15 nomes', r'continuam em `backend/tests`', r'`payments\.order_id` também usa `restrict`', r'Mover os testes para os módulos exigiria',
@@ -36,6 +50,9 @@ for doc in docs:
     for pattern in stale:
         for m in re.finditer(pattern, text, re.M):
             bad += 1; print(f'{doc}: stale claim {m.group(0)!r}')
+    for number, members in lists_of_modules_with_tests(text):
+        if sorted(members) != sorted(WITH_TESTS):
+            bad += 1; print(f'{doc}:{number}: the modules with tests listed as {", ".join(members)}')
     for number, line in enumerate(text.split('\n'), 1):
         if 'payments' in line and re.search(r'restri', line, re.I) and not GONE.search(line):
             bad += 1; print(f'{doc}:{number}: payments still described as restricted')
