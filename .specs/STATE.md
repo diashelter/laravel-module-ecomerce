@@ -11,9 +11,9 @@
 ## Handoff
 
 **Feature**: module-isolation-pilot (slices Module Tests e Payment ↔ Ordering de `.design/module-isolation.md`)
-**Where**: construída na branch `helterdias/module-isolation-pilot` (nada enviado ao remoto); 39 checks com prova verde no `HEAD`; a verificação independente rodou 3 rodadas (só achados de documentação, 15 falhas injetadas e todas pegas) e a terceira deu FAIL por uma contagem antiga, corrigida depois do limite de três rodadas
+**Where**: construída na branch `helterdias/module-isolation-pilot`, enviada ao remoto até `91be57d`, com o PR [diashelter/laravel-module-ecomerce#30](https://github.com/diashelter/laravel-module-ecomerce/pull/30) aberto; 39 checks com prova verde no `HEAD`; a verificação independente rodou 4 rodadas. As três primeiras deram FAIL por achados de documentação e, na rodada 2, por um membro do design sem prova (que virou o C39). A quarta, escopada e pedida por diashelter depois do limite de três, deu PASS em `91be57d` (39/39, 3 falhas novas e todas pegas, `validate_verification.py` com exit 0)
 **In progress**: nada
-**Next step**: diashelter decide se roda uma quarta rodada de verificação escopada (o diff `683d32e..83bd3e8`) ou aceita a correção; depois, abrir o PR. No ambiente de dev, o `make migrate` e o `make queue-restart` já rodaram
+**Next step**: enviar o commit da rodada 4 ao PR #30 (o `git push` pede o ok de diashelter). diashelter aprovou o texto atual do C39 em 2026-10-21, registrado no `checks.md`. Achados não bloqueantes no `verification.md`: o `ConsumeEventsCommandTest.php:55` falhou 1 vez em 3 por tempo (anterior ao piloto) e o padrão do C33 só casa a contagem depois de "são". No ambiente de dev, o `make migrate` e o `make queue-restart` já rodaram
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: helterdias/module-isolation-pilot

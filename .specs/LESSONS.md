@@ -170,6 +170,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: F7b (verification round 3), load-tests/lib/http.js:120 (load-tests/lib)
 - last seen: 2026-10-17T00:42:57Z
 
+### L-027 - A negative-grep proof for a stale count must key on the number and its noun, not on the sentence it was found in, or other phrasings of the same claim pass.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: module-isolation-pilot
+- evidence: C33, proofs/c33-docs.sh:27 (verification round 4) (docs)
+- last seen: 2026-10-21T10:51:29Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

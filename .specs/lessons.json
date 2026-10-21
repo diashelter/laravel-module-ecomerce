@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 27,
+  "next_id": 28,
   "lessons": [
     {
       "id": "L-001",
@@ -472,6 +472,24 @@
       ],
       "created": "2026-10-17T00:42:57Z",
       "last_seen": "2026-10-17T00:42:57Z"
+    },
+    {
+      "id": "L-027",
+      "key": "spec_precision_gap::a negative grep proof for a stale count must key on the number and its noun not on the sentence it was found in or other phrasings of the same claim pass",
+      "text": "A negative-grep proof for a stale count must key on the number and its noun, not on the sentence it was found in, or other phrasings of the same claim pass.",
+      "signal": "spec_precision_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "module-isolation-pilot"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C33, proofs/c33-docs.sh:27 (verification round 4) (docs)"
+      ],
+      "created": "2026-10-21T10:51:29Z",
+      "last_seen": "2026-10-21T10:51:29Z"
     }
   ]
 }

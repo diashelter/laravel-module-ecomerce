@@ -1,8 +1,8 @@
-Preparing worktree (detached HEAD 27be65e)
-HEAD is now at 27be65e test(module-isolation): record the final proofs of the pilot
+Preparing worktree (detached HEAD 91be57d)
+HEAD is now at 91be57d docs(specs): record the module isolation decision and handoff
 removal copy payment-alone without: backoffice catalog customers fulfillment identity inventory ordering
- Container ecommerce-api-run-ba30f78afe52 Creating 
- Container ecommerce-api-run-ba30f78afe52 Created 
+ Container ecommerce-api-run-6e4ec4b18e98 Creating 
+ Container ecommerce-api-run-6e4ec4b18e98 Created 
 ./composer.json has been updated
 Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/identity modules/inventory modules/ordering
 Loading composer repositories with package information
@@ -61,85 +61,85 @@ Use the `composer fund` command to find out more!
 No security vulnerability advisories found.
 Banco de testes: ecommerce_testing_removal_payment_alone (vhost do RabbitMQ: ecommerce_testing_removal_payment_alone)
 packages left: integration messaging payment shared 
- Container ecommerce-api-run-f643d9f4aaaa Creating 
- Container ecommerce-api-run-f643d9f4aaaa Created 
+ Container ecommerce-api-run-ea3e54d85788 Creating 
+ Container ecommerce-api-run-ea3e54d85788 Created 
 
    INFO  Preparing database.  
 
-  Creating migration table ...................................... 11.78ms DONE
+  Creating migration table ...................................... 16.34ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000001_create_cache_table .......................... 12.00ms DONE
-  0001_01_01_000002_create_jobs_table ........................... 14.84ms DONE
-  2026_10_06_000001_create_payments_table ........................ 7.44ms DONE
-  2026_10_15_000001_create_outbox_messages_table ................. 5.81ms DONE
-  2026_10_18_170032_create_features_table ........................ 5.91ms DONE
-  2026_10_21_000001_drop_payments_order_id_foreign ............... 1.55ms DONE
+  0001_01_01_000001_create_cache_table .......................... 13.88ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 16.41ms DONE
+  2026_10_06_000001_create_payments_table ....................... 10.38ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 4.71ms DONE
+  2026_10_18_170032_create_features_table ....................... 13.76ms DONE
+  2026_10_21_000001_drop_payments_order_id_foreign ............... 4.86ms DONE
 
 migrate:fresh: ok
- Container ecommerce-api-run-182007fe266f Creating 
- Container ecommerce-api-run-182007fe266f Created 
+ Container ecommerce-api-run-4443f404daff Creating 
+ Container ecommerce-api-run-4443f404daff Created 
 
    PASS  Appmodules\payment\tests\Feature\PaymentTest
-  ✓ it approves the payment of an order awaiting payment                 0.88s  
-  ✓ it answers the payment attempt without card data                     0.08s  
-  ✓ it answers 404 to the payment of an unknown order                    0.15s  
-  ✓ it records the approved payment and announces it once                0.21s  
-  ✓ it keeps no approved payment when the event cannot be recorded       0.11s  
-  ✓ it declines the payment and keeps the order awaiting payment with d… 0.07s  
-  ✓ it declines the payment and keeps the order awaiting payment with d… 0.06s  
-  ✓ it declines the payment and keeps the order awaiting payment with d… 0.05s  
-  ✓ it approves a new attempt after a declined one                       0.08s  
-  ✓ it rejects an invalid card token without charging with dataset "mis… 0.07s  
-  ✓ it rejects an invalid card token without charging with dataset "not… 0.04s  
-  ✓ it rejects an invalid card token without charging with dataset "65…  0.04s  
-  ✓ it accepts a card token of exactly 64 characters                     0.04s  
-  ✓ it rejects payment for orders that are not awaiting payment          0.05s  
-  ✓ it rejects a second payment while the queue has not moved the order  0.11s  
-  ✓ it loses the race to a concurrent approval with 409                  0.04s  
-  ✓ it charges the order total and ignores amounts in the request        0.04s  
-  ✓ it forbids paying an order of another customer                       0.05s  
-  ✓ it asks the order port with the signed-in customer                   0.04s  
-  ✓ it validates the payment body before checking the order owner        0.04s  
-  ✓ it validates the body before an unavailable order port               0.06s  
-  ✓ it answers 503 when the order port is unavailable                    0.06s  
-  ✓ it requires a signed-in customer to pay                              0.05s  
-  ✓ it allows only one approved payment per order in the database        0.06s  
+  ✓ it approves the payment of an order awaiting payment                 0.63s  
+  ✓ it answers the payment attempt without card data                     0.03s  
+  ✓ it answers 404 to the payment of an unknown order                    0.03s  
+  ✓ it records the approved payment and announces it once                0.03s  
+  ✓ it keeps no approved payment when the event cannot be recorded       0.04s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.04s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.04s  
+  ✓ it declines the payment and keeps the order awaiting payment with d… 0.03s  
+  ✓ it approves a new attempt after a declined one                       0.04s  
+  ✓ it rejects an invalid card token without charging with dataset "mis… 0.03s  
+  ✓ it rejects an invalid card token without charging with dataset "not… 0.03s  
+  ✓ it rejects an invalid card token without charging with dataset "65…  0.03s  
+  ✓ it accepts a card token of exactly 64 characters                     0.03s  
+  ✓ it rejects payment for orders that are not awaiting payment          0.03s  
+  ✓ it rejects a second payment while the queue has not moved the order  0.05s  
+  ✓ it loses the race to a concurrent approval with 409                  0.03s  
+  ✓ it charges the order total and ignores amounts in the request        0.03s  
+  ✓ it forbids paying an order of another customer                       0.03s  
+  ✓ it asks the order port with the signed-in customer                   0.03s  
+  ✓ it validates the payment body before checking the order owner        0.03s  
+  ✓ it validates the body before an unavailable order port               0.03s  
+  ✓ it answers 503 when the order port is unavailable                    0.03s  
+  ✓ it requires a signed-in customer to pay                              0.02s  
+  ✓ it allows only one approved payment per order in the database        0.03s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.02s  
   ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
-  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.04s  
-  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.04s  
-  ✓ it creates a payment without creating an order                       0.04s  
-  ✓ it logs each payment attempt without the card token with ('fake_car… 0.05s  
-  ✓ it logs each payment attempt without the card token with ('fake_car… 0.05s  
-  ✓ it throttles payment attempts after 20 per minute                    0.13s  
+  ✓ it rejects inconsistent payment rows in the database with dataset "… 0.03s  
+  ✓ it creates a payment without creating an order                       0.03s  
+  ✓ it logs each payment attempt without the card token with ('fake_car… 0.04s  
+  ✓ it logs each payment attempt without the card token with ('fake_car… 0.03s  
+  ✓ it throttles payment attempts after 20 per minute                    0.07s  
 
    PASS  Appmodules\payment\tests\Feature\UseCases\Payment\PayOrderUseCaseTest
-  ✓ it records PaymentApproved for an order awaiting payment             0.09s  
-  ✓ it records no PaymentApproved for orders that are not awaiting paym… 0.05s  
-  ✓ it keeps the declined payment after raising the decline              0.04s  
-  ✓ it raises a conflict when a concurrent approval wins the race        0.05s  
-  ✓ it refuses another customer order before checking its status         0.05s  
+  ✓ it records PaymentApproved for an order awaiting payment             0.04s  
+  ✓ it records no PaymentApproved for orders that are not awaiting paym… 0.03s  
+  ✓ it keeps the declined payment after raising the decline              0.03s  
+  ✓ it raises a conflict when a concurrent approval wins the race        0.03s  
+  ✓ it refuses another customer order before checking its status         0.03s  
 
    PASS  Appmodules\payment\tests\Unit\Gateways\FakePaymentGatewayTest
-  ✓ it approves the fake approved card                                   0.03s  
+  ✓ it approves the fake approved card                                   0.02s  
   ✓ it declines each fake card with its reason with dataset "insufficie… 0.02s  
   ✓ it declines each fake card with its reason with dataset "declined b… 0.02s  
   ✓ it declines each fake card with its reason with dataset "unknown to… 0.02s  
-  ✓ it declines each fake card with its reason with dataset "empty toke… 0.03s  
-  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.03s  
-  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.03s  
+  ✓ it declines each fake card with its reason with dataset "empty toke… 0.02s  
+  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.02s  
+  ✓ it ignores the amount and issues a new transaction id per charge wi… 0.02s  
 
    PASS  Appmodules\payment\tests\Unit\Services\PaymentServiceTest
-  ✓ it accepts orders awaiting payment                                   0.04s  
-  ✓ it rejects orders that are not awaiting payment                      0.03s  
+  ✓ it accepts orders awaiting payment                                   0.02s  
+  ✓ it rejects orders that are not awaiting payment                      0.02s  
   ✓ it decides whether an order can be paid with dataset "awaiting paym… 0.02s  
-  ✓ it decides whether an order can be paid with dataset "awaiting paym… 0.03s  
+  ✓ it decides whether an order can be paid with dataset "awaiting paym… 0.02s  
   ✓ it decides whether an order can be paid with dataset "not awaiting…  0.02s  
   ✓ it decides whether an order can be paid with dataset "not awaiting…  0.02s  
 
   Tests:    49 passed (192 assertions)
-  Duration: 3.77s
+  Duration: 2.26s
 
 pest app-modules/payment/tests:   Tests:    49 passed (192 assertions) (exit 0)
 PASS: the tests of payment pass with only payment, shared, messaging and integration installed

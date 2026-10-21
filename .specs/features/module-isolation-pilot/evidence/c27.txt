@@ -1,8 +1,8 @@
 CREATE DATABASE
 Preparing worktree (detached HEAD be1c84c)
 HEAD is now at be1c84c Merge pull request #29 from diashelter/helterdias/hel-16-event-idempotency
- Container ecommerce-api-run-83069ffe530b Creating 
- Container ecommerce-api-run-83069ffe530b Created 
+ Container ecommerce-api-run-900bb0e83f52 Creating 
+ Container ecommerce-api-run-900bb0e83f52 Created 
 Installing dependencies from lock file (including require-dev)
 Verifying lock file contents can be installed on current platform.
 Package operations: 0 installs, 5 updates, 0 removals
@@ -48,30 +48,30 @@ Class Tests\Unit\Architecture\Fixtures\Layout\CoreUsesHttp\Offender located in .
 
 101 packages you are using are looking for funding.
 Use the `composer fund` command to find out more!
- Container ecommerce-api-run-f33f9f65f564 Creating 
- Container ecommerce-api-run-f33f9f65f564 Created 
+ Container ecommerce-api-run-d2514120f228 Creating 
+ Container ecommerce-api-run-d2514120f228 Created 
 
    INFO  Preparing database.  
 
-  Creating migration table ...................................... 24.56ms DONE
+  Creating migration table ...................................... 22.96ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000000_create_users_table .......................... 32.32ms DONE
-  0001_01_01_000001_create_cache_table ........................... 8.49ms DONE
-  0001_01_01_000002_create_jobs_table ........................... 42.71ms DONE
-  2026_10_05_000000_create_customers_table ...................... 10.54ms DONE
-  2026_10_05_000001_create_categories_table ...................... 5.36ms DONE
-  2026_10_05_000002_create_products_table ....................... 18.41ms DONE
-  2026_10_05_000003_create_stocks_table ......................... 14.81ms DONE
-  2026_10_05_000004_create_category_product_table ................ 5.67ms DONE
-  2026_10_05_000005_create_orders_table ......................... 20.72ms DONE
-  2026_10_05_000006_create_order_items_table .................... 19.65ms DONE
-  2026_10_06_000001_create_payments_table ....................... 11.91ms DONE
-  2026_10_07_000001_create_customer_addresses_table ............. 15.06ms DONE
-  2026_10_15_000001_create_outbox_messages_table ................ 10.04ms DONE
-  2026_10_18_170032_create_features_table ........................ 9.84ms DONE
-  2026_10_20_000001_create_deliveries_table ...................... 8.60ms DONE
+  0001_01_01_000000_create_users_table .......................... 23.75ms DONE
+  0001_01_01_000001_create_cache_table ........................... 8.09ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 14.82ms DONE
+  2026_10_05_000000_create_customers_table ....................... 4.21ms DONE
+  2026_10_05_000001_create_categories_table ...................... 4.05ms DONE
+  2026_10_05_000002_create_products_table ........................ 6.28ms DONE
+  2026_10_05_000003_create_stocks_table .......................... 8.31ms DONE
+  2026_10_05_000004_create_category_product_table ................ 4.08ms DONE
+  2026_10_05_000005_create_orders_table ......................... 10.57ms DONE
+  2026_10_05_000006_create_order_items_table ..................... 5.71ms DONE
+  2026_10_06_000001_create_payments_table ........................ 5.90ms DONE
+  2026_10_07_000001_create_customer_addresses_table .............. 6.42ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 4.29ms DONE
+  2026_10_18_170032_create_features_table ........................ 6.75ms DONE
+  2026_10_20_000001_create_deliveries_table ...................... 4.32ms DONE
 
 foreign keys at be1c84c:
 category_product_category_id_foreign
@@ -83,12 +83,12 @@ order_items_product_id_foreign
 orders_customer_id_foreign
 payments_order_id_foreign
 stocks_product_id_foreign
- Container ecommerce-api-run-f53e38c8b2dc Creating 
- Container ecommerce-api-run-f53e38c8b2dc Created 
+ Container ecommerce-api-run-33d9ade3b8c5 Creating 
+ Container ecommerce-api-run-33d9ade3b8c5 Created 
 
    INFO  Running migrations.  
 
-  2026_10_21_000001_drop_payments_order_id_foreign .............. 16.70ms DONE
+  2026_10_21_000001_drop_payments_order_id_foreign ............... 9.24ms DONE
 
 foreign keys at HEAD:
 category_product_category_id_foreign
@@ -99,8 +99,8 @@ order_items_order_id_foreign
 order_items_product_id_foreign
 orders_customer_id_foreign
 stocks_product_id_foreign
- Container ecommerce-api-run-db9f0bbb3155 Creating 
- Container ecommerce-api-run-db9f0bbb3155 Created 
+ Container ecommerce-api-run-a982d5a048cd Creating 
+ Container ecommerce-api-run-a982d5a048cd Created 
 
   Migration name .............................................. Batch / Status  
   0001_01_01_000000_create_users_table ............................... [1] Ran  
