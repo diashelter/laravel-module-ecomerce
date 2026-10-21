@@ -16,8 +16,9 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            // restrictOnDelete: the payment attempts of an order must be kept.
-            $table->foreignUuid('order_id')->constrained()->restrictOnDelete();
+            // No foreign key to orders: the payment module runs without the ordering module, and the order is
+            // checked through the order port before any row is written (see .design/module-isolation.md).
+            $table->foreignUuid('order_id');
             // Copy of orders.total_cents at the moment of the attempt, in cents.
             $table->bigInteger('amount_cents');
             $table->string('status', 20);

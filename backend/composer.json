@@ -18,6 +18,7 @@
         "modules/customers": "*",
         "modules/fulfillment": "*",
         "modules/identity": "*",
+        "modules/integration": "*",
         "modules/inventory": "*",
         "modules/messaging": "*",
         "modules/ordering": "*",

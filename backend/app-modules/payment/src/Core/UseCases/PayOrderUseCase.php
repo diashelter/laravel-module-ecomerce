@@ -9,18 +9,19 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\Messaging\Contracts\EventOutbox;
-use Modules\Ordering\Contracts\PayableOrders;
-use Modules\Ordering\Core\ValueObjects\OrderForPayment;
+use Modules\Payment\Contracts\OrdersToPay;
 use Modules\Payment\Contracts\PaymentGateway;
 use Modules\Payment\Core\DTOs\ChargeRequest;
 use Modules\Payment\Core\DTOs\PayOrderDTO;
 use Modules\Payment\Core\Enums\PaymentStatus;
 use Modules\Payment\Core\Exceptions\PaymentDeclinedException;
 use Modules\Payment\Core\Services\PaymentService;
+use Modules\Payment\Core\ValueObjects\OrderToPay;
 use Modules\Payment\Events\PaymentApproved;
 use Modules\Payment\Persistence\Models\Payment;
 use Modules\Payment\Persistence\Repositories\PaymentRepository;
 use Modules\Shared\Exceptions\BusinessRuleException;
+use Modules\Shared\Exceptions\ServiceUnavailableException;
 
 /**
  * Customer: pays an order through the payment gateway. Every attempt is recorded.
@@ -31,7 +32,7 @@ use Modules\Shared\Exceptions\BusinessRuleException;
 final class PayOrderUseCase
 {
     public function __construct(
-        private readonly PayableOrders $orders,
+        private readonly OrdersToPay $orders,
         private readonly PaymentService $rules,
         private readonly PaymentRepository $payments,
         private readonly PaymentGateway $gateway,
@@ -39,6 +40,7 @@ final class PayOrderUseCase
     ) {}
 
     /**
+     * @throws ServiceUnavailableException when no installed module serves the order port (503, nothing charged or written)
      * @throws ModelNotFoundException when the order is not among the customer's own (404, checked before the status)
      * @throws BusinessRuleException when the order cannot be paid (409)
      * @throws PaymentDeclinedException when the gateway declines the charge (402)
@@ -46,7 +48,7 @@ final class PayOrderUseCase
     public function execute(string $customerId, string $orderId, PayOrderDTO $data): Payment
     {
         $order = $this->orders->findForPayment($customerId, $orderId)
-            ?? throw (new ModelNotFoundException)->setModel(OrderForPayment::class, [$orderId]);
+            ?? throw (new ModelNotFoundException)->setModel(OrderToPay::class, [$orderId]);
 
         $this->rules->ensureCanBePaid($order, $this->payments->hasApprovedForOrder($order->id));
 

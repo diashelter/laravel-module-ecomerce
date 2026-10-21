@@ -8,6 +8,7 @@
     "autoload": {
         "psr-4": {
             "Modules\\Messaging\\": "src/",
+            "Modules\\Messaging\\Tests\\": "tests/",
             "Modules\\Messaging\\Database\\Factories\\": "database/factories/"
         }
     },

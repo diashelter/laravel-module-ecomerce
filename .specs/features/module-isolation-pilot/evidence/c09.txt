@@ -1,0 +1,5 @@
+declarations at be1c84c: 628; at HEAD: 657
+renamed by the checks: 'keeps the fifteen frozen migration names' -> 'keeps the sixteen frozen migration names'
+renamed by the checks: 'lists exactly the ten module packages' -> 'lists exactly the eleven module packages'
+replaced by C26: 'ties payments to existing orders and keeps orders that have payments'
+PASS: every case of the base is still there but the replaced one; 657 declarations

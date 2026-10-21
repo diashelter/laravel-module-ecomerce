@@ -9,10 +9,10 @@ use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Fulfillment\Events\DeliveryScheduled;
 use Modules\Fulfillment\Persistence\Models\Delivery;
 use Modules\Messaging\Contracts\EventOutbox;
+use Modules\Messaging\Tests\Fixtures\FailingOutbox;
 use Modules\Ordering\Core\Enums\OrderStatus;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Persistence\Models\Order;
-use Tests\Feature\Outbox\Fixtures\FailingOutbox;
 
 /**
  * The same OrderPaid envelope reaches ScheduleOrderDelivery more than once (the delivery is at least

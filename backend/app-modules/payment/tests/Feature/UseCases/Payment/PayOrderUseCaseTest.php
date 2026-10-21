@@ -1,0 +1,85 @@
+<?php
+
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
+use Modules\Payment\Core\DTOs\ChargeResult;
+use Modules\Payment\Core\DTOs\PayOrderDTO;
+use Modules\Payment\Core\Enums\DeclineReason;
+use Modules\Payment\Core\Enums\PaymentStatus;
+use Modules\Payment\Core\Exceptions\PaymentDeclinedException;
+use Modules\Payment\Core\UseCases\PayOrderUseCase;
+use Modules\Payment\Persistence\Models\Payment;
+use Modules\Shared\Exceptions\BusinessRuleException;
+
+it('records PaymentApproved for an order awaiting payment', function () {
+    $order = orderToPay(unknownId());
+    fakeOrdersToPay($order);
+
+    $result = app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_approved'));
+
+    expect($result)->toBeInstanceOf(Payment::class)
+        ->and($result->order_id)->toBe($order->id)
+        ->and($result->status)->toBe(PaymentStatus::Approved)
+        ->and(outboxMessages('payment.payment_approved'))->toHaveCount(1)
+        ->and(outboxMessages('payment.payment_approved')->sole()->payload)->toBe(['order_id' => $order->id]);
+});
+
+it('records no PaymentApproved for orders that are not awaiting payment', function () {
+    $order = orderToPay(unknownId(), awaitingPayment: false);
+    fakeOrdersToPay($order);
+
+    expect(fn () => app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_approved')))
+        ->toThrow(BusinessRuleException::class, 'Este pedido não está aguardando pagamento.');
+
+    expect(outboxMessages('payment.payment_approved'))->toBeEmpty();
+});
+
+it('keeps the declined payment after raising the decline', function () {
+    $order = orderToPay(unknownId(), 5000);
+    fakeOrdersToPay($order);
+    spyPaymentGateway(fn () => new ChargeResult(PaymentStatus::Declined, DeclineReason::CardDeclined, 'fake_declined', 'fake'));
+
+    $declined = null;
+    try {
+        app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_declined'));
+    } catch (PaymentDeclinedException $e) {
+        $declined = $e;
+    }
+
+    expect($declined)->not->toBeNull()
+        ->and($declined->render()->getStatusCode())->toBe(402);
+
+    $rows = DB::table('payments')->where('order_id', $order->id)->get();
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->status)->toBe('declined')
+        ->and($rows[0]->decline_reason)->toBe('card_declined')
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
+});
+
+it('raises a conflict when a concurrent approval wins the race', function () {
+    $order = orderToPay(unknownId(), 5000);
+    fakeOrdersToPay($order);
+    spyPaymentGateway(function () use ($order): ChargeResult {
+        Payment::factory()->approved()->create(['order_id' => $order->id]);
+
+        return new ChargeResult(PaymentStatus::Approved, null, 'fake_loser', 'fake');
+    });
+
+    expect(fn () => app(PayOrderUseCase::class)->execute($order->customerId, $order->id, new PayOrderDTO('fake_card_approved')))
+        ->toThrow(BusinessRuleException::class, 'Este pedido não está aguardando pagamento.');
+
+    expect(DB::table('payments')->where('order_id', $order->id)->where('status', 'approved')->count())->toBe(1)
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
+});
+
+it('refuses another customer order before checking its status', function () {
+    $order = orderToPay(unknownId(), awaitingPayment: false);
+    fakeOrdersToPay($order);
+    $gateway = spyPaymentGateway();
+
+    expect(fn () => app(PayOrderUseCase::class)->execute(unknownId(), $order->id, new PayOrderDTO('fake_card_approved')))
+        ->toThrow(ModelNotFoundException::class);
+
+    expect($gateway->charges)->toBeEmpty()
+        ->and(outboxMessages('payment.payment_approved'))->toBeEmpty();
+});

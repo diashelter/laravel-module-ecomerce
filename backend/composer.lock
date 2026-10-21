@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9eaa0945e189ae5f57226573346846cd",
+    "content-hash": "3f540f3a5b05d3117f87ae62360c4b7e",
     "packages": [
         {
             "name": "brick/math",
@@ -3223,7 +3223,7 @@
             "dist": {
                 "type": "path",
                 "url": "app-modules/catalog",
-                "reference": "fd538811142ba78cbbe54b554f61721c82f57071"
+                "reference": "5788f0a571c54676e13e15471775d24a482f4657"
             },
             "type": "library",
             "extra": {
@@ -3236,6 +3236,7 @@
             "autoload": {
                 "psr-4": {
                     "Modules\\Catalog\\": "src/",
+                    "Modules\\Catalog\\Tests\\": "tests/",
                     "Modules\\Catalog\\Database\\Factories\\": "database/factories/"
                 }
             },
@@ -3316,7 +3317,7 @@
             "dist": {
                 "type": "path",
                 "url": "app-modules/identity",
-                "reference": "dfac2545ebbd5c779a6b24d26918e5795b8f9cf2"
+                "reference": "180b726b4bb53295ec1e04193d1b0efe60afd839"
             },
             "type": "library",
             "extra": {
@@ -3329,6 +3330,7 @@
             "autoload": {
                 "psr-4": {
                     "Modules\\Identity\\": "src/",
+                    "Modules\\Identity\\Tests\\": "tests/",
                     "Modules\\Identity\\Database\\Factories\\": "database/factories/"
                 }
             },
@@ -3336,6 +3338,36 @@
                 "proprietary"
             ],
             "description": "The Identity module.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "modules/integration",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/integration",
+                "reference": "3d96f3d317e146fcb78610726a7274903c423b51"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Modules\\Integration\\Providers\\IntegrationServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Modules\\Integration\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "The Integration package: binds the port of one module to the contract of another.",
             "transport-options": {
                 "symlink": true,
                 "relative": true
@@ -3378,7 +3410,7 @@
             "dist": {
                 "type": "path",
                 "url": "app-modules/messaging",
-                "reference": "237fcc507d7d4f654e6ab401b67827cd23997db1"
+                "reference": "6423ee2fb10e26d7e625e6fdded924bbd432016c"
             },
             "type": "library",
             "extra": {
@@ -3391,6 +3423,7 @@
             "autoload": {
                 "psr-4": {
                     "Modules\\Messaging\\": "src/",
+                    "Modules\\Messaging\\Tests\\": "tests/",
                     "Modules\\Messaging\\Database\\Factories\\": "database/factories/"
                 }
             },
@@ -3440,7 +3473,7 @@
             "dist": {
                 "type": "path",
                 "url": "app-modules/payment",
-                "reference": "2d57094bed78e05bad55036db08ee06cbc9a1f8c"
+                "reference": "41a0ea9f4ed0bb5da8a3785d5f2b1891b28f69ba"
             },
             "type": "library",
             "extra": {
@@ -3453,6 +3486,7 @@
             "autoload": {
                 "psr-4": {
                     "Modules\\Payment\\": "src/",
+                    "Modules\\Payment\\Tests\\": "tests/",
                     "Modules\\Payment\\Database\\Factories\\": "database/factories/"
                 }
             },
@@ -3471,7 +3505,7 @@
             "dist": {
                 "type": "path",
                 "url": "app-modules/shared",
-                "reference": "be9a54cd0ba7553b9cdef75531861b57fe2c8a14"
+                "reference": "39bf23a91883b79c4ea0e6fd2540e22af4c19765"
             },
             "type": "library",
             "extra": {
@@ -3483,7 +3517,8 @@
             },
             "autoload": {
                 "psr-4": {
-                    "Modules\\Shared\\": "src/"
+                    "Modules\\Shared\\": "src/",
+                    "Modules\\Shared\\Tests\\": "tests/"
                 }
             },
             "license": [

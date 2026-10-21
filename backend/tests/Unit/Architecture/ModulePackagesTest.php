@@ -10,11 +10,11 @@ use Tests\Unit\Architecture\Support\ModuleLayout;
  * The modules are packages in app-modules, discovered by internachi/modular (see .design/modular-layout.md).
  */
 
-it('lists exactly the ten module packages', function () {
+it('lists exactly the eleven module packages', function () {
     $modules = app(ModuleRegistry::class)->modules();
 
     expect($modules->keys()->sort()->values()->all())
-        ->toBe(['backoffice', 'catalog', 'customers', 'fulfillment', 'identity', 'inventory', 'messaging', 'ordering', 'payment', 'shared']);
+        ->toBe(['backoffice', 'catalog', 'customers', 'fulfillment', 'identity', 'integration', 'inventory', 'messaging', 'ordering', 'payment', 'shared']);
 
     foreach ($modules as $name => $module) {
         expect($module->namespace())->toBe('Modules\\'.ucfirst($name).'\\');
@@ -82,6 +82,11 @@ it('gives every module the manifest of the design', function (string $module) {
     $manifest = json_decode((string) file_get_contents(dirname(ModuleLayout::srcOf($module)).'/composer.json'), true, flags: JSON_THROW_ON_ERROR);
     $expected = ["Modules\\{$module}\\" => 'src/'];
 
+    // The tests of a module are autoloaded by the module itself (Composer ignores the autoload-dev of a dependency).
+    if (is_dir(dirname(ModuleLayout::srcOf($module)).'/tests')) {
+        $expected["Modules\\{$module}\\Tests\\"] = 'tests/';
+    }
+
     if (is_dir(dirname(ModuleLayout::srcOf($module)).'/database/factories')) {
         $expected["Modules\\{$module}\\Database\\Factories\\"] = 'database/factories/';
     }
@@ -90,3 +95,20 @@ it('gives every module the manifest of the design', function (string $module) {
         ->and($manifest['autoload']['psr-4'])->toBe($expected)
         ->and($manifest['extra']['laravel']['providers'])->toBe(["Modules\\{$module}\\Providers\\{$module}ServiceProvider"]);
 })->with(ModuleLayout::modules());
+
+it('maps no module test namespace in the root composer', function () {
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, flags: JSON_THROW_ON_ERROR);
+    $namespaces = [
+        ...array_keys($composer['autoload']['psr-4'] ?? []),
+        ...array_keys($composer['autoload-dev']['psr-4'] ?? []),
+    ];
+
+    expect(array_filter($namespaces, fn (string $namespace) => str_starts_with($namespace, 'Modules\\')))->toBe([]);
+});
+
+it('classifies the integration package as composition', function () {
+    expect(ModuleLayout::COMPOSITION)->toBe(['Integration'])
+        ->and(ModuleLayout::BUSINESS)->not->toContain('Integration')
+        ->and(ModuleLayout::INFRASTRUCTURE)->not->toContain('Integration')
+        ->and(ModuleLayout::modules())->toContain('Integration');
+});

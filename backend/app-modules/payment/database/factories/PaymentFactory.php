@@ -6,7 +6,6 @@ namespace Modules\Payment\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
-use Modules\Ordering\Persistence\Models\Order;
 use Modules\Payment\Core\Enums\DeclineReason;
 use Modules\Payment\Core\Enums\PaymentStatus;
 use Modules\Payment\Persistence\Models\Payment;
@@ -21,7 +20,8 @@ class PaymentFactory extends Factory
     public function definition(): array
     {
         return [
-            'order_id' => Order::factory(),
+            // The order belongs to the ordering module: a payment of a module test points at an id, never at a row.
+            'order_id' => Str::uuid7()->toString(),
             'amount_cents' => 0,
             'status' => PaymentStatus::Approved,
             'decline_reason' => null,

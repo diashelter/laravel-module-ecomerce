@@ -1,0 +1,9 @@
+Banco de testes: ecommerce_testing (vhost do RabbitMQ: ecommerce_testing)
+docker compose exec -e DB_DATABASE=ecommerce_testing -e RABBITMQ_VHOST=ecommerce_testing api sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$@"' pest --filter="approves the fake approved card"
+
+   PASS  Appmodules\payment\tests\Unit\Gateways\FakePaymentGatewayTest
+  ✓ it approves the fake approved card                                   0.18s  
+
+  Tests:    1 passed (4 assertions)
+  Duration: 0.98s
+

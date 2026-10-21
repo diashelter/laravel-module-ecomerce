@@ -17,10 +17,10 @@ use Modules\Ordering\Core\Consumers\MarkOrderAsAwaitingPayment;
 use Modules\Ordering\Core\Consumers\MarkOrderAsDelivered;
 use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
 use Modules\Ordering\Core\Consumers\RecordEstimatedDelivery;
+use Modules\Ordering\Core\InboundEvents\PaymentApproved;
 use Modules\Ordering\Events\OrderPlaced;
 use Modules\Ordering\Persistence\Queries\OrderMetricsQuery;
 use Modules\Ordering\Persistence\Repositories\OrderRepository;
-use Modules\Payment\Events\PaymentApproved;
 use Modules\Shared\Support\RecordId;
 
 /**

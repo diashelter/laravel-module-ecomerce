@@ -2,14 +2,16 @@
 
 use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
 use Modules\Messaging\Contracts\EventSubscriptions;
+use Modules\Messaging\Core\EventSubscriptionRegistry;
+use Modules\Messaging\Tests\Fixtures\OtherEvent;
+use Modules\Messaging\Tests\Fixtures\OtherEventConsumer;
+use Modules\Messaging\Tests\Fixtures\SampleEvent;
+use Modules\Messaging\Tests\Fixtures\SpyConsumer;
 use Modules\Ordering\Core\Consumers\MarkOrderAsAwaitingPayment;
 use Modules\Ordering\Core\Consumers\MarkOrderAsDelivered;
 use Modules\Ordering\Core\Consumers\MarkOrderAsPaid;
 use Modules\Ordering\Core\Consumers\RecordEstimatedDelivery;
-use Tests\Feature\Outbox\Fixtures\OtherEvent;
-use Tests\Feature\Outbox\Fixtures\OtherEventConsumer;
-use Tests\Feature\Outbox\Fixtures\SampleEvent;
-use Tests\Feature\Outbox\Fixtures\SpyConsumer;
+use Modules\Ordering\Core\InboundEvents\PaymentApproved as InboundPaymentApproved;
 
 /** Everything the subscriptions hold for the consumers, to compare before and after a refused one. */
 function subscriptionsSnapshot(EventSubscriptions $subscriptions): array
@@ -34,6 +36,12 @@ it('subscribes the five consumers under their stable names', function (string $n
     'delivered' => ['ordering.mark_order_as_delivered', MarkOrderAsDelivered::class, 'fulfillment.order_delivered'],
     'schedule delivery' => ['fulfillment.schedule_order_delivery', ScheduleOrderDelivery::class, 'ordering.order_paid'],
 ]);
+
+// The ordering module reads the approval of the payment module with a class of its own: the published
+// format is the name, the version and the payload keys, never the producer's class.
+it('reads the payment approval with the class of the ordering module', function () {
+    expect(app(EventSubscriptionRegistry::class)->eventOf('payment.payment_approved'))->toBe(InboundPaymentApproved::class);
+});
 
 it('subscribes no consumer under any other name', function () {
     expect(array_keys(app(EventSubscriptions::class)->consumerClasses()))->toEqualCanonicalizing([

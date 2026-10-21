@@ -1,0 +1,21 @@
+{
+    "name": "modules/integration",
+    "description": "The Integration package: binds the port of one module to the contract of another.",
+    "type": "library",
+    "version": "1.0",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Integration\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Integration\\Providers\\IntegrationServiceProvider"
+            ]
+        }
+    }
+}

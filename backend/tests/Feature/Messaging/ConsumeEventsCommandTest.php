@@ -10,14 +10,14 @@ use Illuminate\Support\Sleep;
 use Modules\Fulfillment\Persistence\Models\Delivery;
 use Modules\Messaging\Contracts\EventSubscriptions;
 use Modules\Messaging\Core\RabbitMq\RabbitMqConnector;
+use Modules\Messaging\Tests\Fixtures\FailingConsumer;
+use Modules\Messaging\Tests\Fixtures\SampleEvent;
+use Modules\Messaging\Tests\Fixtures\SpyConsumer;
 use Modules\Ordering\Core\Enums\OrderStatus;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Persistence\Models\Order;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
-use Tests\Feature\Outbox\Fixtures\FailingConsumer;
-use Tests\Feature\Outbox\Fixtures\SampleEvent;
-use Tests\Feature\Outbox\Fixtures\SpyConsumer;
 
 /** Subscribes the spy under its name; the failing consumer, when asked, to the same event. */
 function subscribeSpy(bool $withFailing = false): void
