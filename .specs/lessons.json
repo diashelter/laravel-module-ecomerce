@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 32,
+  "next_id": 34,
   "lessons": [
     {
       "id": "L-001",
@@ -562,6 +562,42 @@
       ],
       "created": "2026-10-21T12:18:09Z",
       "last_seen": "2026-10-21T12:18:09Z"
+    },
+    {
+      "id": "L-032",
+      "key": "spec_precision_gap::describe a proof by the bound its code applies not by the intent a note that overstates the proof hides the cases it skips",
+      "text": "Describe a proof by the bound its code applies, not by the intent; a note that overstates the proof hides the cases it skips.",
+      "signal": "spec_precision_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "module-isolation-pilot"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md:236 vs proofs/c33-docs.sh:20 (verification round 6) (docs)"
+      ],
+      "created": "2026-10-21T12:42:19Z",
+      "last_seen": "2026-10-21T12:42:19Z"
+    },
+    {
+      "id": "L-033",
+      "key": "spec_precision_gap::when a docs proof matches a list also require the context that makes it that list or an identical list elsewhere satisfies it",
+      "text": "When a docs proof matches a list, also require the context that makes it that list, or an identical list elsewhere satisfies it.",
+      "signal": "spec_precision_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "module-isolation-pilot"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "proofs/c33-docs.sh:30 (verification round 6) (docs)"
+      ],
+      "created": "2026-10-21T12:42:19Z",
+      "last_seen": "2026-10-21T12:42:19Z"
     }
   ]
 }

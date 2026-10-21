@@ -1,8 +1,8 @@
-Preparing worktree (detached HEAD 40058c5)
-HEAD is now at 40058c5 fix(architecture): catch module tests calling outside helpers
+Preparing worktree (detached HEAD aa10021)
+HEAD is now at aa10021 test(module-isolation): match the explicit module list in the C33 proof
 removal copy identity-alone without: backoffice catalog customers fulfillment inventory ordering payment
- Container ecommerce-api-run-3fb5b0f1a2e3 Creating 
- Container ecommerce-api-run-3fb5b0f1a2e3 Created 
+ Container ecommerce-api-run-f9b4097df7b8 Creating 
+ Container ecommerce-api-run-f9b4097df7b8 Created 
 ./composer.json has been updated
 Running composer update modules/backoffice modules/catalog modules/customers modules/fulfillment modules/inventory modules/ordering modules/payment
 Loading composer repositories with package information
@@ -60,59 +60,59 @@ Use the `composer fund` command to find out more!
 No security vulnerability advisories found.
 Banco de testes: ecommerce_testing_removal_identity_alone (vhost do RabbitMQ: ecommerce_testing_removal_identity_alone)
 packages left: identity integration messaging shared 
- Container ecommerce-api-run-063caf10e28f Creating 
- Container ecommerce-api-run-063caf10e28f Created 
+ Container ecommerce-api-run-078a2c11c362 Creating 
+ Container ecommerce-api-run-078a2c11c362 Created 
 
    INFO  Preparing database.  
 
-  Creating migration table ...................................... 15.26ms DONE
+  Creating migration table ...................................... 20.50ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000000_create_users_table .......................... 20.95ms DONE
-  0001_01_01_000001_create_cache_table ........................... 7.49ms DONE
-  0001_01_01_000002_create_jobs_table ........................... 13.73ms DONE
-  2026_10_05_000000_create_customers_table ....................... 4.05ms DONE
-  2026_10_15_000001_create_outbox_messages_table ................. 3.95ms DONE
-  2026_10_18_170032_create_features_table ........................ 5.34ms DONE
+  0001_01_01_000000_create_users_table .......................... 21.31ms DONE
+  0001_01_01_000001_create_cache_table ........................... 8.11ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 17.11ms DONE
+  2026_10_05_000000_create_customers_table ....................... 8.39ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 7.94ms DONE
+  2026_10_18_170032_create_features_table ........................ 4.99ms DONE
 
 migrate:fresh: ok
- Container ecommerce-api-run-2598ba3e5867 Creating 
- Container ecommerce-api-run-2598ba3e5867 Created 
+ Container ecommerce-api-run-abc499beeb87 Creating 
+ Container ecommerce-api-run-abc499beeb87 Created 
 
    PASS  Appmodules\identity\tests\Feature\Auth\AuthTest
-  ✓ it registers a customer account in the customers table               0.62s  
-  ✓ it registers a customer with an e-mail used by a staff member        0.06s  
-  ✓ it rejects registering an e-mail already used by a customer          0.04s  
-  ✓ it validates registration data                                       0.03s  
+  ✓ it registers a customer account in the customers table               0.60s  
+  ✓ it registers a customer with an e-mail used by a staff member        0.08s  
+  ✓ it rejects registering an e-mail already used by a customer          0.07s  
+  ✓ it validates registration data                                       0.04s  
   ✓ it logs a customer in with the customer data only                    0.04s  
-  ✓ it refuses staff credentials on the store login                      0.28s  
-  ✓ it rejects invalid credentials                                       0.23s  
+  ✓ it refuses staff credentials on the store login                      0.24s  
+  ✓ it rejects invalid credentials                                       0.25s  
   ✓ it returns the authenticated customer                                0.05s  
-  ✓ it returns 401 for guests on /me                                     0.03s  
-  ✓ it logs out                                                          0.04s  
+  ✓ it returns 401 for guests on /me                                     0.04s  
+  ✓ it logs out                                                          0.06s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.11s  
   ✓ it throttles registration and both logins after 10 attempts per min… 0.05s  
-  ✓ it throttles registration and both logins after 10 attempts per min… 0.06s  
   ✓ it throttles registration and both logins after 10 attempts per min… 0.04s  
   ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.04s  
   ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.04s  
   ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.04s  
 
    PASS  Appmodules\identity\tests\Feature\Auth\StaffAuthTest
-  ✓ it logs a staff member into the admin with dataset "admin"           0.04s  
+  ✓ it logs a staff member into the admin with dataset "admin"           0.05s  
   ✓ it logs a staff member into the admin with dataset "support"         0.04s  
   ✓ it refuses customer credentials on the admin login                   0.24s  
-  ✓ it refuses a wrong password on the admin login                       0.24s  
-  ✓ it logs a staff member out of the admin                              0.07s  
-  ✓ it accepts only admin and support roles in the database with datase… 0.05s  
-  ✓ it accepts only admin and support roles in the database with datase… 0.06s  
-  ✓ it accepts only admin and support roles in the database with datase… 0.08s  
+  ✓ it refuses a wrong password on the admin login                       0.23s  
+  ✓ it logs a staff member out of the admin                              0.05s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.04s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.03s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.03s  
 
    PASS  Appmodules\identity\tests\Feature\Middleware\EnsureUserIsAdminTest
-  ✓ it lets only the admin role through the admin-only middleware        0.05s  
+  ✓ it lets only the admin role through the admin-only middleware        0.04s  
 
    PASS  Appmodules\identity\tests\Feature\Queries\CustomerMetricsQueryTest
-  ✓ it counts only customer accounts for the dashboard                   0.06s  
+  ✓ it counts only customer accounts for the dashboard                   0.04s  
 
    PASS  Appmodules\identity\tests\Feature\Repositories\CustomerAccountRepositoryTest
   ✓ it paginates customer accounts newest first                          0.04s  
@@ -124,29 +124,29 @@ migrate:fresh: ok
   ✓ it paginates users newest first                                      0.05s  
 
    PASS  Appmodules\identity\tests\Feature\UseCases\User\StaffUseCasesTest
-  ✓ it decides when a staff update may change the role with dataset "ow… 0.05s  
   ✓ it decides when a staff update may change the role with dataset "ow… 0.04s  
-  ✓ it decides when a staff update may change the role with dataset "ot… 0.05s  
-  ✓ it decides when a staff member may be removed                        0.05s  
-  ✓ it deletes a staff member by id and refuses an unknown one           0.03s  
-  ✓ it refuses to update an unknown staff member                         0.03s  
+  ✓ it decides when a staff update may change the role with dataset "ow… 0.04s  
+  ✓ it decides when a staff update may change the role with dataset "ot… 0.08s  
+  ✓ it decides when a staff member may be removed                        0.06s  
+  ✓ it deletes a staff member by id and refuses an unknown one           0.08s  
+  ✓ it refuses to update an unknown staff member                         0.10s  
 
    PASS  Appmodules\identity\tests\Unit\DTOs\UpdateUserProfileDTOTest
-  ✓ it keeps the password out of the changes when none is sent           0.03s  
-  ✓ it includes the password when a new one is sent                      0.02s  
+  ✓ it keeps the password out of the changes when none is sent           0.09s  
+  ✓ it includes the password when a new one is sent                      0.21s  
 
    PASS  Appmodules\identity\tests\Unit\ValueObjects\EmailTest
-  ✓ it normalizes the email with dataset "non ascii capital"             0.02s  
-  ✓ it normalizes the email with dataset "spaces and capitals"           0.02s  
-  ✓ it normalizes the email with dataset "domain without dot"            0.02s  
-  ✓ it refuses an invalid email with dataset "no at sign"                0.02s  
-  ✓ it refuses an invalid email with dataset "two at signs"              0.02s  
-  ✓ it refuses an invalid email with dataset "too long"                  0.02s  
+  ✓ it normalizes the email with dataset "non ascii capital"             0.03s  
+  ✓ it normalizes the email with dataset "spaces and capitals"           0.03s  
+  ✓ it normalizes the email with dataset "domain without dot"            0.03s  
+  ✓ it refuses an invalid email with dataset "no at sign"                0.05s  
+  ✓ it refuses an invalid email with dataset "two at signs"              0.06s  
+  ✓ it refuses an invalid email with dataset "too long"                  0.03s  
 
    PASS  Appmodules\identity\tests\Unit\ValueObjects\PasswordTest
-  ✓ it refuses a short password without echoing it                       0.03s  
+  ✓ it refuses a short password without echoing it                       0.04s  
   ✓ it accepts the minimum length and reveals the text explicitly        0.03s  
-  ✓ it never reveals the plain password with ('json_encode')             0.02s  
+  ✓ it never reveals the plain password with ('json_encode')             0.03s  
   ✓ it never reveals the plain password with ('serialize')               0.02s  
   ✓ it never reveals the plain password with ('var_export')              0.02s  
   ✓ it never reveals the plain password with ('print_r')                 0.02s  
@@ -156,7 +156,7 @@ migrate:fresh: ok
   ✓ it keeps the plain password out of exception traces when the constr… 0.02s  
 
   Tests:    55 passed (202 assertions)
-  Duration: 3.73s
+  Duration: 4.23s
 
 pest app-modules/identity/tests:   Tests:    55 passed (202 assertions) (exit 0)
 PASS: the tests of identity pass with only identity, shared, messaging and integration installed

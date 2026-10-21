@@ -200,6 +200,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C9, proofs/c09-test-count.sh:13 (verification round 5) (tests)
 - last seen: 2026-10-21T12:18:09Z
 
+### L-032 - Describe a proof by the bound its code applies, not by the intent; a note that overstates the proof hides the cases it skips.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: module-isolation-pilot
+- evidence: checks.md:236 vs proofs/c33-docs.sh:20 (verification round 6) (docs)
+- last seen: 2026-10-21T12:42:19Z
+
+### L-033 - When a docs proof matches a list, also require the context that makes it that list, or an identical list elsewhere satisfies it.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: module-isolation-pilot
+- evidence: proofs/c33-docs.sh:30 (verification round 6) (docs)
+- last seen: 2026-10-21T12:42:19Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

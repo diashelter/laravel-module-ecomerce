@@ -1,8 +1,8 @@
-Preparing worktree (detached HEAD 40058c5)
-HEAD is now at 40058c5 fix(architecture): catch module tests calling outside helpers
+Preparing worktree (detached HEAD aa10021)
+HEAD is now at aa10021 test(module-isolation): match the explicit module list in the C33 proof
 removal copy without-payment without: payment
- Container ecommerce-api-run-969d51925b06 Creating 
- Container ecommerce-api-run-969d51925b06 Created 
+ Container ecommerce-api-run-44cc7f63406e Creating 
+ Container ecommerce-api-run-44cc7f63406e Created 
 ./composer.json has been updated
 Running composer update modules/payment
 Loading composer repositories with package information
@@ -59,226 +59,226 @@ Use the `composer fund` command to find out more!
 
 No security vulnerability advisories found.
 Banco de testes: ecommerce_testing_removal_without_payment (vhost do RabbitMQ: ecommerce_testing_removal_without_payment)
- Container ecommerce-api-run-fcddae5bc66b Creating 
- Container ecommerce-api-run-fcddae5bc66b Created 
+ Container ecommerce-api-run-7868f5d1596d Creating 
+ Container ecommerce-api-run-7868f5d1596d Created 
 
    INFO  Preparing database.  
 
-  Creating migration table ...................................... 16.11ms DONE
+  Creating migration table ...................................... 29.47ms DONE
 
    INFO  Running migrations.  
 
-  0001_01_01_000000_create_users_table .......................... 19.27ms DONE
-  0001_01_01_000001_create_cache_table ........................... 7.75ms DONE
-  0001_01_01_000002_create_jobs_table ........................... 16.09ms DONE
-  2026_10_05_000000_create_customers_table ....................... 4.21ms DONE
-  2026_10_05_000001_create_categories_table ...................... 4.76ms DONE
-  2026_10_05_000002_create_products_table ........................ 4.66ms DONE
-  2026_10_05_000003_create_stocks_table .......................... 6.27ms DONE
-  2026_10_05_000004_create_category_product_table ................ 3.93ms DONE
-  2026_10_05_000005_create_orders_table .......................... 9.68ms DONE
-  2026_10_05_000006_create_order_items_table ..................... 6.72ms DONE
-  2026_10_07_000001_create_customer_addresses_table .............. 9.61ms DONE
-  2026_10_15_000001_create_outbox_messages_table ................. 7.18ms DONE
-  2026_10_18_170032_create_features_table ........................ 4.29ms DONE
-  2026_10_20_000001_create_deliveries_table ...................... 5.00ms DONE
+  0001_01_01_000000_create_users_table .......................... 37.13ms DONE
+  0001_01_01_000001_create_cache_table .......................... 12.25ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 28.79ms DONE
+  2026_10_05_000000_create_customers_table ...................... 12.68ms DONE
+  2026_10_05_000001_create_categories_table ...................... 8.04ms DONE
+  2026_10_05_000002_create_products_table ........................ 7.87ms DONE
+  2026_10_05_000003_create_stocks_table ......................... 10.58ms DONE
+  2026_10_05_000004_create_category_product_table ................ 4.62ms DONE
+  2026_10_05_000005_create_orders_table ......................... 11.23ms DONE
+  2026_10_05_000006_create_order_items_table ..................... 7.20ms DONE
+  2026_10_07_000001_create_customer_addresses_table .............. 6.78ms DONE
+  2026_10_15_000001_create_outbox_messages_table ................. 4.12ms DONE
+  2026_10_18_170032_create_features_table ........................ 4.77ms DONE
+  2026_10_20_000001_create_deliveries_table ...................... 7.00ms DONE
 
 migrate:fresh: ok
 tests folders left: app-modules/catalog/tests app-modules/identity/tests app-modules/messaging/tests app-modules/shared/tests 
- Container ecommerce-api-run-0c2e32148981 Creating 
- Container ecommerce-api-run-0c2e32148981 Created 
+ Container ecommerce-api-run-6081201fc1e6 Creating 
+ Container ecommerce-api-run-6081201fc1e6 Created 
 
    PASS  Appmodules\catalog\tests\Feature\Queries\CatalogMetricsQueryTest
-  ✓ it counts products by status                                         1.09s  
-  ✓ it answers zero for a status without products                        0.15s  
+  ✓ it counts products by status                                         0.90s  
+  ✓ it answers zero for a status without products                        0.18s  
 
    PASS  Appmodules\catalog\tests\Unit\Services\CategoryServiceTest
-  ✓ it allows deleting empty categories                                  0.23s  
-  ✓ it does not allow deleting categories with products                  0.16s  
+  ✓ it allows deleting empty categories                                  0.11s  
+  ✓ it does not allow deleting categories with products                  0.06s  
 
    PASS  Appmodules\catalog\tests\Unit\Services\ProductServiceTest
-  ✓ it builds a default image url from the product id                    0.11s  
-  ✓ it allows deleting products that were never ordered                  0.08s  
-  ✓ it does not allow deleting products that appear in orders            0.08s  
+  ✓ it builds a default image url from the product id                    0.06s  
+  ✓ it allows deleting products that were never ordered                  0.05s  
+  ✓ it does not allow deleting products that appear in orders            0.07s  
 
    PASS  Appmodules\catalog\tests\Unit\ValueObjects\ProductAvailabilityTest
   ✓ it decides the availability from the status and the units with data… 0.06s  
-  ✓ it decides the availability from the status and the units with data… 0.06s  
+  ✓ it decides the availability from the status and the units with data… 0.04s  
   ✓ it decides the availability from the status and the units with data… 0.05s  
-  ✓ it decides the availability from the status and the units with data… 0.05s  
-  ✓ it carries the product status in the catalog product                 0.05s  
+  ✓ it decides the availability from the status and the units with data… 0.04s  
+  ✓ it carries the product status in the catalog product                 0.06s  
 
    PASS  Appmodules\identity\tests\Feature\Auth\AuthTest
-  ✓ it registers a customer account in the customers table               0.24s  
-  ✓ it registers a customer with an e-mail used by a staff member        0.12s  
-  ✓ it rejects registering an e-mail already used by a customer          0.20s  
-  ✓ it validates registration data                                       0.13s  
-  ✓ it logs a customer in with the customer data only                    0.09s  
-  ✓ it refuses staff credentials on the store login                      0.28s  
+  ✓ it registers a customer account in the customers table               0.29s  
+  ✓ it registers a customer with an e-mail used by a staff member        0.28s  
+  ✓ it rejects registering an e-mail already used by a customer          0.33s  
+  ✓ it validates registration data                                       0.15s  
+  ✓ it logs a customer in with the customer data only                    0.10s  
+  ✓ it refuses staff credentials on the store login                      0.30s  
   ✓ it rejects invalid credentials                                       0.28s  
   ✓ it returns the authenticated customer                                0.08s  
   ✓ it returns 401 for guests on /me                                     0.08s  
-  ✓ it logs out                                                          0.08s  
-  ✓ it throttles registration and both logins after 10 attempts per min… 0.09s  
+  ✓ it logs out                                                          0.10s  
+  ✓ it throttles registration and both logins after 10 attempts per min… 0.11s  
   ✓ it throttles registration and both logins after 10 attempts per min… 0.07s  
   ✓ it throttles registration and both logins after 10 attempts per min… 0.07s  
-  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.08s  
-  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.07s  
-  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.07s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.11s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.22s  
+  ✓ it keeps the throttle key on the connection address when X-Forwarde… 0.11s  
 
    PASS  Appmodules\identity\tests\Feature\Auth\StaffAuthTest
-  ✓ it logs a staff member into the admin with dataset "admin"           0.10s  
-  ✓ it logs a staff member into the admin with dataset "support"         0.07s  
-  ✓ it refuses customer credentials on the admin login                   0.26s  
-  ✓ it refuses a wrong password on the admin login                       0.26s  
+  ✓ it logs a staff member into the admin with dataset "admin"           0.16s  
+  ✓ it logs a staff member into the admin with dataset "support"         0.15s  
+  ✓ it refuses customer credentials on the admin login                   0.30s  
+  ✓ it refuses a wrong password on the admin login                       0.27s  
   ✓ it logs a staff member out of the admin                              0.06s  
-  ✓ it accepts only admin and support roles in the database with datase… 0.06s  
-  ✓ it accepts only admin and support roles in the database with datase… 0.06s  
-  ✓ it accepts only admin and support roles in the database with datase… 0.06s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.05s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.05s  
+  ✓ it accepts only admin and support roles in the database with datase… 0.05s  
 
    PASS  Appmodules\identity\tests\Feature\Middleware\EnsureUserIsAdminTest
-  ✓ it lets only the admin role through the admin-only middleware        0.12s  
+  ✓ it lets only the admin role through the admin-only middleware        0.06s  
 
    PASS  Appmodules\identity\tests\Feature\Queries\CustomerMetricsQueryTest
-  ✓ it counts only customer accounts for the dashboard                   0.07s  
+  ✓ it counts only customer accounts for the dashboard                   0.05s  
 
    PASS  Appmodules\identity\tests\Feature\Repositories\CustomerAccountRepositoryTest
-  ✓ it paginates customer accounts newest first                          0.07s  
+  ✓ it paginates customer accounts newest first                          0.05s  
 
    PASS  Appmodules\identity\tests\Feature\Repositories\UserRepositoryTest
-  ✓ it creates a user with an explicit role with (Modules\Identity\Core… 0.08s  
-  ✓ it creates a user with an explicit role with (Modules\Identity\Core… 0.06s  
-  ✓ it updates a user together with the role                             0.06s  
-  ✓ it paginates users newest first                                      0.06s  
+  ✓ it creates a user with an explicit role with (Modules\Identity\Core… 0.05s  
+  ✓ it creates a user with an explicit role with (Modules\Identity\Core… 0.05s  
+  ✓ it updates a user together with the role                             0.05s  
+  ✓ it paginates users newest first                                      0.05s  
 
    PASS  Appmodules\identity\tests\Feature\UseCases\User\StaffUseCasesTest
-  ✓ it decides when a staff update may change the role with dataset "ow… 0.07s  
   ✓ it decides when a staff update may change the role with dataset "ow… 0.06s  
-  ✓ it decides when a staff update may change the role with dataset "ot… 0.07s  
-  ✓ it decides when a staff member may be removed                        0.06s  
-  ✓ it deletes a staff member by id and refuses an unknown one           0.07s  
-  ✓ it refuses to update an unknown staff member                         0.06s  
+  ✓ it decides when a staff update may change the role with dataset "ow… 0.05s  
+  ✓ it decides when a staff update may change the role with dataset "ot… 0.06s  
+  ✓ it decides when a staff member may be removed                        0.05s  
+  ✓ it deletes a staff member by id and refuses an unknown one           0.05s  
+  ✓ it refuses to update an unknown staff member                         0.05s  
 
    PASS  Appmodules\identity\tests\Unit\DTOs\UpdateUserProfileDTOTest
   ✓ it keeps the password out of the changes when none is sent           0.04s  
-  ✓ it includes the password when a new one is sent                      0.05s  
+  ✓ it includes the password when a new one is sent                      0.04s  
 
    PASS  Appmodules\identity\tests\Unit\ValueObjects\EmailTest
-  ✓ it normalizes the email with dataset "non ascii capital"             0.05s  
-  ✓ it normalizes the email with dataset "spaces and capitals"           0.05s  
-  ✓ it normalizes the email with dataset "domain without dot"            0.05s  
+  ✓ it normalizes the email with dataset "non ascii capital"             0.04s  
+  ✓ it normalizes the email with dataset "spaces and capitals"           0.04s  
+  ✓ it normalizes the email with dataset "domain without dot"            0.04s  
   ✓ it refuses an invalid email with dataset "no at sign"                0.05s  
   ✓ it refuses an invalid email with dataset "two at signs"              0.04s  
-  ✓ it refuses an invalid email with dataset "too long"                  0.05s  
+  ✓ it refuses an invalid email with dataset "too long"                  0.04s  
 
    PASS  Appmodules\identity\tests\Unit\ValueObjects\PasswordTest
-  ✓ it refuses a short password without echoing it                       0.05s  
-  ✓ it accepts the minimum length and reveals the text explicitly        0.05s  
-  ✓ it never reveals the plain password with ('json_encode')             0.05s  
-  ✓ it never reveals the plain password with ('serialize')               0.05s  
-  ✓ it never reveals the plain password with ('var_export')              0.05s  
+  ✓ it refuses a short password without echoing it                       0.04s  
+  ✓ it accepts the minimum length and reveals the text explicitly        0.04s  
+  ✓ it never reveals the plain password with ('json_encode')             0.04s  
+  ✓ it never reveals the plain password with ('serialize')               0.04s  
+  ✓ it never reveals the plain password with ('var_export')              0.04s  
   ✓ it never reveals the plain password with ('print_r')                 0.05s  
-  ✓ it never reveals the plain password with ('var_dump')                0.05s  
-  ✓ it never reveals the plain password with ('string cast')             0.06s  
-  ✓ it keeps the plain password out of exception traces                  0.09s  
-  ✓ it keeps the plain password out of exception traces when the constr… 0.08s  
+  ✓ it never reveals the plain password with ('var_dump')                0.04s  
+  ✓ it never reveals the plain password with ('string cast')             0.04s  
+  ✓ it keeps the plain password out of exception traces                  0.04s  
+  ✓ it keeps the plain password out of exception traces when the constr… 0.04s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\BrokerIsolationTest
-  ✓ it connects to the checkout vhost                                    0.29s  
-  ✓ it starts every broker test on an empty vhost @ repetition 1 of 2    0.25s  
-  ✓ it starts every broker test on an empty vhost @ repetition 2 of 2    0.25s  
+  ✓ it connects to the checkout vhost                                    0.17s  
+  ✓ it starts every broker test on an empty vhost @ repetition 1 of 2    0.12s  
+  ✓ it starts every broker test on an empty vhost @ repetition 2 of 2    0.08s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\DeadDeliveriesCommandsTest
-  ✓ it reports no dead delivery                                          0.63s  
-  ✓ it lists every dead delivery without taking it from the queue        1.06s  
-  ✓ it returns every dead delivery to its own consumer queue             0.67s  
-  ✓ it returns only the dead deliveries of the given message             0.84s  
-  ✓ it refuses to return a message that is not dead                      0.78s  
-  ✓ it keeps every dead delivery somewhere when the retry stops halfway  0.94s  
-  ✓ it sends a returned delivery back to the dead queue after three mor… 2.11s  
-  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.26s  
-  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.10s  
+  ✓ it reports no dead delivery                                          0.38s  
+  ✓ it lists every dead delivery without taking it from the queue        0.73s  
+  ✓ it returns every dead delivery to its own consumer queue             0.57s  
+  ✓ it returns only the dead deliveries of the given message             0.79s  
+  ✓ it refuses to return a message that is not dead                      0.59s  
+  ✓ it keeps every dead delivery somewhere when the retry stops halfway  0.70s  
+  ✓ it sends a returned delivery back to the dead queue after three mor… 1.73s  
+  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.21s  
+  ✓ it refuses the dead delivery commands without the broker with ('eve… 0.05s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\EventTransportFlagTest
-  ✓ it resolves the event transport to redis when nothing is stored      0.12s  
-  ✓ it shows the current event transport                                 0.14s  
+  ✓ it resolves the event transport to redis when nothing is stored      0.06s  
+  ✓ it shows the current event transport                                 0.07s  
   ✓ it switches the event transport to rabbitmq                          0.13s  
-  ✓ it refuses an unknown event transport with ('bogus')                 0.12s  
-  ✓ it refuses an unknown event transport with ('Redis')                 0.15s  
-  ✓ it refuses an unknown event transport with ('kafka')                 0.13s  
-  ✓ it changes nothing when the event transport already has the given v… 0.18s  
-  ✓ it logs who changed the event transport                              0.17s  
-  ✓ it changes the event transport with redis unreachable                0.15s  
-  ✓ it hands the envelope to the transport of the flag with dataset "re… 0.13s  
-  ✓ it hands the envelope to the transport of the flag with dataset "ra… 0.22s  
-  ✓ it publishes through the new transport on the next relay cycle       0.18s  
-  ✓ it logs each transport change once                                   0.12s  
+  ✓ it refuses an unknown event transport with ('bogus')                 0.07s  
+  ✓ it refuses an unknown event transport with ('Redis')                 0.06s  
+  ✓ it refuses an unknown event transport with ('kafka')                 0.05s  
+  ✓ it changes nothing when the event transport already has the given v… 0.07s  
+  ✓ it logs who changed the event transport                              0.05s  
+  ✓ it changes the event transport with redis unreachable                0.07s  
+  ✓ it hands the envelope to the transport of the flag with dataset "re… 0.08s  
+  ✓ it hands the envelope to the transport of the flag with dataset "ra… 0.06s  
+  ✓ it publishes through the new transport on the next relay cycle       0.06s  
+  ✓ it logs each transport change once                                   0.07s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\MessagingModuleTest
-  ✓ it exposes exactly four messaging contracts                          0.09s  
-  ✓ it registers the five event commands from its own provider           0.14s  
+  ✓ it exposes exactly four messaging contracts                          0.06s  
+  ✓ it registers the five event commands from its own provider           0.09s  
 
    PASS  Appmodules\messaging\tests\Feature\Messaging\RabbitMqEventTransportTest
-  ✓ it declares the topology before the first message                    0.64s  
-  ✓ it publishes one persistent message with the envelope as json        0.68s  
-  ✓ it copies the message once into each consumer queue                  0.71s  
-  ✓ it publishes an event with no consumer without error                 0.76s  
-  ✓ it marks the message published once the broker confirms              0.56s  
-  ✓ it keeps the message pending when the broker is unreachable          0.28s  
-  ✓ it keeps the message pending when the broker refuses it              0.76s  
-  ✓ it throws when the broker does not confirm in five seconds           0.46s  
+  ✓ it declares the topology before the first message                    0.51s  
+  ✓ it publishes one persistent message with the envelope as json        0.86s  
+  ✓ it copies the message once into each consumer queue                  0.73s  
+  ✓ it publishes an event with no consumer without error                 0.65s  
+  ✓ it marks the message published once the broker confirms              0.46s  
+  ✓ it keeps the message pending when the broker is unreachable          0.20s  
+  ✓ it keeps the message pending when the broker refuses it              0.27s  
+  ✓ it throws when the broker does not confirm in five seconds           0.18s  
 
    PASS  Appmodules\messaging\tests\Feature\Outbox\EventDeliveryTest
-  ✓ it pushes one delivery per subscribed consumer with the whole envel… 0.13s  
-  ✓ it publishes an envelope with no subscribed consumer without pushin… 0.10s  
-  ✓ it rebuilds the event and calls the consumer once                    0.08s  
-  ✓ it restores the envelope request id while the consumer runs          0.06s  
-  ✓ it clears a stale request id when the envelope has none              0.07s  
-  ✓ it refuses an envelope version the event does not declare            0.07s  
-  ✓ it retries only the failing consumer three times and fails it alone  3.18s  
-  ✓ it refuses a consumer that does not match the subscribed event with… 0.07s  
-  ✓ it refuses a consumer that does not match the subscribed event with… 0.05s  
-  ✓ it refuses two event classes under the same name                     0.04s  
-  ✓ it delivers an envelope whose message was already pruned             0.06s  
+  ✓ it pushes one delivery per subscribed consumer with the whole envel… 0.09s  
+  ✓ it publishes an envelope with no subscribed consumer without pushin… 0.06s  
+  ✓ it rebuilds the event and calls the consumer once                    0.06s  
+  ✓ it restores the envelope request id while the consumer runs          0.04s  
+  ✓ it clears a stale request id when the envelope has none              0.05s  
+  ✓ it refuses an envelope version the event does not declare            0.05s  
+  ✓ it retries only the failing consumer three times and fails it alone  3.19s  
+  ✓ it refuses a consumer that does not match the subscribed event with… 0.08s  
+  ✓ it refuses a consumer that does not match the subscribed event with… 0.06s  
+  ✓ it refuses two event classes under the same name                     0.06s  
+  ✓ it delivers an envelope whose message was already pruned             0.07s  
 
    PASS  Appmodules\messaging\tests\Feature\Outbox\OutboxRelayTest
-  ✓ it publishes every pending message in order with once                0.06s  
-  ✓ it stops at the first transport failure and keeps the rest pending   0.06s  
+  ✓ it publishes every pending message in order with once                0.08s  
+  ✓ it stops at the first transport failure and keeps the rest pending   0.05s  
   ✓ it exits with 1 when the transport fails with once                   0.06s  
-  ✓ it claims the pending messages with for update skip locked           0.07s  
-  ✓ it hands the transport an envelope built from every column of the r… 0.08s  
-  ✓ it claims publishes and marks the messages in one transaction        0.06s  
-  ✓ it hands a message again when the relay stops before the commit      0.05s  
-  ✓ it waits 500 ms after a cycle with no pending message                0.05s  
-  ✓ it waits 5 seconds after a transport failure                         0.05s  
+  ✓ it claims the pending messages with for update skip locked           0.05s  
+  ✓ it hands the transport an envelope built from every column of the r… 0.05s  
+  ✓ it claims publishes and marks the messages in one transaction        0.05s  
+  ✓ it hands a message again when the relay stops before the commit      0.06s  
+  ✓ it waits 500 ms after a cycle with no pending message                0.06s  
+  ✓ it waits 5 seconds after a transport failure                         0.07s  
   ✓ it prunes published messages older than 7 days and keeps pending on… 0.06s  
   ✓ it prunes again only after an hour                                   0.08s  
   ✓ it exits after the cycle when the queue restart signal changes       0.06s  
-  ✓ it prints one warning line when the transport refuses a message      0.06s  
-  ✓ it keeps relaying while the cache with the restart signal is unreac… 0.06s  
+  ✓ it prints one warning line when the transport refuses a message      0.05s  
+  ✓ it keeps relaying while the cache with the restart signal is unreac… 0.05s  
 
    PASS  Appmodules\shared\tests\Feature\FeatureHarnessTest
   ✓ it runs a module feature test with the refreshed database            0.05s  
 
    PASS  Appmodules\shared\tests\Feature\RateLimitBurstTest
-  ✓ it lets exactly the limit through when 30 requests arrive at the sa… 2.42s  
-  ✓ it gives the window expiry to a counter left without one             0.08s  
+  ✓ it lets exactly the limit through when 30 requests arrive at the sa… 2.15s  
+  ✓ it gives the window expiry to a counter left without one             0.12s  
 
    PASS  Appmodules\shared\tests\Feature\RateLimiterStoreTest
-  ✓ it leaves the rate limiter on the default store without CACHE_LIMIT… 0.06s  
+  ✓ it leaves the rate limiter on the default store without CACHE_LIMIT… 0.05s  
 
    PASS  Appmodules\shared\tests\Feature\TestIdentityTest
-  ✓ it signs a customer in by id alone                                   0.06s  
+  ✓ it signs a customer in by id alone                                   0.05s  
 
    PASS  Appmodules\shared\tests\Feature\WithoutPaymentProofTest
-  ✓ it answers 404 to the payment route without the payment module inst… 0.06s  
-  ✓ it keeps an order awaiting payment without the payment module insta… 0.10s  
+  ✓ it answers 404 to the payment route without the payment module inst… 0.05s  
+  ✓ it keeps an order awaiting payment without the payment module insta… 0.08s  
 
    PASS  Appmodules\shared\tests\Unit\UnitHarnessTest
-  ✓ it runs a module unit test without the database                      0.04s  
+  ✓ it runs a module unit test without the database                      0.06s  
 
   Tests:    135 passed (574 assertions)
-  Duration: 30.20s
+  Duration: 25.59s
 
 pest app-modules/catalog/tests app-modules/identity/tests app-modules/messaging/tests app-modules/shared/tests :   Tests:    135 passed (574 assertions) (exit 0)
 PASS: without the payment module the others migrate and pass, and the route is gone

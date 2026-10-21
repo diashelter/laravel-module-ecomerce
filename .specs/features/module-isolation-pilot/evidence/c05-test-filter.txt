@@ -5,5 +5,5 @@ docker compose exec -e DB_DATABASE=ecommerce_testing -e RABBITMQ_VHOST=ecommerce
   ✓ it approves the fake approved card                                   0.18s  
 
   Tests:    1 passed (4 assertions)
-  Duration: 1.02s
+  Duration: 0.98s
 
