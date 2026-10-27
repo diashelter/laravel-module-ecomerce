@@ -1,0 +1,27 @@
+# Storefront Read Model verification
+
+**Verdict**: FAIL
+**Mutations**: 3 - probed C42 (total of the category filter), C5 (version of the category rename), C1/C2/C3 (order of `category_ids` in the event); also C25/C26 (second attempt of `ConditionalUpsert`, killed) and C33/C34 (order in the republish snapshot, killed)
+**Proofs**: `proofs.md` at 8354e57
+**Verifier**: independent sub-agent (author != verifier)
+
+## Findings
+
+| Finding | Evidence | Fix | Closed |
+| --- | --- | --- | --- |
+| C42 never asserts `meta.total` or `meta.last_page` of a category filter with results; the total can ignore the filter and no test fails | mutation `StorefrontQuery.php:61` `countDocuments($filter)` -> `countDocuments(['product' => ['$ne' => null], 'deleted_version' => null])` not killed by `filters by the slug of a category that is not a tombstone` (it asserts only the names, and `meta.total` 0 for the empty case). Criterion 35 fixes `meta.total` and `meta.last_page` counted in MongoDB | in `StorefrontReadTest`, list more than 12 products in one category plus others outside it, assert `meta.total`, `meta.last_page` and `links` (with `category=`) on pages 1 and 2 |  fix(storefront-read-model): close the verification findings - `counts the filtered list in MongoDB...` (C42, C48) asserts total 14, last_page 2 and the links of `category=games` |
+| C5 proves "stored version plus 1" for the category rename only from the default version 1 | mutation `UpdateCategoryUseCase.php:34` `'version' => $category->version + 1` -> `'version' => 2` not killed by `records the category creation at version 1 and the rename at the next version`. The deletion test (stored 3 -> 4) and the product edit (two edits) do not cover it | before the rename, set `categories.version` to 3 (as the deletion test does) and expect the `catalog.category_updated` and the column at 4 |  same commit - `records the category creation at version 1 and the rename at the next version` (C5) renames from stored 3 and expects 4 |
+| C1/C2/C3: the ascending order of `category_ids` in the event is not proven, it holds by the order PostgreSQL happens to return | mutation `ProductRepository.php:32` `->orderBy('categories.id')->pluck(...)` -> `->pluck(...)` not killed by the C1, C2 and C3 tests, though the edit sends `[$second->id, $first->id]` and expects ascending (the pivot primary-key index order hides the missing `ORDER BY`). Assumption 4 and door 1 fix "ascending" | assert the SQL of the event read carries `order by "categories"."id"` (query log, like the lock test), or build the pivot rows so the heap/index order is descending |  same commit - `records the whole product at the next version on an edit` (C2) asserts the `order by "categories"."id" asc` of the id read |
+| `isPlain` accepts a non-finite float, and the refusal of door 2 is not an `InvalidArgumentException` for it | own example: `[NAN]` and `[INF]` in a list pass `isPlain` (`is_scalar`) and fail later with `Illuminate\Database\Eloquent\JsonEncodingException`; nothing is recorded (0 rows), the list of refusals in criterion 12 does not name them | refuse `is_nan`/`is_infinite` floats in `isPlain` with the same `InvalidArgumentException` and add the two cases to `refuses an associative array, a nested array and an object in the payload` (low) |  same commit - `isFiniteScalar` refuses NAN and INF; four cases added to `refuses an associative array, a nested array and an object in the payload` (C14) |
+| C48 proves the constant read count only for the unfiltered list | `reads MongoDB the same number of times for one and twelve products` calls `GET /api/products` with no `category`; `StorefrontQuery` has an extra read for the slug, and the filtered path (the one that also sizes `$in`) is not counted for 1 vs 12 (criterion 41 names the list without a filter, so this is a coverage note, low) | repeat the count with `?category=<slug>` for 1 and 12 products |  same commit - the filtered list is counted for 1 and 12 products (C48) |
+
+## Own examples (all pass at HEAD, nothing to fix)
+
+- `GET /api/products?page=999` with 13 products: `200`, `data` [], `meta.total` 13, `last_page` 2, same shape as the Laravel paginator.
+- 15 products with the same name and the same price (ids in reverse insertion order): pages 1 and 2 are disjoint and in ascending id order for `name`, `price_asc` and `price_desc`.
+- `?category=games&page=2` with 14 products in the category: `total` 14, `last_page` 2, 2 items, `links.prev` keeps `category=games`.
+- Product event with the same version and different content (`A` then `B` at version 3): `A` stays. Tombstone 4, stock 5, then a product event at version 6: `deleted_version` stays 4, the document stays out of the list (state diagram: tombstone stays tombstone).
+- `catalog:republish` and `inventory:republish` with 201 categories, 201 products and 201 stocks (crosses the 200 page of `RepublicationQuery`): 201, 201 and 201 messages, no duplicate, no loss.
+- Payload lists `['a', ['b']]`, `['a', new stdClass]`, `[[]]`, `[null]` are refused; `[1.0E+300, -0.0, false, 0]` is accepted.
+
+Mutations killed: `ConditionalUpsert` second attempt (`$attempt === 1`), republish `json_agg(category_id)` without order. The mutations were run with `mutate.py --spec` (the engine `check_proofs.py --mutations` calls) so the dev stack was not stopped by the gateway proofs; the tree is restored and only `mutations.json` and this file are new.

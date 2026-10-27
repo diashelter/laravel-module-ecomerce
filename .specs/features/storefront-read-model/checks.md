@@ -154,6 +154,7 @@ Proof: `make test-filter FILTER="lists only the documents with a product part an
 
 **C42** - `category=<slug>` lista só os produtos cujo `category_ids` tem uma categoria sem lápide com aquele slug. Table-driven: o slug de uma categoria viva → os produtos dela; um slug que só uma lápide guarda → página vazia; um slug desconhecido → `200`, `data` vazio e `meta.total` 0; uma categoria nova que reusa o slug de uma lápide → só os produtos da nova (AC 36)
 Proof: `make test-filter FILTER="filters by the slug of a category that is not a tombstone"`
+Proof: `make test-filter FILTER="counts the filtered list in MongoDB and reads the same number of times for one and twelve products"`
 
 **C43** - `sort=name` ordena por byte, com o id desempatando: `Abacaxi`, `Banana`, `Zebra`, `banana`, `caju`, `Água`, `éclair`, nessa ordem; `price_asc` e `price_desc` ordenam por `price_cents`, e dois produtos com o mesmo preço (e dois com o mesmo nome) saem com o menor id primeiro nas três ordenações; sem `sort`, a ordem é a de `name` (AC 37)
 Proof: `make test-filter FILTER="sorts the storefront by name in byte order and by price with the id breaking ties"`
@@ -172,6 +173,7 @@ Proof: `make test-filter FILTER="renders a document without the stock part as un
 
 **C48** - `GET /api/products` faz o mesmo número de leituras no MongoDB (contadas pelo log de consultas da conexão `mongodb`) com 1 produto e com 12, cada um com 2 categorias, e esse número é maior que 0 (AC 41)
 Proof: `make test-filter FILTER="reads MongoDB the same number of times for one and twelve products"`
+Proof: `make test-filter FILTER="counts the filtered list in MongoDB and reads the same number of times for one and twelve products"`
 Proof: `make test-filter FILTER="lists the catalog with the same query count for 1 and 12 products"`
 
 **C49** - `GET /api/products`, com e sem filtro, e `GET /api/products/{product}` não fazem nenhuma consulta na conexão `pgsql` (AC 42)

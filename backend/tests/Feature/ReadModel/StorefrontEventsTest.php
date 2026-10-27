@@ -116,6 +116,16 @@ it('records the whole product at the next version on an edit', function () {
     $product = productWithStock(4);
     $product->categories()->attach([$first->id]);
 
+    // The ids of the event come ordered by the query, not by the luck of the pivot index.
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $this->putJson("/api/admin/products/{$product->id}", editBody(['category_ids' => [$second->id, $first->id]]))->assertOk();
+    $idReads = array_filter(array_column(DB::getQueryLog(), 'query'), fn (string $sql) => str_starts_with($sql, 'select "categories"."id" from "categories" inner join "category_product"'));
+    DB::disableQueryLog();
+    expect($idReads)->toHaveCount(1)->and(array_values($idReads)[0])->toContain('order by "categories"."id" asc');
+    outboxMessages('catalog.product_updated')->each->delete();
+    DB::table('products')->where('id', $product->id)->update(['version' => 1]);
+
     // Every field, then only the categories, then the same body again: versions 2, 3 and 4 in that order.
     $this->putJson("/api/admin/products/{$product->id}", editBody(['name' => 'Novo nome', 'price_cents' => 5500, 'category_ids' => [$second->id, $first->id]]))->assertOk();
     $this->putJson("/api/admin/products/{$product->id}", editBody(['name' => 'Novo nome', 'price_cents' => 5500, 'category_ids' => [$third->id]]))->assertOk();
@@ -181,6 +191,13 @@ it('records the category creation at version 1 and the rename at the next versio
 
     expect(soleEvent('catalog.category_updated'))->toEqual(['category_id' => $id, 'name' => 'Casa e Jardim', 'slug' => 'casa-e-jardim', 'version' => 2])
         ->and(DB::table('categories')->where('id', $id)->value('version'))->toBe(2);
+
+    // The stored version plus 1, not a constant: from 3 the rename is 4.
+    DB::table('categories')->where('id', $id)->update(['version' => 3]);
+    $this->putJson("/api/admin/categories/{$id}", ['name' => 'Casa'])->assertOk();
+
+    expect(outboxMessages('catalog.category_updated')->last()->payload['version'])->toBe(4)
+        ->and(DB::table('categories')->where('id', $id)->value('version'))->toBe(4);
 });
 
 it('records the category deletion at the stored version plus one', function () {

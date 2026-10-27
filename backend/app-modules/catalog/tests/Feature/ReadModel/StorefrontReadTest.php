@@ -254,3 +254,39 @@ it('answers 503 within five seconds when MongoDB does not answer', function (str
     assertApiError($response, 'SERVICE_UNAVAILABLE', 'Este recurso está indisponível no momento.');
     expect($elapsed)->toBeLessThan(5.0);
 })->with(['/api/products', '/api/products/{id}']);
+
+it('counts the filtered list in MongoDB and reads the same number of times for one and twelve products', function () {
+    $games = '0199f0a0-0000-7000-8000-0000000000c1';
+    project(categoryEvent($games, 1, 'Games', 'games'));
+    foreach (range(1, 14) as $number) {
+        listProduct(sprintf('Em games %02d', $number), categoryIds: [$games]);
+    }
+    foreach (range(1, 5) as $number) {
+        listProduct("Fora {$number}");
+    }
+
+    $first = $this->getJson('/api/products?category=games')->assertOk();
+    $second = $this->getJson('/api/products?category=games&page=2')->assertOk();
+
+    expect($first->json('meta.total'))->toBe(14)
+        ->and($first->json('meta.last_page'))->toBe(2)
+        ->and($first->json('data'))->toHaveCount(12)
+        ->and($first->json('links.next'))->toContain('category=games')->toContain('page=2')
+        ->and($second->json('data'))->toHaveCount(2)
+        ->and($second->json('links.prev'))->toContain('category=games');
+
+    // The filtered path costs a fixed number of reads too: the slug, the count, the page and the categories.
+    $reads = function (string $slug) {
+        $connection = DB::connection('mongodb');
+        $connection->flushQueryLog();
+        $connection->enableQueryLog();
+        $this->getJson("/api/products?category={$slug}")->assertOk();
+
+        return count($connection->getQueryLog());
+    };
+    $twelve = $reads('games');
+    readModel()->products()->deleteMany([]);
+    listProduct('Único em games', categoryIds: [$games]);
+
+    expect($reads('games'))->toBe($twelve);
+});

@@ -1,0 +1,37 @@
+[
+  {
+    "file": "backend/app-modules/catalog/src/Persistence/ReadModel/ConditionalUpsert.php",
+    "old": "if ($attempt === 2) {",
+    "new": "if ($attempt === 1) {",
+    "proof": "make test-filter FILTER=\"ends with the higher version when two deliveries race|counts a losing upsert as a discard\"",
+    "label": "ConditionalUpsert gives up on the first duplicate key (no second attempt after a lost insert race)"
+  },
+  {
+    "file": "backend/app-modules/catalog/src/Core/UseCases/UpdateCategoryUseCase.php",
+    "old": "'version' => $category->version + 1]",
+    "new": "'version' => 2]",
+    "proof": "make test-filter FILTER=\"records the category creation at version 1 and the rename at the next version\"",
+    "label": "category rename version stored+1 -> constant 2"
+  },
+  {
+    "file": "backend/app-modules/catalog/src/Persistence/Queries/StorefrontQuery.php",
+    "old": "$total = $this->store->products()->countDocuments($filter);",
+    "new": "$total = $this->store->products()->countDocuments(['product' => ['$ne' => null], 'deleted_version' => null]);",
+    "proof": "make test-filter FILTER=\"filters by the slug of a category that is not a tombstone|counts the filtered list in MongoDB and reads the same number of times for one and twelve products\"",
+    "label": "meta.total ignores the category filter"
+  },
+  {
+    "file": "backend/app-modules/catalog/src/Persistence/Repositories/ProductRepository.php",
+    "old": "->orderBy('categories.id')->pluck('categories.id')",
+    "new": "->pluck('categories.id')",
+    "proof": "make test-filter FILTER=\"records the product creation and the opening stock at version 1|records the whole product at the next version on an edit|records the whole product at the next version on a status change\"",
+    "label": "category_ids of the event no longer ordered ascending"
+  },
+  {
+    "file": "backend/app-modules/catalog/src/Persistence/Queries/RepublicationQuery.php",
+    "old": "json_agg(category_id order by category_id)",
+    "new": "json_agg(category_id)",
+    "proof": "make test-filter FILTER=\"republishes every category and product with the current state and version|reads each product and its categories in one snapshot\"",
+    "label": "republished category_ids no longer ordered ascending"
+  }
+]

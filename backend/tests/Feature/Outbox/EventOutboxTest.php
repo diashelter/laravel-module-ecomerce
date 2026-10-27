@@ -118,6 +118,10 @@ it('refuses an associative array, a nested array and an object in the payload', 
     'list with a null inside' => [['a', null]],
     'array with a gap in its keys' => [[1 => 'a']],
     'object' => [new stdClass],
+    'not a number' => [NAN],
+    'infinity' => [INF],
+    'list with a not a number' => [[1.5, NAN]],
+    'list with infinity' => [[-INF]],
     'dated object' => [CarbonImmutable::parse('2026-10-15 12:00:00')],
 ]);
 
