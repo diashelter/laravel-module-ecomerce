@@ -1,8 +1,8 @@
 # storefront-read-model proofs
 
-**HEAD**: 8354e57
+**HEAD**: bb966ca
 **Tree**: clean
-**Result**: 89 pass, 0 fail; mutations 0 killed, 0 not
+**Result**: 101 pass, 0 fail; mutations 5 killed, 0 not
 
 | Check | Proof | Ran | Passed | Result |
 | --- | --- | --- | --- | --- |
@@ -20,11 +20,16 @@
 | C11 | `make test-filter FILTER="locks the row before computing the version"` | 7 | - | pass |
 | C12 | `make test-filter FILTER="gives concurrent product writes increasing versions and the final row to the newest e` | 1 | - | pass |
 | C13 | `make test-filter FILTER="gives a concurrent checkout and stock adjustment increasing versions and the final qu` | 1 | - | pass |
-| C14 | `make test-filter FILTER="accepts a flat list and an ISO 8601 date in the payload|refuses an associative array,` | 11 | - | pass |
+| C14 | `make test-filter FILTER="accepts a flat list and an ISO 8601 date in the payload"` | 4 | - | pass |
+| C14 | `make test-filter FILTER="refuses an associative array, a nested array and an object in the payload"` | 10 | - | pass |
+| C14 | `make test-filter FILTER="refuses a resource in the payload"` | 1 | - | pass |
 | C15 | `sh .specs/features/storefront-read-model/proofs/c15-unchanged-cases.sh` | 42 | - | pass |
-| C16 | `make test-filter FILTER="reads the stock change with the catalog reader into the same values|detects a reader ` | 2 | - | pass |
-| C17 | `make test-filter FILTER="keeps the eighteen frozen migration names|places each module migration in its owner p` | 16 | - | pass |
-| C17 | `make test-filter FILTER="adds the version column to products, categories and stocks|gives version 1 to the row` | 4 | - | pass |
+| C16 | `make test-filter FILTER="reads the stock change with the catalog reader into the same values"` | 1 | - | pass |
+| C16 | `make test-filter FILTER="detects a reader that disagrees with its producer"` | 1 | - | pass |
+| C17 | `make test-filter FILTER="keeps the eighteen frozen migration names"` | 1 | - | pass |
+| C17 | `make test-filter FILTER="places each module migration in its owner package"` | 15 | - | pass |
+| C17 | `make test-filter FILTER="adds the version column to products, categories and stocks"` | 3 | - | pass |
+| C17 | `make test-filter FILTER="gives version 1 to the rows that existed before"` | 1 | - | pass |
 | C18 | `make test-filter FILTER="replaces the product part with a newer product event"` | 3 | - | pass |
 | C19 | `make test-filter FILTER="discards a product event that is not newer"` | 6 | - | pass |
 | C20 | `make test-filter FILTER="creates the document with only the stock part when the stock arrives first"` | 1 | - | pass |
@@ -35,27 +40,34 @@
 | C25 | `make test-filter FILTER="ends with the higher version when two deliveries race"` | 2 | - | pass |
 | C26 | `make test-filter FILTER="counts a losing upsert as a discard"` | 1 | - | pass |
 | C27 | `make test-filter FILTER="fails the delivery and keeps the document when MongoDB does not answer"` | 1 | - | pass |
-| C28 | `make test-filter FILTER="subscribes the thirteen consumers under their stable names|subscribes no consumer und` | 14 | - | pass |
-| C29 | `make test-filter FILTER="keeps the read model inside the catalog|fails on a deliberate read model violation"` | 3 | - | pass |
+| C28 | `make test-filter FILTER="subscribes the thirteen consumers under their stable names"` | 13 | - | pass |
+| C28 | `make test-filter FILTER="subscribes no consumer under any other name"` | 1 | - | pass |
+| C29 | `make test-filter FILTER="keeps the read model inside the catalog"` | 1 | - | pass |
+| C29 | `make test-filter FILTER="fails on a deliberate read model violation"` | 2 | - | pass |
 | C30 | `make test-filter FILTER="stores exactly the fields of door 4"` | 1 | - | pass |
 | C31 | `sh docker/tests/read-model.sh --only make-rebuild` | count unknown | - | pass |
 | C32 | `make test-filter FILTER="empties both collections and leaves the indexes of door 4"` | 1 | - | pass |
-| C33 | `make test-filter FILTER="republishes every category and product with the current state and version|republishes` | 2 | - | pass |
+| C33 | `make test-filter FILTER="republishes every category and product with the current state and version"` | 1 | - | pass |
+| C33 | `make test-filter FILTER="republishes every stock row with the current quantity and version"` | 1 | - | pass |
 | C34 | `make test-filter FILTER="reads each product and its categories in one snapshot"` | 1 | - | pass |
 | C35 | `make test-filter FILTER="exits non-zero with the count recorded when the republish fails halfway and converges` | 2 | - | pass |
 | C36 | `sh docker/tests/read-model.sh --only make-fresh-seed` | count unknown | - | pass |
 | C37 | `make test-filter FILTER="returns the same storefront after emptying MongoDB and rebuilding"` | 1 | - | pass |
 | C38 | `make test-filter FILTER="leaves no document of a record missing from PostgreSQL after the rebuild"` | 1 | - | pass |
-| C39 | `make test-filter FILTER="keeps the written state when a republished envelope arrives after the write|answers 2` | 2 | - | pass |
+| C39 | `make test-filter FILTER="keeps the written state when a republished envelope arrives after the write"` | 1 | - | pass |
+| C39 | `make test-filter FILTER="answers 200 with what was projected while the rebuild runs"` | 1 | - | pass |
 | C40 | `sh .specs/features/storefront-read-model/proofs/c40-storefront-tests.sh` | 134 | - | pass |
 | C41 | `make test-filter FILTER="lists only the documents with a product part and no tombstone twelve per page"` | 1 | - | pass |
 | C42 | `make test-filter FILTER="filters by the slug of a category that is not a tombstone"` | 1 | - | pass |
+| C42 | `make test-filter FILTER="counts the filtered list in MongoDB and reads the same number of times for one and tw` | 1 | - | pass |
 | C43 | `make test-filter FILTER="sorts the storefront by name in byte order and by price with the id breaking ties"` | 1 | - | pass |
 | C44 | `make test-filter FILTER="refuses an invalid sort or page"` | 3 | - | pass |
 | C45 | `make test-filter FILTER="answers the product page from the document"` | 7 | - | pass |
 | C46 | `make test-filter FILTER="answers 404 to a non canonical id without reading MongoDB"` | 1 | - | pass |
-| C47 | `make test-filter FILTER="renders a document without the stock part as unavailable|leaves out a category that h` | 2 | - | pass |
+| C47 | `make test-filter FILTER="renders a document without the stock part as unavailable"` | 1 | - | pass |
+| C47 | `make test-filter FILTER="leaves out a category that has not arrived or is a tombstone"` | 1 | - | pass |
 | C48 | `make test-filter FILTER="reads MongoDB the same number of times for one and twelve products"` | 1 | - | pass |
+| C48 | `make test-filter FILTER="counts the filtered list in MongoDB and reads the same number of times for one and tw` | 1 | - | pass |
 | C48 | `make test-filter FILTER="lists the catalog with the same query count for 1 and 12 products"` | 1 | - | pass |
 | C49 | `make test-filter FILTER="runs no PostgreSQL query on the storefront"` | 1 | - | pass |
 | C50 | `make test-filter FILTER="decides availability when reading"` | 1 | - | pass |
@@ -72,7 +84,7 @@
 | C59 | `make test-filter FILTER="starts each test with an empty read model"` | 2 | - | pass |
 | C60 | `sh docker/tests/read-model.sh --only ci` | count unknown | - | pass |
 | C61 | `sh docker/tests/read-model.sh --only dev-services` | count unknown | - | pass |
-| C61 | `docker compose run --rm --no-deps --entrypoint php api -m | grep -qx -e mongodb` | count unknown | - | pass |
+| C61 | `sh docker/tests/read-model.sh --only php-extension` | count unknown | - | pass |
 | C62 | `sh load-tests/tests/stack.sh --only connection` | count unknown | - | pass |
 | C62 | `sh load-tests/tests/stack.sh --only fpm-pool` | count unknown | - | pass |
 | C63 | `sh load-tests/tests/k6.sh projection.test.js --only first-vu-writes` | count unknown | - | pass |
@@ -95,3 +107,13 @@
 | C76 | `sh .specs/features/storefront-read-model/proofs/docs.sh --only domain-analysis` | count unknown | - | pass |
 | C77 | `sh .specs/features/storefront-read-model/proofs/docs.sh --only agents` | count unknown | - | pass |
 | Build | `make pint` | - | - | pass |
+
+## Mutations
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| ConditionalUpsert gives up on the first duplicate key (no second attempt after a lost insert race) | `backend/app-modules/catalog/src/Persistence/ReadModel/ConditionalUpsert.php:39` | yes |
+| category rename version stored+1 -> constant 2 | `backend/app-modules/catalog/src/Core/UseCases/UpdateCategoryUseCase.php:34` | yes |
+| meta.total ignores the category filter | `backend/app-modules/catalog/src/Persistence/Queries/StorefrontQuery.php:61` | yes |
+| category_ids of the event no longer ordered ascending | `backend/app-modules/catalog/src/Persistence/Repositories/ProductRepository.php:32` | yes |
+| republished category_ids no longer ordered ascending | `backend/app-modules/catalog/src/Persistence/Queries/RepublicationQuery.php:53` | yes |
