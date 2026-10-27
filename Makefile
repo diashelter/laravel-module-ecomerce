@@ -146,8 +146,9 @@ events-retry: ## Devolve as entregas mortas aos consumidores: make events-retry 
 # so two suites on one database break each other. The main checkout keeps ecommerce_testing; a worktree uses
 # ecommerce_testing_<name>. Any checkout can pick another database: make test TEST_DB_DATABASE=<name>.
 TEST_DB_DATABASE := $(or $(TEST_DB_DATABASE),ecommerce_testing$(if $(WORKTREE),_$(shell printf '%s' '$(WORKTREE)' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '_' | cut -c1-45)))
-# The RabbitMQ vhost of the checkout has the name of its test database, so two suites never see each other's queues.
-TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) -e RABBITMQ_VHOST=$(TEST_DB_DATABASE) api
+# The RabbitMQ vhost and the MongoDB database of the checkout have the name of its test database, so two suites never
+# see each other's queues or read model.
+TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) -e RABBITMQ_VHOST=$(TEST_DB_DATABASE) -e MONGODB_DATABASE=$(TEST_DB_DATABASE) api
 PEST              = sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$$@"' pest
 # The name goes unquoted into SQL, and the suite would wipe the development database. The check reads it
 # from the environment, so no value can break its own quoting.
@@ -170,9 +171,10 @@ test-prepare: worktree-env
 		|| { rabbitmqctl -q add_vhost "$$VHOST" && rabbitmqctl -q set_permissions -p "$$VHOST" "$$RABBITMQ_DEFAULT_USER" ".*" ".*" ".*"; }'
 	@echo "Banco de testes: $(TEST_DB_DATABASE) (vhost do RabbitMQ: $(TEST_DB_DATABASE))"
 
-test-db-drop: ## Apaga o banco e o vhost do RabbitMQ de testes deste checkout (o próximo make test os recria)
+test-db-drop: ## Apaga o banco, o banco do MongoDB e o vhost do RabbitMQ de testes deste checkout (o próximo make test os recria)
 	@$(CHECK_TEST_DB)
 	$(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -c 'DROP DATABASE IF EXISTS $(TEST_DB_DATABASE) WITH (FORCE)'
+	$(DC) exec -T -e TEST_DB=$(TEST_DB_DATABASE) mongodb sh -c 'mongosh --quiet -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.getSiblingDB(process.env.TEST_DB).dropDatabase()"'
 	$(DC) exec -T -e VHOST=$(TEST_DB_DATABASE) rabbitmq sh -c 'if rabbitmqctl -q list_vhosts --no-table-headers | grep -qx "$$VHOST"; then rabbitmqctl -q delete_vhost "$$VHOST"; fi'
 
 pint: worktree-env ## Verifica o estilo do backend/ deste checkout (Pint, sem corrigir)

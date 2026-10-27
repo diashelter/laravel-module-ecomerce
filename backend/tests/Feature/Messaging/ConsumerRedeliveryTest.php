@@ -3,6 +3,12 @@
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Modules\Catalog\Events\CategoryCreated;
+use Modules\Catalog\Events\CategoryDeleted;
+use Modules\Catalog\Events\ProductCreated;
+use Modules\Catalog\Events\ProductDeleted;
+use Modules\Catalog\Events\ProductStatusChanged;
+use Modules\Catalog\Events\ProductUpdated;
 use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
 use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Fulfillment\Events\DeliveryScheduled;
@@ -109,3 +115,30 @@ it('redelivers OrderPaid to ScheduleOrderDelivery', function () {
         ->and(DB::table('outbox_messages')->count())->toBe(1);
     Queue::assertPushedTimes(DeliverOrder::class, 2);
 });
+
+/*
+ * The storefront projector: its key of idempotency is the version of each part (AD-005), so the same envelope
+ * delivered twice leaves the document as the first delivery left it, and records nothing in the outbox.
+ */
+it('redelivers every storefront event to its projector', function (Closure $event, string $collection) {
+    $event = $event();
+    $envelope = envelopeOf($event);
+
+    deliverEnvelope($envelope, STOREFRONT_CONSUMERS[$event::class]);
+    $afterFirst = readModel()->{$collection}()->find([], ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']])->toArray();
+    deliverEnvelope($envelope, STOREFRONT_CONSUMERS[$event::class]);
+    $afterSecond = readModel()->{$collection}()->find([], ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']])->toArray();
+
+    expect($afterFirst)->toHaveCount(1)
+        ->and($afterSecond)->toBe($afterFirst)
+        ->and(DB::table('outbox_messages')->count())->toBe(0);
+})->with([
+    'ProductCreated' => [fn () => productEvent('0199f0a0-0000-7000-8000-0000000000a1', 1, ProductCreated::class), 'products'],
+    'ProductUpdated' => [fn () => productEvent('0199f0a0-0000-7000-8000-0000000000a1', 2, ProductUpdated::class), 'products'],
+    'ProductStatusChanged' => [fn () => productEvent('0199f0a0-0000-7000-8000-0000000000a1', 3, ProductStatusChanged::class, ['status' => 'inactive']), 'products'],
+    'ProductDeleted' => [fn () => new ProductDeleted('0199f0a0-0000-7000-8000-0000000000a1', 4), 'products'],
+    'CategoryCreated' => [fn () => categoryEvent('0199f0a0-0000-7000-8000-0000000000c1', 1, event: CategoryCreated::class), 'categories'],
+    'CategoryUpdated' => [fn () => categoryEvent('0199f0a0-0000-7000-8000-0000000000c1', 2), 'categories'],
+    'CategoryDeleted' => [fn () => new CategoryDeleted('0199f0a0-0000-7000-8000-0000000000c1', 3), 'categories'],
+    'StockChanged' => [fn () => stockEvent('0199f0a0-0000-7000-8000-0000000000a1', 7, 2), 'products'],
+]);

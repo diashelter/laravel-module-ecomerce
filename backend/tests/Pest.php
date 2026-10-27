@@ -18,6 +18,9 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature', '../app-modules/*/tests/Feature');
 
+// MongoDB is not rolled back by RefreshDatabase: every feature test starts with both read model collections empty.
+pest()->beforeEach(fn () => emptyReadModel())->in('Feature', '../app-modules/*/tests/Feature');
+
 // Every test that uses the broker starts on a vhost with nothing declared in it.
 pest()->beforeEach(fn () => resetBroker())->in('Feature/Messaging', '../app-modules/messaging/tests/Feature/Messaging');
 
