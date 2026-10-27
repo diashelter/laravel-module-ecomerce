@@ -4,9 +4,9 @@
     "tlc-spec-lean": {
       "name": "tlc-spec-lean",
       "source": "local",
-      "contentHash": "28368cb86a9d441fce24426eb502a39a5e7f9ffe0ad5d682fead2ce76c5b085b",
+      "contentHash": "51bcf485f5b981d613d660767d03f194d9117188c7615914108759a21de7b5cf",
       "installedAt": "2026-10-06T12:47:56.250Z",
-      "updatedAt": "2026-10-06T12:47:56.250Z",
+      "updatedAt": "2026-10-27T19:00:17.000Z",
       "agents": [
         "claude-code"
       ],
