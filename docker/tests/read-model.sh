@@ -250,6 +250,11 @@ PY
         grep -q 'pecl install .*mongodb' docker/php/Dockerfile || fail "o Dockerfile não instala a extensão mongodb"
         ok "o Dockerfile instala a extensão mongodb"
         ;;
+    php-extension)
+        modules=$($DEV run --rm --no-deps --entrypoint php api -m) || fail "não consegui listar as extensões do PHP"
+        printf '%s\n' "$modules" | grep -qx mongodb || fail "a imagem PHP não tem a extensão mongodb"
+        ok "a imagem PHP tem a extensão mongodb"
+        ;;
     *)
         echo "FALHOU: caso desconhecido '$CASE'" >&2
         exit 1

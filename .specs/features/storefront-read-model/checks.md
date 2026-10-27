@@ -62,17 +62,22 @@ Proof: `make test-filter FILTER="gives concurrent product writes increasing vers
 Proof: `make test-filter FILTER="gives a concurrent checkout and stock adjustment increasing versions and the final quantity to the newest event"`
 
 **C14** - O `EventOutbox` grava um payload com `['a', 'b']`, com `[]` e com uma data em texto ISO 8601 com o fuso (`2026-10-27T13:45:00+00:00`), e recusa com `InvalidArgumentException`, sem gravar nada, `[['a']]`, `['k' => 'v']` e `new stdClass`. O caso `refuses a payload value that is not a scalar or null` sai com esta afirmação, e o `refuses a resource in the payload` fica (AC 12, porta 2)
-Proof: `make test-filter FILTER="accepts a flat list and an ISO 8601 date in the payload|refuses an associative array, a nested array and an object in the payload|refuses a resource in the payload"`
+Proof: `make test-filter FILTER="accepts a flat list and an ISO 8601 date in the payload"`
+Proof: `make test-filter FILTER="refuses an associative array, a nested array and an object in the payload"`
+Proof: `make test-filter FILTER="refuses a resource in the payload"`
 
 **C15** - Os casos nomeados em `proofs/c15-unchanged-cases.sh` estão byte a byte iguais aos da base `82337f0` e passam: os nomes, versões e payloads dos 5 eventos de hoje (`declares the name and version of every order event`, `maps every order event payload and rebuilds it`), os consumidores de hoje no `ConsumerRedeliveryTest`, o carrinho (todo o `CartValidationTest`), as recusas e o lock do checkout (`returns 409 and changes nothing when stock is insufficient`, `rejects inactive and out of stock products`, `never lets stock go negative (spec scenario: stock 5, buy 4 then 3)`, `locks the stock rows with SELECT ... FOR UPDATE`), a lista do admin (`lists the admin products newest first fifteen per page`) e a flag de transporte (`EventTransportFlagTest`) (AC 13)
 Proof: `sh .specs/features/storefront-read-model/proofs/c15-unchanged-cases.sh`
 
 **C16** - A leitora `Modules\Catalog\Core\InboundEvents\StockChanged` lê o payload que `Modules\Inventory\Events\StockChanged::toPayload()` grava nos mesmos `stock_id`, `product_id`, `quantity` e `version`, com o mesmo nome e a mesma versão, e a suíte de composição falha com uma leitora que discorda do produtor (AC 14)
-Proof: `make test-filter FILTER="reads the stock change with the catalog reader into the same values|detects a reader that disagrees with its producer"`
+Proof: `make test-filter FILTER="reads the stock change with the catalog reader into the same values"`
+Proof: `make test-filter FILTER="detects a reader that disagrees with its producer"`
 
 **C17** - As migrations `2026_10_27_000001_add_version_to_products_and_categories_tables` (em `app-modules/catalog/database/migrations`) e `2026_10_27_000002_add_version_to_stocks_table` (em `app-modules/inventory/database/migrations`) existem, o `ModuleMigrationsTest` congela 18 nomes, e `products.version`, `categories.version` e `stocks.version` são `bigint`, `NOT NULL`, com default 1; uma linha que já existia antes do `up()` fica com `version` 1 (porta 3)
-Proof: `make test-filter FILTER="keeps the eighteen frozen migration names|places each module migration in its owner package"`
-Proof: `make test-filter FILTER="adds the version column to products, categories and stocks|gives version 1 to the rows that existed before"`
+Proof: `make test-filter FILTER="keeps the eighteen frozen migration names"`
+Proof: `make test-filter FILTER="places each module migration in its owner package"`
+Proof: `make test-filter FILTER="adds the version column to products, categories and stocks"`
+Proof: `make test-filter FILTER="gives version 1 to the rows that existed before"`
 
 ### S2 - ProductDocument e o projetor
 
@@ -107,10 +112,12 @@ Proof: `make test-filter FILTER="counts a losing upsert as a discard"`
 Proof: `make test-filter FILTER="fails the delivery and keeps the document when MongoDB does not answer"`
 
 **C28** - O `EventSubscriptions` tem exatamente 13 consumidores: os 5 de hoje e os 8 da porta 8 (`catalog.project_product_created`, `catalog.project_product_updated`, `catalog.project_product_status_changed`, `catalog.project_product_deleted`, `catalog.project_category_created`, `catalog.project_category_updated`, `catalog.project_category_deleted` e `catalog.project_stock_changed`), cada um com a sua classe em `Modules\Catalog\Core\Consumers` e o seu evento, e nenhum outro nome (AC 24, porta 8)
-Proof: `make test-filter FILTER="subscribes the thirteen consumers under their stable names|subscribes no consumer under any other name"`
+Proof: `make test-filter FILTER="subscribes the thirteen consumers under their stable names"`
+Proof: `make test-filter FILTER="subscribes no consumer under any other name"`
 
 **C29** - Só o `Modules\Catalog` nomeia a conexão `mongodb`, `catalog_products` e `catalog_categories`; dentro dele, só `Core\Consumers`, `Console` (o `catalog:read-model-clear`), `Persistence` e `Providers` alcançam a persistência do modelo de leitura, e a gravação só vem dos consumidores e do comando de esvaziar. A suíte de arquitetura passa com o código e falha com cada fixture de violação proposital: uma classe do Inventory que nomeia `catalog_products`, e um controller do `Http` do Catalog que grava no modelo de leitura (AC 25)
-Proof: `make test-filter FILTER="keeps the read model inside the catalog|fails on a deliberate read model violation"`
+Proof: `make test-filter FILTER="keeps the read model inside the catalog"`
+Proof: `make test-filter FILTER="fails on a deliberate read model violation"`
 
 **C30** - Depois de um evento de cada tipo, o documento de `catalog_products` tem exatamente as chaves `_id`, `product`, `stock` e `deleted_version`; `product` tem exatamente `name`, `price_cents`, `description`, `image_url`, `status`, `category_ids`, `created_at`, `updated_at` e `version`, com as datas em texto; `stock` tem exatamente `id`, `quantity` e `version`; e o de `catalog_categories` tem exatamente `_id`, `name`, `slug`, `version` e `deleted_version`. Nenhum guarda `is_available`, `status_label` nem `available_quantity` (AC 25, porta 4)
 Proof: `make test-filter FILTER="stores exactly the fields of door 4"`
@@ -124,7 +131,8 @@ Proof: `sh docker/tests/read-model.sh --only make-rebuild`
 Proof: `make test-filter FILTER="empties both collections and leaves the indexes of door 4"`
 
 **C33** - O `catalog:republish` sai com 0, imprime `Republicados: <n> categorias e <m> produtos.` e grava exatamente um `catalog.category_updated` por categoria e um `catalog.product_updated` por produto, cada um com o estado atual e a `version` atual da linha (sem somar 1); o `inventory:republish` sai com 0, imprime `Republicados: <n> estoques.` e grava exatamente um `inventory.stock_changed` por linha de `stocks`, com a `quantity` e a `version` atuais (AC 28, porta 7)
-Proof: `make test-filter FILTER="republishes every category and product with the current state and version|republishes every stock row with the current quantity and version"`
+Proof: `make test-filter FILTER="republishes every category and product with the current state and version"`
+Proof: `make test-filter FILTER="republishes every stock row with the current quantity and version"`
 
 **C34** - O `catalog:republish` lê cada produto e as suas categorias num só instantâneo: no log de consultas, a linha do produto e os ids das categorias vêm de uma só consulta, ou de consultas dentro de uma transação `REPEATABLE READ` aberta antes delas (AC 28)
 Proof: `make test-filter FILTER="reads each product and its categories in one snapshot"`
@@ -142,7 +150,8 @@ Proof: `make test-filter FILTER="returns the same storefront after emptying Mong
 Proof: `make test-filter FILTER="leaves no document of a record missing from PostgreSQL after the rebuild"`
 
 **C39** - Um envelope republicado entregue depois do envelope de uma escrita que gravou depois dele é descartado, e a vitrine mostra o estado da escrita; com as coleções esvaziadas e só as categorias entregues, `GET /api/products` responde `200` com `meta.total` 0, e com metade dos produtos entregue, `200` com essa metade (AC 33)
-Proof: `make test-filter FILTER="keeps the written state when a republished envelope arrives after the write|answers 200 with what was projected while the rebuild runs"`
+Proof: `make test-filter FILTER="keeps the written state when a republished envelope arrives after the write"`
+Proof: `make test-filter FILTER="answers 200 with what was projected while the rebuild runs"`
 
 ### S4 - api-read
 
@@ -169,7 +178,8 @@ Proof: `make test-filter FILTER="answers the product page from the document"`
 Proof: `make test-filter FILTER="answers 404 to a non canonical id without reading MongoDB"`
 
 **C47** - Um documento listado sem a parte do estoque sai com `stock` nulo, `is_available` falso e `available_quantity` 0; um produto que cita uma categoria que ainda não chegou e uma que virou lápide sai com só as categorias vivas em `categories`, na ordem de `category_ids` (AC 40)
-Proof: `make test-filter FILTER="renders a document without the stock part as unavailable|leaves out a category that has not arrived or is a tombstone"`
+Proof: `make test-filter FILTER="renders a document without the stock part as unavailable"`
+Proof: `make test-filter FILTER="leaves out a category that has not arrived or is a tombstone"`
 
 **C48** - `GET /api/products` faz o mesmo número de leituras no MongoDB (contadas pelo log de consultas da conexão `mongodb`) com 1 produto e com 12, cada um com 2 categorias, e esse número é maior que 0 (AC 41)
 Proof: `make test-filter FILTER="reads MongoDB the same number of times for one and twelve products"`
@@ -218,7 +228,7 @@ Proof: `sh docker/tests/read-model.sh --only ci`
 
 **C61** - O MongoDB como dependência: o `backend/composer.json` exige `mongodb/laravel-mongodb` `^5.7`; a imagem PHP tem a extensão `mongodb`; o `docker-compose.yml` de dev tem o serviço `mongodb` (`mongo:8.2`, com healthcheck e usuário raiz por `MONGO_INITDB_ROOT_USERNAME` e `MONGO_INITDB_ROOT_PASSWORD`), e o `api`, o `queue-worker`, o `outbox-relay`, o `event-consumer`, o `scheduler` e o `api-read` dependem dele saudável (porta 5)
 Proof: `sh docker/tests/read-model.sh --only dev-services`
-Proof: `docker compose run --rm --no-deps --entrypoint php api -m | grep -qx -e mongodb`
+Proof: `sh docker/tests/read-model.sh --only php-extension`
 
 **C62** - Na pilha de carga, os serviços são `api api-read db event-consumer k6 mongodb nginx outbox-relay queue-worker rabbitmq redis`, o `api`, o `queue-worker`, o `event-consumer` e o `api-read` têm `MONGODB_HOST` `mongodb`, e o `api-read` usa o mesmo `fpm-pool.conf` do `api` (porta 6)
 Proof: `sh load-tests/tests/stack.sh --only connection`
