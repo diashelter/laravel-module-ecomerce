@@ -122,6 +122,7 @@ describe('admin products', function () {
 
 it('exposes price_cents as an integer on the public catalog', function () {
     $product = productWithStock(3, ['price_cents' => 129990]);
+    rebuildStorefront();
 
     $list = $this->getJson('/api/products')->assertOk()->json('data.0');
     $show = $this->getJson("/api/products/{$product->id}")->assertOk()->json('data');

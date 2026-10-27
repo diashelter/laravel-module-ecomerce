@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Modules\Catalog\Core\Consumers\ProjectCategoryCreated;
 use Modules\Catalog\Core\Consumers\ProjectCategoryDeleted;
 use Modules\Catalog\Core\Consumers\ProjectCategoryUpdated;
@@ -42,6 +43,10 @@ function readModel(): ReadModelStore
 /** MongoDB is not rolled back by RefreshDatabase: every feature test starts with both collections empty. */
 function emptyReadModel(): void
 {
+    // A test that read the log of the connection leaves it on, and the log of every later command would pile up.
+    DB::connection('mongodb')->disableQueryLog();
+    DB::connection('mongodb')->flushQueryLog();
+
     readModel()->products()->deleteMany([]);
     readModel()->categories()->deleteMany([]);
 }

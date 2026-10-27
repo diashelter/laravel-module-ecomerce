@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Modules\Catalog\Persistence\Models\Category;
 use Modules\Catalog\Persistence\Models\Product;
 
@@ -7,6 +8,8 @@ it('lists active and inactive products with availability', function () {
     $available = productWithStock(10);
     $outOfStock = productWithStock(0);
     $inactive = Product::factory()->inactive()->withStock(10)->create();
+
+    rebuildStorefront();
 
     $response = $this->getJson('/api/products')->assertOk();
 
@@ -23,6 +26,8 @@ it('filters products by category slug', function () {
     $inGames->categories()->attach($games);
     productWithStock(1);
 
+    rebuildStorefront();
+
     $this->getJson('/api/products?category=games')
         ->assertOk()
         ->assertJsonCount(1, 'data')
@@ -33,6 +38,8 @@ it('sorts products', function (string $sort, array $expected) {
     productWithStock(1, ['name' => 'Banana', 'price_cents' => 2000]);
     productWithStock(1, ['name' => 'Abacaxi', 'price_cents' => 3000]);
     productWithStock(1, ['name' => 'Caju', 'price_cents' => 1000]);
+
+    rebuildStorefront();
 
     $names = collect($this->getJson("/api/products?sort={$sort}")->assertOk()->json('data'))->pluck('name')->all();
 
@@ -50,6 +57,8 @@ it('rejects an invalid sort option', function () {
 it('paginates products', function () {
     Product::factory()->count(15)->withStock(1)->create();
 
+    rebuildStorefront();
+
     $this->getJson('/api/products?page=2')
         ->assertOk()
         ->assertJsonCount(3, 'data')
@@ -63,6 +72,7 @@ it('paginates products', function () {
 
 it('shows an available product', function () {
     $product = productWithStock(7);
+    rebuildStorefront();
 
     $this->getJson("/api/products/{$product->id}")
         ->assertOk()
@@ -73,6 +83,7 @@ it('does not show unavailable products', function (string $state) {
     $product = $state === 'inactive'
         ? Product::factory()->inactive()->withStock(5)->create()
         : productWithStock(0);
+    rebuildStorefront();
 
     $this->getJson("/api/products/{$product->id}")
         ->assertNotFound()
@@ -90,7 +101,16 @@ it('lists the catalog with the same query count for 1 and 12 products', function
         $product = productWithStock(3);
         $product->categories()->attach(Category::factory()->count(2)->create());
     };
-    $listing = fn () => queriesDuring(fn () => $this->getJson('/api/products')->assertOk());
+    // The reads of the page are MongoDB commands: the log of the mongodb connection counts them.
+    $listing = function () {
+        rebuildStorefront();
+        $connection = DB::connection('mongodb');
+        $connection->flushQueryLog();
+        $connection->enableQueryLog();
+        $this->getJson('/api/products')->assertOk();
+
+        return array_column($connection->getQueryLog(), 'query');
+    };
 
     $makeProduct();
     $single = $listing();
@@ -104,21 +124,10 @@ it('lists the catalog with the same query count for 1 and 12 products', function
         ->and(count($full))->toBe(count($single));
 });
 
-it('reads the stock of the catalog page through the inventory', function () {
-    Product::factory()->count(3)->withStock(2)->create();
-
-    $queries = queriesDuring(fn () => $this->getJson('/api/products')->assertOk());
-
-    $stockReads = array_values(array_filter($queries, fn (string $sql) => str_contains($sql, '"stocks"')));
-
-    expect($stockReads)->toHaveCount(1)
-        ->and($stockReads[0])->toContain('"product_id" in (')
-        ->and(array_filter($queries, fn (string $sql) => str_contains($sql, 'join') && str_contains($sql, '"stocks"')))->toBeEmpty();
-});
-
 it('renders a product without a stock row as unavailable', function () {
     $product = Product::factory()->create();
     $this->actingAs(admin());
+    rebuildStorefront();
 
     $listed = collect($this->getJson('/api/products')->assertOk()->json('data'))->firstWhere('id', $product->id);
     $opened = $this->getJson("/api/admin/products/{$product->id}")->assertOk()->json('data');

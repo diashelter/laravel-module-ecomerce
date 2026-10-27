@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Catalog\Console;
 
 use Illuminate\Console\Command;
-use Modules\Catalog\Core\UseCases\ClearReadModelUseCase;
+use Modules\Catalog\Persistence\ReadModel\ReadModelStore;
 
 class ClearReadModelCommand extends Command
 {
@@ -13,9 +13,9 @@ class ClearReadModelCommand extends Command
 
     protected $description = 'Esvazia o modelo de leitura da vitrine (catalog_products e catalog_categories no MongoDB)';
 
-    public function handle(ClearReadModelUseCase $clear): int
+    public function handle(ReadModelStore $store): int
     {
-        $clear->execute();
+        $store->clear();
 
         $this->info('Modelo de leitura esvaziado: catalog_products e catalog_categories.');
 

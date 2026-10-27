@@ -46,7 +46,12 @@ function validBodyOf(string $method, string $uri, string $kind): array
 function existingIdOf(string $kind): string
 {
     return match ($kind) {
-        'product' => productWithStock(3)->id,
+        'product' => (function () {
+            $id = productWithStock(3)->id;
+            rebuildStorefront();
+
+            return $id;
+        })(),
         'category' => Category::factory()->create()->id,
         'stock' => stockOf(productWithStock(3))->id,
         'customer' => customer()->id,
@@ -239,6 +244,7 @@ it('keeps the query count of the staff and showcase reads and updates', function
         'product' => (function () {
             $product = productWithStock(5);
             $product->categories()->attach(Category::factory()->count(2)->create());
+            rebuildStorefront();
 
             return $product->id;
         })(),
@@ -262,7 +268,8 @@ it('keeps the query count of the staff and showcase reads and updates', function
 
     expect($queries)->toHaveCount($expected, implode("\n", $queries));
 })->with([
-    'show product' => ['GET', 'api/products/{product}', 'product', 3],
+    // The storefront reads MongoDB: no PostgreSQL query at all.
+    'show product' => ['GET', 'api/products/{product}', 'product', 0],
     'show admin product' => ['GET', 'api/admin/products/{product}', 'product', 3],
     'update product' => ['PUT', 'api/admin/products/{product}', 'product', 12],
     'update product status' => ['PATCH', 'api/admin/products/{product}/status', 'product', 6],

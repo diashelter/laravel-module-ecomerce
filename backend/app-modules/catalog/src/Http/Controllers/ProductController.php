@@ -7,20 +7,20 @@ namespace Modules\Catalog\Http\Controllers;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Modules\Catalog\Http\Requests\ProductIndexRequest;
 use Modules\Catalog\Http\Resources\ProductResource;
-use Modules\Catalog\Persistence\Queries\ProductQuery;
+use Modules\Catalog\Persistence\Queries\StorefrontQuery;
 use Modules\Shared\Http\Controllers\Controller;
 
 class ProductController extends Controller
 {
     /**
      * Public catalog: lists active AND inactive products (the frontend greys out the
-     * unavailable ones). Filtering, sorting and pagination happen in the database.
+     * unavailable ones). Filtering, sorting and pagination happen in the read model (MongoDB).
      */
-    public function index(ProductIndexRequest $request, ProductQuery $products): AnonymousResourceCollection
+    public function index(ProductIndexRequest $request, StorefrontQuery $products): AnonymousResourceCollection
     {
         $filters = $request->toDto();
 
-        $page = $products->paginateCatalog($filters->category, $filters->sort, config('shop.products_per_page'));
+        $page = $products->paginate($filters->category, $filters->sort, config('shop.products_per_page'));
 
         return ProductResource::collection($page->withQueryString());
     }
@@ -28,7 +28,7 @@ class ProductController extends Controller
     /**
      * The product page is only reachable while the product can be bought.
      */
-    public function show(string $product, ProductQuery $products): ProductResource
+    public function show(string $product, StorefrontQuery $products): ProductResource
     {
         $product = $products->find($product);
 

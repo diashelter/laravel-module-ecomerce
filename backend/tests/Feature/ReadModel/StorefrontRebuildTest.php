@@ -1,7 +1,11 @@
 <?php
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Modules\Catalog\Core\InboundEvents\StockChanged;
+use Modules\Catalog\Events\CategoryUpdated;
+use Modules\Catalog\Events\ProductUpdated;
 use Modules\Catalog\Persistence\Models\Category;
 use Modules\Catalog\Persistence\Models\Product;
 use Modules\Messaging\Contracts\DomainEvent;
@@ -148,3 +152,124 @@ it('exits non-zero with the count recorded when the republish fails halfway and 
     'catalog:republish' => ['catalog:republish', 'catalog'],
     'inventory:republish' => ['inventory:republish', 'inventory'],
 ]);
+
+/** Every body the storefront answers: each page of each sort, a category filter, and every product page. */
+function storefrontBodies(array $productIds, string $categorySlug): array
+{
+    $bodies = [];
+
+    foreach (['name', 'price_asc', 'price_desc'] as $sort) {
+        foreach ([1, 2] as $page) {
+            $bodies["list {$sort} {$page}"] = test()->getJson("/api/products?sort={$sort}&page={$page}")->assertOk()->json();
+        }
+    }
+
+    $bodies['category'] = test()->getJson("/api/products?category={$categorySlug}")->assertOk()->json();
+
+    foreach ($productIds as $id) {
+        $response = test()->getJson("/api/products/{$id}");
+        // The request id of an error body is different on every request.
+        $bodies["product {$id}"] = [$response->status(), Arr::except($response->json(), 'request_id')];
+    }
+
+    return $bodies;
+}
+
+it('returns the same storefront after emptying MongoDB and rebuilding', function () {
+    $this->actingAs(admin());
+    $categories = collect(['Periféricos', 'Monitores'])->map(fn (string $name) => Category::query()->findOrFail($this->postJson('/api/admin/categories', ['name' => $name])->assertCreated()->json('data.id')));
+    $ids = [];
+
+    // Written through the routes, so every change publishes its event and the storefront fills as in production.
+    foreach (range(1, 15) as $number) {
+        $ids[] = $this->postJson('/api/admin/products', productPayload([
+            'name' => "Produto {$number}",
+            'price_cents' => 1000 + ($number % 4) * 250,
+            'category_ids' => $number % 2 === 0 ? [$categories[0]->id, $categories[1]->id] : [$categories[1]->id],
+            'stock_quantity' => $number % 5 === 0 ? 0 : 10,
+        ]))->assertCreated()->json('data.id');
+    }
+    $this->putJson("/api/admin/products/{$ids[0]}", productPayload(['name' => 'Editado', 'category_ids' => [$categories[0]->id]]))->assertOk();
+    $this->patchJson("/api/admin/products/{$ids[1]}/status", ['status' => 'inactive'])->assertOk();
+    $this->deleteJson("/api/admin/products/{$ids[2]}")->assertNoContent();
+    $this->putJson('/api/admin/stocks/'.stockOf(Product::query()->findOrFail($ids[3]))->id, ['operation' => 'decrease', 'quantity' => 4])->assertOk();
+    $this->actingAs($account = customer())->postJson('/api/orders', checkoutBody([['product_id' => $ids[5], 'quantity' => 2]]))->assertCreated();
+    relayUntilIdle();
+
+    $before = storefrontBodies($ids, $categories[0]->slug);
+
+    expect($before['list name 1']['meta']['total'])->toBe(14);
+
+    readModel()->products()->deleteMany([]);
+    readModel()->categories()->deleteMany([]);
+    $this->getJson('/api/products')->assertOk()->assertJsonPath('meta.total', 0);
+
+    rebuildStorefront();
+
+    expect(storefrontBodies($ids, $categories[0]->slug))->toEqual($before);
+});
+
+it('leaves no document of a record missing from PostgreSQL after the rebuild', function () {
+    $product = productWithStock(3);
+    $category = Category::factory()->create();
+    readModel()->products()->insertOne(['_id' => unknownId(), 'product' => ['name' => 'Fantasma', 'version' => 9], 'stock' => null, 'deleted_version' => null]);
+    readModel()->products()->insertOne(['_id' => unknownId(), 'product' => null, 'stock' => null, 'deleted_version' => 4]);
+    readModel()->categories()->insertOne(['_id' => unknownId(), 'name' => 'Fantasma', 'slug' => 'fantasma', 'version' => 9, 'deleted_version' => null]);
+
+    rebuildStorefront();
+
+    expect(readModel()->products()->distinct('_id'))->toBe([$product->id])
+        ->and(readModel()->categories()->distinct('_id'))->toBe([$category->id]);
+});
+
+it('keeps the written state when a republished envelope arrives after the write', function () {
+    $this->actingAs(admin());
+    $product = productWithStock(3);
+    Artisan::call('catalog:read-model-clear');
+
+    // The rebuild records the product at version 1; before it is delivered, an edit commits at version 2.
+    Artisan::call('catalog:republish');
+    $this->putJson("/api/admin/products/{$product->id}", productPayload(['name' => 'Depois da reconstrução']))->assertOk();
+
+    $messages = outboxMessages('catalog.product_updated');
+    expect($messages->pluck('payload.version')->all())->toBe([1, 2]);
+
+    // Delivered in the wrong order: the write first, then the older republished one.
+    project(ProductUpdated::fromPayload($messages[1]->payload));
+    project(ProductUpdated::fromPayload($messages[0]->payload));
+    Artisan::call('inventory:republish');
+    project(StockChanged::fromPayload(outboxMessages('inventory.stock_changed')->sole()->payload));
+
+    $this->getJson("/api/products/{$product->id}")->assertOk()->assertJsonPath('data.name', 'Depois da reconstrução');
+});
+
+it('answers 200 with what was projected while the rebuild runs', function () {
+    $products = collect(range(1, 6))->map(fn () => productWithStock(2));
+    Category::factory()->count(2)->create();
+    Artisan::call('catalog:read-model-clear');
+    Artisan::call('catalog:republish');
+    Artisan::call('inventory:republish');
+
+    // Nothing projected yet.
+    $this->getJson('/api/products')->assertOk()->assertJsonPath('meta.total', 0)->assertJsonCount(0, 'data');
+
+    // Only the categories delivered: still an empty page.
+    foreach (outboxMessages('catalog.category_updated') as $message) {
+        project(CategoryUpdated::fromPayload($message->payload));
+    }
+    $this->getJson('/api/products')->assertOk()->assertJsonPath('meta.total', 0);
+
+    // Half of the products delivered: that half, each with its stock once the stock arrives.
+    foreach (outboxMessages('catalog.product_updated')->take(3) as $message) {
+        project(ProductUpdated::fromPayload($message->payload));
+    }
+    $response = $this->getJson('/api/products')->assertOk()->assertJsonPath('meta.total', 3);
+
+    expect(array_column($response->json('data'), 'is_available'))->toBe([false, false, false]);
+
+    foreach (outboxMessages('inventory.stock_changed') as $message) {
+        project(StockChanged::fromPayload($message->payload));
+    }
+
+    expect(array_column($this->getJson('/api/products')->assertOk()->json('data'), 'is_available'))->toBe([true, true, true]);
+});

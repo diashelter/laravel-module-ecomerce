@@ -37,9 +37,9 @@ jobs:
       - name: Build the PHP image
         run: docker compose build api
 
-      - name: Start PostgreSQL, Redis, RabbitMQ and the API container
+      - name: Start PostgreSQL, Redis, RabbitMQ, MongoDB and the API container
         run: |
-          docker compose up -d --wait db redis rabbitmq
+          docker compose up -d --wait db redis rabbitmq mongodb
           docker compose up -d api
           make wait-api
 
