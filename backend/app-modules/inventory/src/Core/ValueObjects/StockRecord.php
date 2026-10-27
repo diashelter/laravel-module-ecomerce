@@ -17,5 +17,6 @@ final readonly class StockRecord
         public string $productId,
         public int $quantity,
         public ?CarbonImmutable $updatedAt,
+        public int $version,
     ) {}
 }

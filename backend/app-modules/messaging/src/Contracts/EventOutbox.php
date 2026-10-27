@@ -17,7 +17,7 @@ interface EventOutbox
     /**
      * @throws LogicException when no transaction is open: an event recorded outside the change it
      *                        announces is a programming error
-     * @throws InvalidArgumentException when a payload value is not a scalar or null
+     * @throws InvalidArgumentException when a payload value is not null, a scalar or a flat list of scalars
      */
     public function record(DomainEvent $event): void;
 }

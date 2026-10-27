@@ -13,12 +13,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 use Modules\Catalog\Database\Factories\CategoryFactory;
 
-#[Fillable(['name'])]
+#[Fillable(['name', 'version'])]
 #[UseFactory(CategoryFactory::class)]
 class Category extends Model
 {
     /** @use HasFactory<CategoryFactory> */
     use HasFactory, HasUuids;
+
+    protected function casts(): array
+    {
+        return [
+            'version' => 'integer',
+        ];
+    }
 
     protected static function booted(): void
     {

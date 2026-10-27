@@ -24,6 +24,7 @@
         "modules/ordering": "*",
         "modules/payment": "*",
         "modules/shared": "*",
+        "mongodb/laravel-mongodb": "^5.7",
         "php-amqplib/php-amqplib": "^3.7"
     },
     "require-dev": {

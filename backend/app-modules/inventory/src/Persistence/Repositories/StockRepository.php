@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Inventory\Persistence\Repositories;
 
+use Illuminate\Support\Facades\DB;
 use Modules\Catalog\Core\ValueObjects\ProductIds;
 use Modules\Inventory\Contracts\StockInitializer;
 use Modules\Inventory\Contracts\StockReservation;
 use Modules\Inventory\Core\ValueObjects\StockQuantities;
+use Modules\Inventory\Events\StockChanged;
 use Modules\Inventory\Persistence\Models\Stock;
+use Modules\Messaging\Contracts\EventOutbox;
 use Modules\Shared\Repositories\BaseRepository;
 
 /**
@@ -16,10 +19,15 @@ use Modules\Shared\Repositories\BaseRepository;
  * the checkout depend on the StockInitializer and StockReservation contracts. The reads live in
  * the Queries folder (StockLevels, StockMetrics and the admin list).
  *
+ * Both contracts are called from inside the transaction of the caller, so the repository records the
+ * inventory.stock_changed of the row it wrote in that same transaction.
+ *
  * @extends BaseRepository<Stock>
  */
 class StockRepository extends BaseRepository implements StockInitializer, StockReservation
 {
+    public function __construct(private readonly EventOutbox $outbox) {}
+
     protected function model(): string
     {
         return Stock::class;
@@ -30,7 +38,9 @@ class StockRepository extends BaseRepository implements StockInitializer, StockR
      */
     public function createForProduct(string $productId, int $quantity): void
     {
-        $this->create(['product_id' => $productId, 'quantity' => $quantity]);
+        $stock = $this->create(['product_id' => $productId, 'quantity' => $quantity, 'version' => 1]);
+
+        $this->outbox->record(new StockChanged($stock->id, $productId, $quantity, 1));
     }
 
     /**
@@ -47,18 +57,18 @@ class StockRepository extends BaseRepository implements StockInitializer, StockR
     }
 
     /**
-     * Re-reads a single stock row with a lock. Must run inside a transaction.
-     */
-    public function lockById(string $id): Stock
-    {
-        return $this->query()->whereKey($id)->lockForUpdate()->firstOrFail();
-    }
-
-    /**
-     * UPDATE stocks SET quantity = quantity - ? (safe only while the row is locked).
+     * UPDATE stocks SET quantity = quantity - ?, version = version + 1 (safe only while the row is locked). The row
+     * comes back from the same statement, so the event carries the quantity left and the new version without a read.
      */
     public function decrement(string $productId, int $quantity): void
     {
-        $this->query()->where('product_id', $productId)->decrement('quantity', $quantity);
+        $row = DB::selectOne(
+            'update stocks set quantity = quantity - ?, version = version + 1 where product_id = ? returning id, quantity, version',
+            [$quantity, $productId],
+        );
+
+        if ($row !== null) {
+            $this->outbox->record(new StockChanged($row->id, $productId, $row->quantity, $row->version));
+        }
     }
 }

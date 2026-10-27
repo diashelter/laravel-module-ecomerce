@@ -23,5 +23,6 @@ final readonly class ProductRecord
         public ProductStatus $status,
         public ?CarbonImmutable $createdAt,
         public ?CarbonImmutable $updatedAt,
+        public int $version,
     ) {}
 }

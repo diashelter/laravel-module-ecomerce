@@ -13,7 +13,7 @@ it('registers no laravel listener for the module events', function () {
         ModuleLayout::filesMatching('Events/*.php'),
     );
 
-    expect($events)->toHaveCount(5);
+    expect($events)->toHaveCount(15);
 
     foreach ($events as $event) {
         expect(class_exists($event))->toBeTrue()

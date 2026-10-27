@@ -95,14 +95,30 @@ it('accepts every scalar and null in the payload', function (mixed $value) {
     'null' => [null],
 ]);
 
-it('refuses a payload value that is not a scalar or null', function (mixed $value) {
+it('accepts a flat list and an ISO 8601 date in the payload', function (mixed $value) {
+    recordInTransaction(new SampleEvent(['value' => $value]));
+
+    $payload = json_decode(DB::table('outbox_messages')->sole()->payload, true);
+
+    expect($payload['value'])->toBe($value);
+})->with([
+    'list of strings' => [['a', 'b']],
+    'empty list' => [[]],
+    'list of mixed scalars' => [['a', 1, 1.5, true]],
+    'date with time and offset' => ['2026-10-27T13:45:00+00:00'],
+]);
+
+it('refuses an associative array, a nested array and an object in the payload', function (mixed $value) {
     expect(fn () => recordInTransaction(new SampleEvent(['value' => $value])))->toThrow(InvalidArgumentException::class);
 
     expect(DB::table('outbox_messages')->count())->toBe(0);
 })->with([
-    'associative array' => [['key' => 'value']],
-    'list' => [['a', 'b']],
-    'object' => [CarbonImmutable::parse('2026-10-15 12:00:00')],
+    'associative array' => [['k' => 'v']],
+    'list with a list inside' => [[['a']]],
+    'list with a null inside' => [['a', null]],
+    'array with a gap in its keys' => [[1 => 'a']],
+    'object' => [new stdClass],
+    'dated object' => [CarbonImmutable::parse('2026-10-15 12:00:00')],
 ]);
 
 it('refuses a resource in the payload', function () {

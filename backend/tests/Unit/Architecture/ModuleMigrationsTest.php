@@ -3,7 +3,7 @@
 /*
  * Each module owns the migrations of its tables, in app-modules/<module>/database/migrations. The migrations
  * table stores the file name, so a name that changes would run the SQL again on a migrated database: the
- * sixteen names are frozen here.
+ * eighteen names are frozen here.
  */
 
 const FRAMEWORK_MIGRATIONS = [
@@ -27,6 +27,8 @@ const MODULE_MIGRATION_OWNERS = [
     '2026_10_15_000001_create_outbox_messages_table' => 'messaging',
     '2026_10_20_000001_create_deliveries_table' => 'fulfillment',
     '2026_10_21_000001_drop_payments_order_id_foreign' => 'payment',
+    '2026_10_27_000001_add_version_to_products_and_categories_tables' => 'catalog',
+    '2026_10_27_000002_add_version_to_stocks_table' => 'inventory',
 ];
 
 /** @return list<string> the migration names the migrator finds in the given paths, sorted as it runs them */
@@ -47,7 +49,7 @@ it('places each module migration in its owner package', function (string $name, 
         ->and(is_file(base_path("database/migrations/{$name}.php")))->toBeFalse();
 })->with(array_map(fn (string $name, string $owner) => [$name, $owner], array_keys(MODULE_MIGRATION_OWNERS), MODULE_MIGRATION_OWNERS));
 
-it('keeps the sixteen frozen migration names', function () {
+it('keeps the eighteen frozen migration names', function () {
     $paths = [...app('migrator')->paths(), database_path('migrations')];
     $frozen = [...FRAMEWORK_MIGRATIONS, ...array_keys(MODULE_MIGRATION_OWNERS)];
     sort($frozen);

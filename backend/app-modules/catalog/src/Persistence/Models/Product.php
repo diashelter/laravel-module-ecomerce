@@ -14,7 +14,7 @@ use Modules\Catalog\Core\Enums\ProductStatus;
 use Modules\Catalog\Core\ValueObjects\ProductRecord;
 use Modules\Catalog\Database\Factories\ProductFactory;
 
-#[Fillable(['name', 'price_cents', 'description', 'image_url', 'status'])]
+#[Fillable(['name', 'price_cents', 'description', 'image_url', 'status', 'version'])]
 #[UseFactory(ProductFactory::class)]
 class Product extends Model
 {
@@ -25,6 +25,7 @@ class Product extends Model
     {
         return [
             'price_cents' => 'integer',
+            'version' => 'integer',
             'status' => ProductStatus::class,
         ];
     }
@@ -47,6 +48,7 @@ class Product extends Model
             $this->status,
             $this->created_at?->toImmutable(),
             $this->updated_at?->toImmutable(),
+            $this->version,
         );
     }
 }

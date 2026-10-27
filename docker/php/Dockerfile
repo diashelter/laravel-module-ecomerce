@@ -1,11 +1,11 @@
-# Shared image for the "api" (PHP-FPM), "queue-worker", "outbox-relay", "event-consumer" and "scheduler" containers.
+# Shared image for the "api" and "api-read" (PHP-FPM), "queue-worker", "outbox-relay", "event-consumer" and "scheduler" containers.
 FROM php:8.5-fpm-alpine
 
 RUN apk add --no-cache icu-libs libpq libzip postgresql-client \
-    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libpq-dev libzip-dev linux-headers \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libpq-dev libzip-dev linux-headers openssl-dev \
     && docker-php-ext-install -j"$(nproc)" bcmath intl pcntl pdo_pgsql sockets zip \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && pecl install redis mongodb \
+    && docker-php-ext-enable redis mongodb \
     && apk del .build-deps
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

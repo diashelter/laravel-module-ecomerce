@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Inventory\Core\ValueObjects\StockRecord;
 use Modules\Inventory\Database\Factories\StockFactory;
 
-#[Fillable(['product_id', 'quantity'])]
+#[Fillable(['product_id', 'quantity', 'version'])]
 #[UseFactory(StockFactory::class)]
 class Stock extends Model
 {
@@ -23,13 +23,14 @@ class Stock extends Model
     {
         return [
             'quantity' => 'integer',
+            'version' => 'integer',
         ];
     }
 
     /** The data of this row, for the callers that must not hold the model. */
     public function toRecord(): StockRecord
     {
-        return new StockRecord($this->id, $this->product_id, $this->quantity, $this->updated_at?->toImmutable());
+        return new StockRecord($this->id, $this->product_id, $this->quantity, $this->updated_at?->toImmutable(), $this->version);
     }
 
     public function hasUnits(): bool

@@ -103,7 +103,7 @@ function producerOf(string $name): ?string
     foreach (ModuleLayout::filesMatching('Events/*.php') as $file) {
         $class = ModuleLayout::classOf($file);
 
-        if (is_subclass_of($class, DomainEvent::class) && $class::eventName() === $name) {
+        if (is_subclass_of($class, DomainEvent::class) && ! (new ReflectionClass($class))->isAbstract() && $class::eventName() === $name) {
             return $class;
         }
     }

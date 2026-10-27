@@ -21,7 +21,7 @@ foreach ($modulesWithEvents as $module) {
 }
 
 it('implements DomainEvent in every module event: every module with events is covered', function () use ($modulesWithEvents) {
-    expect($modulesWithEvents)->toBe(['Fulfillment', 'Ordering', 'Payment']);
+    expect($modulesWithEvents)->toBe(['Catalog', 'Fulfillment', 'Inventory', 'Ordering', 'Payment']);
 });
 
 foreach ([
