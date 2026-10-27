@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Modules\Catalog\Persistence\Models\Category;
 use Modules\Catalog\Persistence\Models\Product;
 use Modules\Customers\Persistence\Models\CustomerAddress;
@@ -127,4 +128,17 @@ function productPayload(array $overrides = []): array
         'category_ids' => Category::factory()->count(2)->create()->pluck('id')->all(),
         'stock_quantity' => 7,
     ], $overrides);
+}
+
+/**
+ * What `make storefront-rebuild` does, then the delivery of its messages: the storefront shows what the database holds.
+ * The factories and the seeders write no event, so a test that reads the storefront calls this first.
+ */
+function rebuildStorefront(): void
+{
+    expect(Artisan::call('catalog:read-model-clear'))->toBe(0)
+        ->and(Artisan::call('catalog:republish'))->toBe(0)
+        ->and(Artisan::call('inventory:republish'))->toBe(0);
+
+    relayUntilIdle();
 }

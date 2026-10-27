@@ -6,6 +6,7 @@ namespace Modules\Inventory\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Modules\Inventory\Console\RepublishStocksCommand;
 use Modules\Inventory\Contracts\StockInitializer;
 use Modules\Inventory\Contracts\StockLevels;
 use Modules\Inventory\Contracts\StockMetrics;
@@ -28,6 +29,13 @@ class InventoryServiceProvider extends ServiceProvider
         StockMetrics::class => StockMetricsQuery::class,
         StockReservation::class => StockRepository::class,
     ];
+
+    public function boot(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([RepublishStocksCommand::class]);
+        }
+    }
 
     public function register(): void
     {

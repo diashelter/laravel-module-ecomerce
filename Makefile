@@ -25,7 +25,7 @@ CHECKOUT_API   = $(CHECKOUT_RUN) api
 
 .PHONY: help up down build rebuild ps logs logs-api logs-worker logs-relay \
 	logs-consumer shell artisan worktree-env migrate migrate-fresh seed fresh optimize clear \
-	db-shell db-reset db-dump db-restore \
+	db-shell db-reset db-dump db-restore storefront-rebuild \
 	queue queue-restart queue-failed queue-retry event-transport events-failed events-retry \
 	test test-filter test-prepare test-db-drop pint test-frontend npm-install frontend-shell setup env-files wait-api \
 	load-test load-down
@@ -85,11 +85,21 @@ migrate: ## Executa as migrations
 migrate-fresh: ## Apaga todas as tabelas e executa as migrations
 	$(ARTISAN) migrate:fresh --force
 
-seed: ## Executa os seeders
+seed: ## Executa os seeders (e reconstrói a vitrine)
 	$(ARTISAN) db:seed --force
+	$(MAKE) storefront-rebuild
 
-fresh: ## Recria o banco de desenvolvimento (migrate:fresh --seed)
+fresh: ## Recria o banco de desenvolvimento (migrate:fresh --seed) e reconstrói a vitrine
 	$(ARTISAN) migrate:fresh --seed --force
+	$(MAKE) storefront-rebuild
+
+# The storefront is served from MongoDB, which the seeders and the factories do not write: this empties the read model
+# and publishes the state of every category, product and stock through the outbox. The relay and the consumers
+# (make up) project the messages, so the storefront fills in a few seconds.
+storefront-rebuild: ## Reconstrói o modelo de leitura da vitrine (MongoDB) a partir do PostgreSQL
+	$(ARTISAN) catalog:read-model-clear
+	$(ARTISAN) catalog:republish
+	$(ARTISAN) inventory:republish
 
 optimize: ## Gera caches de configuração, rotas e eventos
 	$(ARTISAN) optimize

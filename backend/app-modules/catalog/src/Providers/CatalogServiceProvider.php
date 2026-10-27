@@ -6,6 +6,8 @@ namespace Modules\Catalog\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Modules\Catalog\Console\ClearReadModelCommand;
+use Modules\Catalog\Console\RepublishCatalogCommand;
 use Modules\Catalog\Contracts\CatalogMetrics;
 use Modules\Catalog\Contracts\ProductCatalog;
 use Modules\Catalog\Core\Consumers\ProjectCategoryCreated;
@@ -54,6 +56,10 @@ class CatalogServiceProvider extends ServiceProvider
 
     public function boot(EventSubscriptions $subscriptions): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([ClearReadModelCommand::class, RepublishCatalogCommand::class]);
+        }
+
         // The stable names name the RabbitMQ queues of the consumers: they never derive from the classes.
         $subscriptions->subscribe(ProductCreated::class, ProjectProductCreated::class, 'catalog.project_product_created');
         $subscriptions->subscribe(ProductUpdated::class, ProjectProductUpdated::class, 'catalog.project_product_updated');
