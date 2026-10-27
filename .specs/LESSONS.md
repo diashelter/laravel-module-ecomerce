@@ -212,6 +212,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: proofs/c33-docs.sh:30 (verification round 6) (docs)
 - last seen: 2026-10-21T12:42:19Z
 
+### L-034 - Assert meta.total, meta.last_page and the links of a filtered list, not only the names it returns
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `read-model` · harmful: 0
+- features: storefront-read-model
+- evidence: StorefrontReadTest.php: filters by the slug of a category (read-model)
+- last seen: 2026-10-27T23:08:06Z
+
+### L-035 - Prove a version bump from a stored version above the default, so a constant cannot pass
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `events` · harmful: 0
+- features: storefront-read-model
+- evidence: UpdateCategoryUseCase.php:34 version + 1 (events)
+- last seen: 2026-10-27T23:08:06Z
+
+### L-036 - Assert the ORDER BY in the query log when the test data would come back in order anyway
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `events` · harmful: 0
+- features: storefront-read-model
+- evidence: ProductRepository.php:32 orderBy categories.id (events)
+- last seen: 2026-10-27T23:08:06Z
+
+### L-037 - A payload validator must refuse values the encoder cannot hold, such as NAN and INF
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `outbox` · harmful: 0
+- features: storefront-read-model
+- evidence: OutboxMessageRepository::isPlain with NAN (outbox)
+- last seen: 2026-10-27T23:08:06Z
+
+### L-038 - Count the reads of the filtered path as well as the unfiltered one
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `read-model` · harmful: 0
+- features: storefront-read-model
+- evidence: StorefrontReadTest.php: reads MongoDB the same number of times (read-model)
+- last seen: 2026-10-27T23:08:06Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
