@@ -40,7 +40,7 @@ def source(text, name):
     start = re.search(r"^it\(" + re.escape(repr(name)[1:-1]) + r"'?,", text, re.M) or re.search(r"^it\('" + re.escape(name) + r"'", text, re.M)
     if start is None:
         return None
-    end = re.search(r"^\}\)[^\n]*;\n", text[start.start():], re.M)
+    end = re.search(r"^(\}\)[^\n]*;|\]\);)\n", text[start.start():], re.M)
     return text[start.start():start.start() + end.end()]
 
 

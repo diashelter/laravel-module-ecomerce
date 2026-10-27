@@ -22,98 +22,98 @@ Plan: `.specs/features/storefront-read-model/plan.md`
 ### S1 - Eventos `catalog.*` e `inventory.stock_changed`
 
 **C1** - Depois de um `POST /api/admin/products` com `201`, a linha de `products` tem `version` 1, a de `stocks` tem `version` 1, e `outbox_messages` tem exatamente um `catalog.product_created` versão 1 com as chaves `product_id`, `name`, `price_cents`, `description`, `image_url`, `status`, `category_ids`, `created_at`, `updated_at` e `version` (nem mais, nem menos), os valores gravados e `version` 1, e exatamente um `inventory.stock_changed` versão 1 com `stock_id` (o id da linha de `stocks`), `product_id`, `quantity` (a quantidade de abertura) e `version` 1. Exemplos, um caso cada: `image_url` nulo no corpo → o payload leva a URL padrão que o produto gravou, e a versão continua 1; `category_ids` vazio → `[]`; duas categorias → os dois ids em ordem crescente (AC 1, porta 1, porta 3)
-Proof: `make test-filter FILTER="records the product creation and the opening stock at version 1"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records the product creation and the opening stock at version 1"`
 
 **C2** - Um `PUT /api/admin/products/{product}` com `200` soma 1 a `products.version` e grava um `catalog.product_updated` com o produto inteiro como ficou na linha e a versão nova. Exemplos: a edição de todos os campos; a edição só das categorias → o `category_ids` novo e a versão mais 1; duas edições seguidas → versões 2 e 3, nessa ordem (AC 2)
-Proof: `make test-filter FILTER="records the whole product at the next version on an edit"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records the whole product at the next version on an edit"`
 
 **C3** - Um `PATCH /api/admin/products/{product}/status` com `200` soma 1 a `products.version` e grava um `catalog.product_status_changed` com as dez chaves da porta 1, com `name`, `price_cents`, `description`, `image_url`, `category_ids` e `created_at` iguais aos da linha, e não só o `status` (AC 3)
-Proof: `make test-filter FILTER="records the whole product at the next version on a status change"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records the whole product at the next version on a status change"`
 
 **C4** - Um `DELETE /api/admin/products/{product}` com `204` grava um `catalog.product_deleted` com exatamente `product_id` e `version` (a versão guardada mais 1) e nenhum `inventory.stock_changed`, embora a linha de `stocks` saia pela cascata (AC 4)
-Proof: `make test-filter FILTER="records the product deletion at the stored version plus one and no stock change"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records the product deletion at the stored version plus one and no stock change"`
 
 **C5** - Um `POST /api/admin/categories` com `201` grava `catalog.category_created` com `category_id`, `name`, o `slug` gravado e `version` 1, e `categories.version` é 1; um `PUT /api/admin/categories/{category}` com `200` que renomeia grava `catalog.category_updated` com o `slug` regenerado e a versão mais 1, igual à da linha (AC 5)
-Proof: `make test-filter FILTER="records the category creation at version 1 and the rename at the next version"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records the category creation at version 1 and the rename at the next version"`
 
 **C6** - Um `DELETE /api/admin/categories/{category}` de uma categoria sem produtos, com `204`, grava um `catalog.category_deleted` com exatamente `category_id` e `version` (a versão guardada mais 1) (AC 6)
-Proof: `make test-filter FILTER="records the category deletion at the stored version plus one"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records the category deletion at the stored version plus one"`
 
 **C7** - Um `PUT /api/admin/stocks/{stock}` com `200` soma 1 a `stocks.version` e grava um `inventory.stock_changed` com a quantidade gravada, nunca as unidades ajustadas: `increase` 3 sobre 7 → `quantity` 10; `decrease` 7 sobre 7 → `quantity` 0 (AC 7)
-Proof: `make test-filter FILTER="records the stored quantity at the next version on a stock adjustment"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records the stored quantity at the next version on a stock adjustment"`
 
 **C8** - Um `POST /api/orders` com `201` que compra 3 unidades de um produto com 10 e 1 de um com 5 grava, na transação do checkout, exatamente dois `inventory.stock_changed`, com `quantity` 7 e 4 e a versão de cada estoque mais 1. O caso `keeps the query count of the checkout` muda com esta afirmação: as únicas consultas que ele ganha são as das mensagens de estoque, antes do `ordering.order_placed` (AC 8)
-Proof: `make test-filter FILTER="records one stock change per product of the checkout with the quantity left"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
-Proof: `make test-filter FILTER="keeps the query count of the checkout"` - `backend/tests/Feature/CheckoutTest.php`
+Proof: `make test-filter FILTER="records one stock change per product of the checkout with the quantity left"`
+Proof: `make test-filter FILTER="keeps the query count of the checkout"`
 
 **C9** - Uma escrita recusada responde como hoje, não grava mensagem nenhuma em `outbox_messages` e não muda nenhuma `version`. Table-driven sobre 5: a exclusão de uma categoria com produtos; o ajuste que deixaria o estoque negativo (`422` `O estoque não pode ficar negativo.`); o checkout de um produto inativo; o de um produto sem estoque; o checkout com estoque insuficiente (`409`) (AC 9)
-Proof: `make test-filter FILTER="records nothing and keeps every version when a write is refused"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="records nothing and keeps every version when a write is refused"`
 
 **C10** - O checkout que falha na terceira colisão do código do pedido, depois de baixar o estoque, não deixa nenhum `inventory.stock_changed` em `outbox_messages` e deixa a `version` e a `quantity` dos estoques como estavam (AC 10)
-Proof: `make test-filter FILTER="keeps no stock change and no version of a checkout that fails on the third code collision"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="keeps no stock change and no version of a checkout that fails on the third code collision"`
 
 **C11** - Cada escrita que muda a vitrine trava a linha antes de calcular a versão: no log de consultas, a primeira consulta que toca a linha é um `select ... for update` e vem antes do `update` que soma 1 a `version`. Table-driven sobre 7: edição do produto, mudança de status, exclusão do produto, renomeação da categoria, exclusão da categoria, ajuste de estoque e checkout (AC 11, porta 3)
-Proof: `make test-filter FILTER="locks the row before computing the version"` - `backend/tests/Feature/ReadModel/StorefrontEventsTest.php`
+Proof: `make test-filter FILTER="locks the row before computing the version"`
 
 **C12** - Uma mudança de status e uma edição do mesmo produto, em execuções simultâneas repetidas 20 vezes, sempre deixam versões estritamente crescentes em `outbox_messages` para aquele produto, sem versão repetida, e o evento de maior versão carrega exatamente o estado que a linha de `products` guarda no fim (AC 11)
-Proof: `make test-filter FILTER="gives concurrent product writes increasing versions and the final row to the newest event"` - `backend/tests/Feature/ReadModel/ConcurrentWritesTest.php`
+Proof: `make test-filter FILTER="gives concurrent product writes increasing versions and the final row to the newest event"`
 
 **C13** - Um checkout e um ajuste do mesmo estoque, em execuções simultâneas repetidas 20 vezes, sempre deixam versões estritamente crescentes para aquele estoque, sem versão repetida, e o `inventory.stock_changed` de maior versão carrega a `quantity` que a linha de `stocks` guarda no fim (AC 11)
-Proof: `make test-filter FILTER="gives a concurrent checkout and stock adjustment increasing versions and the final quantity to the newest event"` - `backend/tests/Feature/ReadModel/ConcurrentWritesTest.php`
+Proof: `make test-filter FILTER="gives a concurrent checkout and stock adjustment increasing versions and the final quantity to the newest event"`
 
 **C14** - O `EventOutbox` grava um payload com `['a', 'b']`, com `[]` e com uma data em texto ISO 8601 com o fuso (`2026-10-27T13:45:00+00:00`), e recusa com `InvalidArgumentException`, sem gravar nada, `[['a']]`, `['k' => 'v']` e `new stdClass`. O caso `refuses a payload value that is not a scalar or null` sai com esta afirmação, e o `refuses a resource in the payload` fica (AC 12, porta 2)
-Proof: `make test-filter FILTER="accepts a flat list and an ISO 8601 date in the payload|refuses an associative array, a nested array and an object in the payload|refuses a resource in the payload"` - `backend/tests/Feature/Outbox/EventOutboxTest.php`
+Proof: `make test-filter FILTER="accepts a flat list and an ISO 8601 date in the payload|refuses an associative array, a nested array and an object in the payload|refuses a resource in the payload"`
 
 **C15** - Os casos nomeados em `proofs/c15-unchanged-cases.sh` estão byte a byte iguais aos da base `82337f0` e passam: os nomes, versões e payloads dos 5 eventos de hoje (`declares the name and version of every order event`, `maps every order event payload and rebuilds it`), os consumidores de hoje no `ConsumerRedeliveryTest`, o carrinho (todo o `CartValidationTest`), as recusas e o lock do checkout (`returns 409 and changes nothing when stock is insufficient`, `rejects inactive and out of stock products`, `never lets stock go negative (spec scenario: stock 5, buy 4 then 3)`, `locks the stock rows with SELECT ... FOR UPDATE`), a lista do admin (`lists the admin products newest first fifteen per page`) e a flag de transporte (`EventTransportFlagTest`) (AC 13)
 Proof: `sh .specs/features/storefront-read-model/proofs/c15-unchanged-cases.sh`
 
 **C16** - A leitora `Modules\Catalog\Core\InboundEvents\StockChanged` lê o payload que `Modules\Inventory\Events\StockChanged::toPayload()` grava nos mesmos `stock_id`, `product_id`, `quantity` e `version`, com o mesmo nome e a mesma versão, e a suíte de composição falha com uma leitora que discorda do produtor (AC 14)
-Proof: `make test-filter FILTER="reads the stock change with the catalog reader into the same values|detects a reader that disagrees with its producer"` - `backend/tests/Unit/Architecture/OrderEventPayloadTest.php`
+Proof: `make test-filter FILTER="reads the stock change with the catalog reader into the same values|detects a reader that disagrees with its producer"`
 
 **C17** - As migrations `2026_10_27_000001_add_version_to_products_and_categories_tables` (em `app-modules/catalog/database/migrations`) e `2026_10_27_000002_add_version_to_stocks_table` (em `app-modules/inventory/database/migrations`) existem, o `ModuleMigrationsTest` congela 18 nomes, e `products.version`, `categories.version` e `stocks.version` são `bigint`, `NOT NULL`, com default 1; uma linha que já existia antes do `up()` fica com `version` 1 (porta 3)
-Proof: `make test-filter FILTER="keeps the eighteen frozen migration names|places each module migration in its owner package"` - `backend/tests/Unit/Architecture/ModuleMigrationsTest.php`
-Proof: `make test-filter FILTER="adds the version column to products, categories and stocks|gives version 1 to the rows that existed before"` - `backend/tests/Feature/Database/VersionColumnsTest.php`
+Proof: `make test-filter FILTER="keeps the eighteen frozen migration names|places each module migration in its owner package"`
+Proof: `make test-filter FILTER="adds the version column to products, categories and stocks|gives version 1 to the rows that existed before"`
 
 ### S2 - ProductDocument e o projetor
 
 **C18** - Um evento de produto com versão maior que a da parte guardada, ou sem parte guardada, substitui a parte `product` inteira pelos valores do payload e pela versão dele, e cria o documento quando ele não existe. Table-driven sobre os 3 eventos de produto; caso forte: a parte guardada com `description` `"x"` e o evento novo com `description` nulo → `null`, e um campo da parte que o evento não traz não sobra (AC 15)
-Proof: `make test-filter FILTER="replaces the product part with a newer product event"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="replaces the product part with a newer product event"`
 
 **C19** - Um evento de produto com versão menor ou igual à guardada, ou menor ou igual a `deleted_version`, é descartado sem mudar nada no documento. Table-driven: versão 2 guardada e versão 2 de novo → nada muda; versão 1 depois da 3 → nada muda; versão 3 depois da 2 → aplicado; lápide 4 e evento de produto versão 4 → nada muda (AC 16)
-Proof: `make test-filter FILTER="discards a product event that is not newer"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="discards a product event that is not newer"`
 
 **C20** - Um `inventory.stock_changed` de um produto sem documento cria o documento com `product` nulo, `deleted_version` nulo e `stock` com exatamente `id`, `quantity` e `version` (AC 17)
-Proof: `make test-filter FILTER="creates the document with only the stock part when the stock arrives first"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="creates the document with only the stock part when the stock arrives first"`
 
 **C21** - Um evento de estoque com versão maior que a guardada substitui a parte `stock` inteira; com versão igual ou menor, é descartado. Table-driven: maior → substituída; igual → nada muda; menor → nada muda (AC 18)
-Proof: `make test-filter FILTER="replaces or discards the stock part by its version"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="replaces or discards the stock part by its version"`
 
 **C22** - Um `catalog.product_deleted` grava `deleted_version` com a versão dele, criando o documento quando não existe; depois dele, um evento de produto com versão até `deleted_version` é descartado e um evento de estoque mais novo substitui a parte `stock` sem mudar `deleted_version`. Caso forte: `catalog.product_deleted` versão 4 antes do `catalog.product_created` versão 1 → o documento continua lápide, com `product` nulo (AC 19)
-Proof: `make test-filter FILTER="keeps a deleted product as a tombstone"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="keeps a deleted product as a tombstone"`
 
 **C23** - Os eventos de categoria criam, substituem, descartam ou viram lápide o documento de `catalog_categories` pela mesma regra de versão (criada; renomeada com versão maior; renomeação mais velha descartada; excluída vira lápide; renomeação atrasada depois da exclusão descartada), e nenhum documento de `catalog_products` muda em nenhum dos casos (AC 20)
-Proof: `make test-filter FILTER="projects categories by the same version rule and touches no product"` - `backend/app-modules/catalog/tests/Feature/ReadModel/CategoryProjectorTest.php`
+Proof: `make test-filter FILTER="projects categories by the same version rule and touches no product"`
 
 **C24** - O mesmo envelope entregue duas vezes pelo `EventDelivery` ao consumidor do projetor muda o documento uma vez só (a segunda entrega deixa o documento igual ao da primeira) e não grava mensagem em `outbox_messages`. Table-driven sobre os 8 eventos e os seus consumidores (AC 21, AD-001)
-Proof: `make test-filter FILTER="redelivers every storefront event to its projector"` - `backend/tests/Feature/Messaging/ConsumerRedeliveryTest.php`
+Proof: `make test-filter FILTER="redelivers every storefront event to its projector"`
 
 **C25** - Duas entregas da mesma parte com versões diferentes, em execuções simultâneas repetidas 20 vezes (com e sem o documento existente), sempre deixam o documento na versão maior, e nenhuma das duas entregas falha (AC 22)
-Proof: `make test-filter FILTER="ends with the higher version when two deliveries race"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="ends with the higher version when two deliveries race"`
 
 **C26** - A gravação condicional que perde para uma versão mais nova conta como descarte e completa a entrega: uma entrega de versão 1 a um documento que outra escrita cria com versão 2 entre o filtro e o upsert (a chave duplicada do upsert) não lança exceção pelo `EventDelivery` e deixa a versão 2 (AC 22)
-Proof: `make test-filter FILTER="counts a losing upsert as a discard"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="counts a losing upsert as a discard"`
 
 **C27** - Com o MongoDB sem responder (a conexão apontada para um endereço que não atende), a entrega pelo `EventDelivery` lança exceção, como a de qualquer consumidor, e o documento guardado continua igual depois que a conexão volta (AC 23)
-Proof: `make test-filter FILTER="fails the delivery and keeps the document when MongoDB does not answer"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="fails the delivery and keeps the document when MongoDB does not answer"`
 
 **C28** - O `EventSubscriptions` tem exatamente 13 consumidores: os 5 de hoje e os 8 da porta 8 (`catalog.project_product_created`, `catalog.project_product_updated`, `catalog.project_product_status_changed`, `catalog.project_product_deleted`, `catalog.project_category_created`, `catalog.project_category_updated`, `catalog.project_category_deleted` e `catalog.project_stock_changed`), cada um com a sua classe em `Modules\Catalog\Core\Consumers` e o seu evento, e nenhum outro nome (AC 24, porta 8)
-Proof: `make test-filter FILTER="subscribes the thirteen consumers under their stable names|subscribes no consumer under any other name"` - `backend/tests/Feature/Messaging/ConsumerNamesTest.php`
+Proof: `make test-filter FILTER="subscribes the thirteen consumers under their stable names|subscribes no consumer under any other name"`
 
 **C29** - Só o `Modules\Catalog` nomeia a conexão `mongodb`, `catalog_products` e `catalog_categories`; dentro dele, só `Core\Consumers`, `Console` (o `catalog:read-model-clear`), `Persistence` e `Providers` alcançam a persistência do modelo de leitura, e a gravação só vem dos consumidores e do comando de esvaziar. A suíte de arquitetura passa com o código e falha com cada fixture de violação proposital: uma classe do Inventory que nomeia `catalog_products`, e um controller do `Http` do Catalog que grava no modelo de leitura (AC 25)
-Proof: `make test-filter FILTER="keeps the read model inside the catalog|fails on a deliberate read model violation"` - `backend/tests/Unit/Architecture/ReadModelTest.php`
+Proof: `make test-filter FILTER="keeps the read model inside the catalog|fails on a deliberate read model violation"`
 
 **C30** - Depois de um evento de cada tipo, o documento de `catalog_products` tem exatamente as chaves `_id`, `product`, `stock` e `deleted_version`; `product` tem exatamente `name`, `price_cents`, `description`, `image_url`, `status`, `category_ids`, `created_at`, `updated_at` e `version`, com as datas em texto; `stock` tem exatamente `id`, `quantity` e `version`; e o de `catalog_categories` tem exatamente `_id`, `name`, `slug`, `version` e `deleted_version`. Nenhum guarda `is_available`, `status_label` nem `available_quantity` (AC 25, porta 4)
-Proof: `make test-filter FILTER="stores exactly the fields of door 4"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ProductProjectorTest.php`
+Proof: `make test-filter FILTER="stores exactly the fields of door 4"`
 
 ### S3 - Reconstrução
 
@@ -121,28 +121,28 @@ Proof: `make test-filter FILTER="stores exactly the fields of door 4"` - `backen
 Proof: `sh docker/tests/read-model.sh --only make-rebuild`
 
 **C32** - O `catalog:read-model-clear` sai com 0, imprime `Modelo de leitura esvaziado: catalog_products e catalog_categories.`, deixa as duas coleções com 0 documentos e com exatamente os índices da porta 4: em `catalog_products`, `product.category_ids`, (`product.name`, `_id`) e (`product.price_cents`, `_id`); em `catalog_categories`, `slug` não único (além do `_id`) (AC 27, porta 4)
-Proof: `make test-filter FILTER="empties both collections and leaves the indexes of door 4"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ClearReadModelCommandTest.php`
+Proof: `make test-filter FILTER="empties both collections and leaves the indexes of door 4"`
 
 **C33** - O `catalog:republish` sai com 0, imprime `Republicados: <n> categorias e <m> produtos.` e grava exatamente um `catalog.category_updated` por categoria e um `catalog.product_updated` por produto, cada um com o estado atual e a `version` atual da linha (sem somar 1); o `inventory:republish` sai com 0, imprime `Republicados: <n> estoques.` e grava exatamente um `inventory.stock_changed` por linha de `stocks`, com a `quantity` e a `version` atuais (AC 28, porta 7)
-Proof: `make test-filter FILTER="republishes every category and product with the current state and version|republishes every stock row with the current quantity and version"` - `backend/tests/Feature/ReadModel/StorefrontRebuildTest.php`
+Proof: `make test-filter FILTER="republishes every category and product with the current state and version|republishes every stock row with the current quantity and version"`
 
 **C34** - O `catalog:republish` lê cada produto e as suas categorias num só instantâneo: no log de consultas, a linha do produto e os ids das categorias vêm de uma só consulta, ou de consultas dentro de uma transação `REPEATABLE READ` aberta antes delas (AC 28)
-Proof: `make test-filter FILTER="reads each product and its categories in one snapshot"` - `backend/tests/Feature/ReadModel/StorefrontRebuildTest.php`
+Proof: `make test-filter FILTER="reads each product and its categories in one snapshot"`
 
 **C35** - Um comando de republicação que falha no meio (o outbox recusa a gravação do terceiro registro) sai com código diferente de 0 e imprime `Republicados antes da falha: 2.`; rodado de novo, termina com 0, e depois das entregas a vitrine é igual à de uma reconstrução sem falha. Table-driven sobre `catalog:republish` e `inventory:republish` (AC 29)
-Proof: `make test-filter FILTER="exits non-zero with the count recorded when the republish fails halfway and converges when run again"` - `backend/tests/Feature/ReadModel/StorefrontRebuildTest.php`
+Proof: `make test-filter FILTER="exits non-zero with the count recorded when the republish fails halfway and converges when run again"`
 
 **C36** - As receitas `fresh` e `seed` do `Makefile` terminam com `$(MAKE) storefront-rebuild`, depois do comando de migração ou de seed (AC 30)
 Proof: `sh docker/tests/read-model.sh --only make-fresh-seed`
 
 **C37** - Com produtos, categorias e estoques gravados pelas rotas do admin e pelo checkout (pelo menos 14 produtos, para duas páginas), esvaziar o MongoDB, reconstruir e entregar as mensagens devolve, em `GET /api/products`, o mesmo corpo em todas as páginas de cada uma das 3 ordenações e com o filtro de uma categoria, e em `GET /api/products/{product}` o mesmo corpo para cada produto disponível e o mesmo status para os demais (AC 31)
-Proof: `make test-filter FILTER="returns the same storefront after emptying MongoDB and rebuilding"` - `backend/tests/Feature/ReadModel/StorefrontRebuildTest.php`
+Proof: `make test-filter FILTER="returns the same storefront after emptying MongoDB and rebuilding"`
 
 **C38** - Documentos de `catalog_products` e `catalog_categories` cujos ids não existem no PostgreSQL (um banco anterior) não sobram depois da reconstrução (AC 32)
-Proof: `make test-filter FILTER="leaves no document of a record missing from PostgreSQL after the rebuild"` - `backend/tests/Feature/ReadModel/StorefrontRebuildTest.php`
+Proof: `make test-filter FILTER="leaves no document of a record missing from PostgreSQL after the rebuild"`
 
 **C39** - Um envelope republicado entregue depois do envelope de uma escrita que gravou depois dele é descartado, e a vitrine mostra o estado da escrita; com as coleções esvaziadas e só as categorias entregues, `GET /api/products` responde `200` com `meta.total` 0, e com metade dos produtos entregue, `200` com essa metade (AC 33)
-Proof: `make test-filter FILTER="keeps the written state when a republished envelope arrives after the write|answers 200 with what was projected while the rebuild runs"` - `backend/tests/Feature/ReadModel/StorefrontRebuildTest.php`
+Proof: `make test-filter FILTER="keeps the written state when a republished envelope arrives after the write|answers 200 with what was projected while the rebuild runs"`
 
 ### S4 - api-read
 
@@ -150,39 +150,39 @@ Proof: `make test-filter FILTER="keeps the written state when a republished enve
 Proof: `sh .specs/features/storefront-read-model/proofs/c40-storefront-tests.sh`
 
 **C41** - Com 13 documentos com a parte do produto, 1 só com a parte do estoque e 1 lápide, `GET /api/products` responde `meta.total` 13, `meta.last_page` 2, `meta.per_page` 12, 12 itens na página 1 e 1 na página 2, nenhum item da lápide nem do documento só com estoque, e `GET /api/products?sort=price_asc&page=1` tem `links.next` com `sort=price_asc&page=2` (AC 35)
-Proof: `make test-filter FILTER="lists only the documents with a product part and no tombstone twelve per page"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="lists only the documents with a product part and no tombstone twelve per page"`
 
 **C42** - `category=<slug>` lista só os produtos cujo `category_ids` tem uma categoria sem lápide com aquele slug. Table-driven: o slug de uma categoria viva → os produtos dela; um slug que só uma lápide guarda → página vazia; um slug desconhecido → `200`, `data` vazio e `meta.total` 0; uma categoria nova que reusa o slug de uma lápide → só os produtos da nova (AC 36)
-Proof: `make test-filter FILTER="filters by the slug of a category that is not a tombstone"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="filters by the slug of a category that is not a tombstone"`
 
 **C43** - `sort=name` ordena por byte, com o id desempatando: `Abacaxi`, `Banana`, `Zebra`, `banana`, `caju`, `Água`, `éclair`, nessa ordem; `price_asc` e `price_desc` ordenam por `price_cents`, e dois produtos com o mesmo preço (e dois com o mesmo nome) saem com o menor id primeiro nas três ordenações; sem `sort`, a ordem é a de `name` (AC 37)
-Proof: `make test-filter FILTER="sorts the storefront by name in byte order and by price with the id breaking ties"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="sorts the storefront by name in byte order and by price with the id breaking ties"`
 
 **C44** - `sort=random`, `page=0` e `page=abc` respondem `422` com o erro de validação no campo, como hoje (AC 38)
-Proof: `make test-filter FILTER="refuses an invalid sort or page"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="refuses an invalid sort or page"`
 
 **C45** - `GET /api/products/{product}`, table-driven: documento ativo com 3 unidades → `200` com `data.available_quantity` 3; inativo com unidades → `404` `Produto indisponível.`; ativo com 0 unidades → `404` `Produto indisponível.`; com a parte do produto e sem a do estoque → `404` `Produto indisponível.`; id desconhecido → `404` `Recurso não encontrado.`; lápide → `404` `Recurso não encontrado.`; só com a parte do estoque → `404` `Recurso não encontrado.` (AC 39)
-Proof: `make test-filter FILTER="answers the product page from the document"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="answers the product page from the document"`
 
 **C46** - `GET /api/products/abc` responde `404` sem nenhuma leitura no MongoDB (AC 39)
-Proof: `make test-filter FILTER="answers 404 to a non canonical id without reading MongoDB"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="answers 404 to a non canonical id without reading MongoDB"`
 
 **C47** - Um documento listado sem a parte do estoque sai com `stock` nulo, `is_available` falso e `available_quantity` 0; um produto que cita uma categoria que ainda não chegou e uma que virou lápide sai com só as categorias vivas em `categories`, na ordem de `category_ids` (AC 40)
-Proof: `make test-filter FILTER="renders a document without the stock part as unavailable|leaves out a category that has not arrived or is a tombstone"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="renders a document without the stock part as unavailable|leaves out a category that has not arrived or is a tombstone"`
 
 **C48** - `GET /api/products` faz o mesmo número de leituras no MongoDB (contadas pelo log de consultas da conexão `mongodb`) com 1 produto e com 12, cada um com 2 categorias, e esse número é maior que 0 (AC 41)
-Proof: `make test-filter FILTER="reads MongoDB the same number of times for one and twelve products"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
-Proof: `make test-filter FILTER="lists the catalog with the same query count for 1 and 12 products"` - `backend/tests/Feature/ProductCatalogTest.php`
+Proof: `make test-filter FILTER="reads MongoDB the same number of times for one and twelve products"`
+Proof: `make test-filter FILTER="lists the catalog with the same query count for 1 and 12 products"`
 
 **C49** - `GET /api/products`, com e sem filtro, e `GET /api/products/{product}` não fazem nenhuma consulta na conexão `pgsql` (AC 42)
-Proof: `make test-filter FILTER="runs no PostgreSQL query on the storefront"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="runs no PostgreSQL query on the storefront"`
 
 **C50** - A disponibilidade é decidida na leitura: um documento `active` com 0 unidades sai listado com `is_available` falso e `status_label` `Ativo`; um `inactive` com 5 unidades sai listado com `is_available` falso e `available_quantity` 5; e a consulta da vitrine não filtra por `product.status` nem por `stock.quantity` (AC 43)
-Proof: `make test-filter FILTER="decides availability when reading"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="decides availability when reading"`
 Proof: `sh .specs/features/storefront-read-model/proofs/c50-no-rule-in-query.sh`
 
 **C51** - Com a conexão `mongodb` apontada para um endereço que não atende, `GET /api/products` e `GET /api/products/{product}` respondem `503` com `{"code":"SERVICE_UNAVAILABLE","message":"Este recurso está indisponível no momento.","errors":{},"request_id":"<o X-Request-ID da resposta>"}` em menos de 5 segundos cada (AC 44)
-Proof: `make test-filter FILTER="answers 503 within five seconds when MongoDB does not answer"` - `backend/app-modules/catalog/tests/Feature/ReadModel/StorefrontReadTest.php`
+Proof: `make test-filter FILTER="answers 503 within five seconds when MongoDB does not answer"`
 
 ### S5 - Gateway
 
@@ -209,7 +209,7 @@ Proof: `sh docker/tests/read-model.sh --only client-address`
 
 **C59** - O `TEST_API` do `Makefile` passa `-e MONGODB_DATABASE=$(TEST_DB_DATABASE)` (no checkout principal, `ecommerce_testing`; num worktree, `ecommerce_testing_<nome>`), e o `test-db-drop` apaga esse banco no MongoDB; na suíte, um teste de `Feature` começa com as duas coleções vazias mesmo depois de outro ter gravado nelas (AC 50)
 Proof: `sh docker/tests/read-model.sh --only test-mongo-db`
-Proof: `make test-filter FILTER="starts each test with an empty read model"` - `backend/app-modules/catalog/tests/Feature/ReadModel/ReadModelIsolationTest.php`
+Proof: `make test-filter FILTER="starts each test with an empty read model"`
 
 **C60** - No `.github/workflows/ci.yml`, o job `backend` sobe `mongodb` no mesmo `docker compose up -d --wait` do `db`, do `redis` e do `rabbitmq`, e o job `load-smoke` roda `make load-test TYPE=smoke`, cujo `load-tests/docker-compose.yml` tem `mongodb` e `api-read` (AC 51)
 Proof: `sh docker/tests/read-model.sh --only ci`
