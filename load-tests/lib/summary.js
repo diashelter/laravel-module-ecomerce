@@ -7,6 +7,7 @@ import { breakpointRateAt } from './profiles.js';
 const CUSTOM_METRICS = [
     'unexpected_errors',
     'order_payable_wait',
+    'storefront_projection_lag',
     'contention_created',
     'contention_refused',
     'contention_server_errors',

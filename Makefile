@@ -206,6 +206,8 @@ frontend-shell: ## Abre um shell no container do frontend, com o frontend/ deste
 ## ---------- Testes de carga (k6) ----------
 
 LOAD_PROFILES  = smoke load stress spike breakpoint soak contention limits
+# The products the LoadTestSeeder creates, and the storefront must list before k6 starts.
+LOAD_PRODUCTS  = 202
 # The event-transport flag of the load stack for the run (HEL-13): the transport the relay publishes through.
 LOAD_TRANSPORTS = redis rabbitmq
 TRANSPORT      ?= redis
@@ -231,14 +233,22 @@ load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYP
 	$(LOAD) down --volumes --remove-orphans
 	@# The rabbitmq container sometimes exits at boot with "Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces"
 	@# (seen on a busy host, never twice in a row): one more attempt starts it.
-	$(LOAD) up -d --wait db redis rabbitmq || { echo "Subindo o rabbitmq de novo."; $(LOAD) up -d --wait db redis rabbitmq; }
+	$(LOAD) up -d --wait db redis rabbitmq mongodb || { echo "Subindo o rabbitmq de novo."; $(LOAD) up -d --wait db redis rabbitmq mongodb; }
 	$(LOAD) up -d api
 	@until $(LOAD) exec -T api test -f vendor/autoload.php 2>/dev/null; do sleep 2; done
 	@$(LOAD) exec -T api sh -c 'php artisan migrate:fresh --force && php artisan db:seed --class=LoadTestSeeder --force' \
 		|| { echo "A pilha de carga não subiu. Logs da api de carga:"; $(LOAD) logs --no-color api; exit 1; }
 	$(LOAD) exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache && php artisan modules:cache'
 	$(LOAD) exec -T api php artisan events:transport $(TRANSPORT) --by=$(USER)
-	$(LOAD) up -d queue-worker outbox-relay event-consumer nginx
+	$(LOAD) up -d queue-worker outbox-relay event-consumer api-read nginx
+	@# The seed writes no event: the storefront reads MongoDB, so the read model is rebuilt (the relay and the consumers
+	@# project the messages) and k6 waits until the gateway lists all the products.
+	$(LOAD) exec -T api sh -c 'php artisan catalog:read-model-clear && php artisan catalog:republish && php artisan inventory:republish'
+	@n=0; until [ "$$($(LOAD) exec -T api php -r 'echo json_decode(file_get_contents("http://nginx/api/products"), true)["meta"]["total"] ?? 0;' 2>/dev/null)" = "$(LOAD_PRODUCTS)" ]; do \
+		n=$$((n + 1)); \
+		if [ $$n -ge 120 ]; then echo "A vitrine da pilha de carga não chegou a $(LOAD_PRODUCTS) produtos em 120 s."; exit 1; fi; \
+		sleep 1; \
+	done
 	@mkdir -p load-tests/results && chmod a+rwx load-tests/results
 	$(LOAD) run --rm \
 		-e PROFILE=$(TYPE) -e RUN_STAMP=$(LOAD_RUN) \

@@ -56,12 +56,15 @@ O `LoadTestSeeder` produz sempre os mesmos dados, a partir da semente fixa do Fa
 
 - 1.000 clientes, de `load-customer-0@example.com` a `load-customer-999@example.com`, com a senha `password` e um endereço cada;
 - `admin@example.com` e `suporte@example.com`;
-- 8 categorias e 201 produtos:
+- 8 categorias e 202 produtos:
   - 170 ativos com 1.000.000 de unidades;
   - 10 ativos sem unidades;
   - 20 inativos;
   - o `Produto Disputado`, ativo, com 10 unidades;
+  - o `Produto da Equipe`, ativo, com 1.000 unidades, que nenhum fluxo de compra escolhe: só o primeiro VU do fluxo da equipe grava o preço dele, para medir o `storefront_projection_lag`;
 - 10.000 pedidos de histórico.
+
+O seed não grava evento nenhum, e a vitrine lê o MongoDB: por isso o `make load-test` sobe o `mongodb` e o `api-read`, depois do seed sobe o relay e os consumidores, reconstrói o modelo de leitura (`catalog:read-model-clear`, `catalog:republish` e `inventory:republish`) e espera, por até 120 segundos, o `GET /api/products` pelo Nginx informar `meta.total` 202 antes de rodar o k6. O Nginx de carga manda o `GET` e o `HEAD` da vitrine para o `api-read` (o mesmo pool do FPM do `api`) e o resto para o `api`.
 
 O `load-customer-0` não é usado por nenhum VU: os pedidos e o endereço dele são o "outro cliente" dos casos de erro. O seed leva cerca de 5 segundos.
 
@@ -75,7 +78,7 @@ Os perfis de volume dividem os VUs entre três fluxos:
 
 - **Vitrine** (cerca de 75%): o visitante anônimo navega e valida o carrinho.
 - **Compra** (20%): o cliente compra, espera o pedido ficar pagável e paga.
-- **Equipe** (5%): o painel do admin.
+- **Equipe** (5%): o painel do admin. O primeiro VU do fluxo grava, a cada iteração, o preço do `Produto da Equipe` (1 centavo acima do último) e espera a vitrine mostrá-lo.
 
 | Perfil | Forma da carga | Limites de requisição | Limites de aprovação |
 |---|---|---|---|
@@ -109,6 +112,7 @@ Quando um limite cai, o `make load-test` sai com código diferente de zero, e os
   - um check do corpo que falhou;
   - um pedido que não ficou pagável em 60 segundos.
 - **`order_payable_wait`:** o tempo entre o `201` do pedido e a leitura que o mostra em `awaiting_payment`. O k6 consulta o pedido a cada 250 ms (o frontend consulta a cada 2 s), então a resolução da métrica é de 250 ms. Ela mede o relay do outbox e o worker, ou o consumidor do RabbitMQ, sob carga. Até a HEL-13 o k6 consultava a cada 2 s, e a linha de base da HEL-14 tem essa resolução: com 2 s, os dois transportes caíam na mesma leitura.
+- **`storefront_projection_lag`:** o tempo entre o `200` do `PUT /api/admin/products/{product}` e a leitura de `GET /api/products/{product}`, pelo Nginx, que mostra exatamente o preço gravado (o `Produto da Equipe`, 1 centavo acima do último). Ele mede o caminho inteiro da consistência eventual: o outbox, o relay, o transporte, o consumidor do projetor e o MongoDB. Só o primeiro VU do fluxo da equipe grava, em sequência: com vários VUs, duas edições que chegam ao banco na ordem inversa do relógio do k6 deixariam um VU esperando um preço que não volta. O k6 lê a cada 250 ms e desiste em 60 s, o que conta um erro inesperado. A métrica aparece no resumo e em `results/<perfil>-checks.txt` (o p95), sem limite de aprovação: a primeira série só registra, e o limite sai da linha de base.
 - **`rate_limit_overshoot`:** quantos logins da rajada simultânea do `limits` passaram além do limite de 10. A métrica é só registrada, sem limite de aprovação. O esperado é 0: o `throttle` conta a requisição antes de decidir (`AtomicThrottleRequests`, ver o [README do projeto](../README.md)), e passam exatamente 10. Com o `throttle` do framework, que confere antes de contar, passavam 11.
 
 Antes da primeira linha de base, os limites de latência eram 500 ms na vitrine, 1 s em `POST /api/orders` e 10 s em `order_payable_wait`. Agora eles são o p95 da linha do `load` vezes 1,2, arredondado para cima até a dezena de ms seguinte: 40 ms, 70 ms e 2.450 ms (`BASELINE` em `lib/baseline.js`, que muda junto com a linha). O `stress` e o `soak` usam os mesmos limites, então eles costumam reprovar: o relatório mostra quanto a API degradou.
@@ -129,12 +133,15 @@ Uma linha só entra na tabela quando duas rodadas seguidas do mesmo perfil, no m
 
 Mudar a máquina, a configuração da pilha, o `LoadTestSeeder`, o pool do FPM ou a versão do k6 abre uma série nova. A coluna "Mudou desde a série anterior" diz o que mudou.
 
+**Série da vitrine no modelo de leitura (HEL-17).** A partir desta mudança a vitrine (`GET /api/products` e `GET /api/products/{product}`) é servida pelo `api-read`, a partir do modelo de leitura no MongoDB, sem consultar o PostgreSQL, e o conjunto de dados tem 202 produtos (o `Produto da Equipe`). Isso muda o caminho que a métrica "p95 vitrine" mede e o `LoadTestSeeder`, então as duas tabelas abaixo abrem uma série nova com a linha "série nova: a vitrine passou a ser servida pelo `api-read`". A linha só traz números depois que duas rodadas seguidas no mesmo commit ficam a menos de 20% uma da outra; até lá ela diz "sem rodada aceita". A coluna de `storefront_projection_lag` não existe nas tabelas (travadas pelas provas): o p95 dela vai na nota da linha.
+
 O k6 roda na mesma VM do Docker que a API e disputa CPU com ela. Por isso, os números só se comparam com rodadas da mesma máquina.
 
 | Data | Commit | Máquina | Perfil | VUs ou taxa | req/s | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Erro inesperado | Ponto de ruptura | Mudou desde a série anterior |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-16 | f58ff69 | Apple M1, VM do Docker com 8 CPUs e 4 GB | load | 50 VUs | 47.3 | 30.0 | 55.4 | 2035 | 0% | - | primeira série |
 | 2026-10-16 | f58ff69 | Apple M1, VM do Docker com 8 CPUs e 4 GB | breakpoint | 5 a 500 it/s | 127.3 | - | - | 3978 | 0% | 49.4 it/s (p95 acima de 2 s aos 82 s) | primeira série |
+| 2026-10-27 | - | Apple M1, VM do Docker com 8 CPUs e 4 GB | load | 50 VUs | - | - | - | - | - | - | série nova: a vitrine passou a ser servida pelo `api-read` (modelo de leitura no MongoDB, 202 produtos). Sem rodada aceita ainda (duas rodadas a menos de 20%) |
 
 Como as linhas foram aceitas:
 
@@ -155,6 +162,8 @@ A HEL-13 mede o mesmo perfil `load` com o relay publicando por cada transporte (
 | 2026-10-18 | 99094d7 | Apple M1, VM do Docker com 8 CPUs e 4 GB | redis | load | 50 VUs | 50.6 | 35.6 | 50.2 | 1382 | 0% | primeira série. Aceita pela regra dos 20%: a rodada anterior do redis, no mesmo commit, teve p95 de 30,4 ms na vitrine, 49,4 ms em `POST /api/orders` e 1.369 ms em `order_payable_wait` |
 | 2026-10-18 | 99094d7 | Apple M1, VM do Docker com 8 CPUs e 4 GB | rabbitmq | load | 50 VUs | 50.1 | 32.3 | 52.2 | 558 | 0% | primeira série. Aceita pela regra dos 20%: a rodada anterior do rabbitmq, no mesmo commit, teve p95 de 29,7 ms na vitrine, 47,5 ms em `POST /api/orders` e 555 ms em `order_payable_wait` |
 | 2026-10-20 | 299af92 | Apple M1, VM do Docker com 8 CPUs e 4 GB | redis | load | 50 VUs | 51.4 | 24.1 | 39.2 | 1353 | 0% | módulos como pacotes do `internachi/modular` (HEL-12), com o cache de módulos da pilha de carga em `/tmp/laravel`. Aceita pela regra dos 20%: a rodada anterior do redis, no mesmo commit, teve p95 de 24,9 ms na vitrine, 38,4 ms em `POST /api/orders` e 1.360 ms em `order_payable_wait`; as duas ficaram dentro dos limites da `lib/baseline.js`. A máquina não estava na condição pedida (carga média de 3 a 4, com o `db`, o `redis` e o `rabbitmq` da pilha de dev no ar). |
+| 2026-10-27 | - | Apple M1, VM do Docker com 8 CPUs e 4 GB | redis | load | 50 VUs | - | - | - | - | - | série nova: a vitrine passou a ser servida pelo `api-read` (modelo de leitura no MongoDB, 202 produtos). Sem rodada aceita ainda (duas rodadas a menos de 20%) |
+| 2026-10-27 | - | Apple M1, VM do Docker com 8 CPUs e 4 GB | rabbitmq | load | 50 VUs | - | - | - | - | - | série nova: a vitrine passou a ser servida pelo `api-read` (modelo de leitura no MongoDB, 202 produtos). Sem rodada aceita ainda (duas rodadas a menos de 20%) |
 
 - **O que a tabela mostra.** Com a vitrine e `POST /api/orders` iguais dentro do ruído, a espera até pagar do p95 caiu de cerca de 1,4 s no Redis para cerca de 0,56 s no RabbitMQ. A causa não foi medida; a hipótese é o `sleep` de 1 s do supervisor do Horizon quando a fila está vazia, contra a entrega por push do consumidor do RabbitMQ. Nenhum dos dois transportes teve erro inesperado.
 - **Como foram feitas.** Quatro rodadas no commit `99094d7`, com a pilha de dev parada: duas do rabbitmq em sequência (15:43 e 15:50) e duas do redis em sequência (16:17 e 16:24). O código medido não mudou até o commit que grava esta tabela, que só mexe nos documentos.

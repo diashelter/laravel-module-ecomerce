@@ -1,7 +1,7 @@
 // Proves the lines computed after a run (checks C90 and C91), the burst overshoot and the breakpoint rate at stop,
 // and what the burst counter counts (check C63).
 import { expectEqual, runCase } from './harness.js';
-import { derivedLines } from '../lib/summary.js';
+import { derivedLines, summarize } from '../lib/summary.js';
 import { passedTheLimiter } from '../scenarios/limits.js';
 
 export { options } from './harness.js';
@@ -23,6 +23,19 @@ const cases = {
         expectEqual('a wrong password passed the limiter', passedTheLimiter(422), true);
         expectEqual('a 429 did not', passedTheLimiter(429), false);
         expectEqual('a 200 passed it', passedTheLimiter(200), true);
+    },
+    'projection-lag-p95': () => {
+        const data = {
+            root_group: { checks: [], groups: [] },
+            state: { testRunDurationMs: 1000 },
+            metrics: { storefront_projection_lag: { values: { count: 12, 'p(95)': 842.5, avg: 400 } } },
+        };
+        const out = summarize(data);
+        const checks = out['results/smoke-checks.txt'];
+
+        expectEqual('the checks file has the metric, its samples and its p95', checks.includes('metric\tstorefront_projection_lag\t12\t842.5'), true);
+        expectEqual('the terminal summary shows it', out.stdout.includes('storefront_projection_lag: '), true);
+        expectEqual('without samples, no line', summarize({ ...data, metrics: {} })['results/smoke-checks.txt'].includes('storefront_projection_lag'), false);
     },
     'breakpoint-rate': () => {
         const data = { metrics: {}, setup_data: { startedAt: NOW - 450_000 } };

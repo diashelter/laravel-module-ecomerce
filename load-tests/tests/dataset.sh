@@ -45,12 +45,22 @@ case "$CASE" in
     catalog)
         reseed
         expect_eq "8 categorias" "$(psql_load 'select count(*) from categories')" 8
-        expect_eq "201 produtos" "$(psql_load 'select count(*) from products')" 201
+        expect_eq "202 produtos" "$(psql_load 'select count(*) from products')" 202
         expect_eq "170 ativos com 1.000.000" "$(psql_load "select count(*) from products p join stocks s on s.product_id = p.id where p.status = 'active' and s.quantity = 1000000")" 170
         expect_eq "10 ativos com 0" "$(psql_load "select count(*) from products p join stocks s on s.product_id = p.id where p.status = 'active' and s.quantity = 0")" 10
         expect_eq "20 inativos com 100" "$(psql_load "select count(*) from products p join stocks s on s.product_id = p.id where p.status = 'inactive' and s.quantity = 100")" 20
         expect_eq "um Produto Disputado, ativo, com 10" "$(psql_load "select count(*) from products p join stocks s on s.product_id = p.id where p.name = 'Produto Disputado' and p.status = 'active' and s.quantity = 10")" 1
         expect_eq "só um com esse nome" "$(psql_load "select count(*) from products where name = 'Produto Disputado'")" 1
+        ;;
+    team-product)
+        reseed
+        expect_eq "um Produto da Equipe, ativo, com unidades" "$(psql_load "select count(*) from products p join stocks s on s.product_id = p.id where p.name = 'Produto da Equipe' and p.status = 'active' and s.quantity > 0")" 1
+        expect_eq "só um com esse nome" "$(psql_load "select count(*) from products where name = 'Produto da Equipe'")" 1
+        expect_eq "202 produtos" "$(psql_load 'select count(*) from products')" 202
+        # No purchase flow picks it: it is not among the 170 available products (1,000,000 units) nor the disputed one.
+        expect_eq "fora dos 170 disponíveis" "$(psql_load "select count(*) from products p join stocks s on s.product_id = p.id where p.name = 'Produto da Equipe' and s.quantity = 1000000")" 0
+        grep -q "p.name !== TEAM_PRODUCT" load-tests/lib/dataset.js || fail "o dataset.js não tira o Produto da Equipe de data.available"
+        ok "o dataset.js tira o Produto da Equipe dos produtos de compra"
         ;;
     orders)
         reseed
@@ -93,6 +103,6 @@ case "$CASE" in
         expect_eq "pagamentos só dos pedidos pagos do seed" "$(psql_load 'select count(*) from payments')" "$(psql_load "select count(*) from orders where status in ('payment_approved', 'delivered')")"
         ;;
     *)
-        unknown_case "customers staff catalog orders stock-and-outbox deterministic seed-time untouched"
+        unknown_case "customers staff catalog team-product orders stock-and-outbox deterministic seed-time untouched"
         ;;
 esac
