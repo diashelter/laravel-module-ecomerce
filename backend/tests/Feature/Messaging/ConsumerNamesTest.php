@@ -1,5 +1,13 @@
 <?php
 
+use Modules\Catalog\Core\Consumers\ProjectCategoryCreated;
+use Modules\Catalog\Core\Consumers\ProjectCategoryDeleted;
+use Modules\Catalog\Core\Consumers\ProjectCategoryUpdated;
+use Modules\Catalog\Core\Consumers\ProjectProductCreated;
+use Modules\Catalog\Core\Consumers\ProjectProductDeleted;
+use Modules\Catalog\Core\Consumers\ProjectProductStatusChanged;
+use Modules\Catalog\Core\Consumers\ProjectProductUpdated;
+use Modules\Catalog\Core\Consumers\ProjectStockChanged;
 use Modules\Fulfillment\Core\Consumers\ScheduleOrderDelivery;
 use Modules\Messaging\Contracts\EventSubscriptions;
 use Modules\Messaging\Core\EventSubscriptionRegistry;
@@ -23,7 +31,7 @@ function subscriptionsSnapshot(EventSubscriptions $subscriptions): array
     ];
 }
 
-it('subscribes the five consumers under their stable names', function (string $name, string $consumer, string $event) {
+it('subscribes the thirteen consumers under their stable names', function (string $name, string $consumer, string $event) {
     $subscriptions = app(EventSubscriptions::class);
 
     expect($subscriptions->consumerOf($name))->toBe($consumer)
@@ -35,6 +43,14 @@ it('subscribes the five consumers under their stable names', function (string $n
     'estimated delivery' => ['ordering.record_estimated_delivery', RecordEstimatedDelivery::class, 'fulfillment.delivery_scheduled'],
     'delivered' => ['ordering.mark_order_as_delivered', MarkOrderAsDelivered::class, 'fulfillment.order_delivered'],
     'schedule delivery' => ['fulfillment.schedule_order_delivery', ScheduleOrderDelivery::class, 'ordering.order_paid'],
+    'project product created' => ['catalog.project_product_created', ProjectProductCreated::class, 'catalog.product_created'],
+    'project product updated' => ['catalog.project_product_updated', ProjectProductUpdated::class, 'catalog.product_updated'],
+    'project product status changed' => ['catalog.project_product_status_changed', ProjectProductStatusChanged::class, 'catalog.product_status_changed'],
+    'project product deleted' => ['catalog.project_product_deleted', ProjectProductDeleted::class, 'catalog.product_deleted'],
+    'project category created' => ['catalog.project_category_created', ProjectCategoryCreated::class, 'catalog.category_created'],
+    'project category updated' => ['catalog.project_category_updated', ProjectCategoryUpdated::class, 'catalog.category_updated'],
+    'project category deleted' => ['catalog.project_category_deleted', ProjectCategoryDeleted::class, 'catalog.category_deleted'],
+    'project stock changed' => ['catalog.project_stock_changed', ProjectStockChanged::class, 'inventory.stock_changed'],
 ]);
 
 // The ordering module reads the approval of the payment module with a class of its own: the published
@@ -50,6 +66,14 @@ it('subscribes no consumer under any other name', function () {
         'ordering.record_estimated_delivery',
         'ordering.mark_order_as_delivered',
         'fulfillment.schedule_order_delivery',
+        'catalog.project_product_created',
+        'catalog.project_product_updated',
+        'catalog.project_product_status_changed',
+        'catalog.project_product_deleted',
+        'catalog.project_category_created',
+        'catalog.project_category_updated',
+        'catalog.project_category_deleted',
+        'catalog.project_stock_changed',
     ]);
 });
 

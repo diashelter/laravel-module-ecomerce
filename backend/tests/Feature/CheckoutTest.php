@@ -303,10 +303,12 @@ it('keeps the query count of the checkout', function () {
 
     $queries = array_column(DB::getQueryLog(), 'query');
 
-    // The one query the outbox adds: OrderPlaced, the last write of the checkout transaction, before
-    // the items are read back for the response.
-    expect($queries)->toHaveCount(10)
-        ->and(array_values(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'insert into "outbox_messages"'))))->toHaveCount(1)
-        ->and($queries[8])->toStartWith('insert into "outbox_messages"')
-        ->and($queries[9])->toStartWith('select * from "order_items"');
+    // The outbox adds three inserts: one inventory.stock_changed per product (each right after its UPDATE ... RETURNING,
+    // which carries the quantity left and the version back without a read) and OrderPlaced, the last write of the
+    // checkout transaction, before the items are read back for the response.
+    expect($queries)->toHaveCount(12)
+        ->and(array_values(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'insert into "outbox_messages"'))))->toHaveCount(3)
+        ->and(array_values(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'update stocks set quantity = quantity - ?, version = version + 1'))))->toHaveCount(2)
+        ->and($queries[10])->toStartWith('insert into "outbox_messages"')
+        ->and($queries[11])->toStartWith('select * from "order_items"');
 });

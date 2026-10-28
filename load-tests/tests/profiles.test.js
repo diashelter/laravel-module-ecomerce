@@ -48,6 +48,13 @@ function baselineFromReadme() {
 }
 
 const cases = {
+    'no-projection-lag-threshold': () => {
+        for (const profile of ['load', 'stress', 'soak']) {
+            const thresholds = buildOptions(profile, null).thresholds;
+
+            expectEqual(`${profile}: no threshold on storefront_projection_lag`, Object.keys(thresholds).filter((name) => name.includes('storefront_projection_lag')), []);
+        }
+    },
     smoke: () => {
         const options = buildOptions('smoke', null);
 

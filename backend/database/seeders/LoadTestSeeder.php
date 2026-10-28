@@ -47,6 +47,11 @@ class LoadTestSeeder extends Seeder
 
     public const DISPUTED_UNITS = 10;
 
+    /** Written by the first VU of the backoffice flow, to measure the projection lag; no purchase flow picks it. */
+    public const TEAM_PRODUCT = 'Produto da Equipe';
+
+    public const TEAM_UNITS = 1000;
+
     public const ORDERS = 10_000;
 
     private const CHUNK = 1000;
@@ -145,7 +150,8 @@ class LoadTestSeeder extends Seeder
     }
 
     /**
-     * 170 available products, 10 sold out, 20 inactive and the one the contention profile disputes.
+     * 170 available products, 10 sold out, 20 inactive, the one the contention profile disputes and the one the
+     * team flow writes (202 in all).
      *
      * @return list<array{id: string, name: string, price_cents: int}> the available products
      */
@@ -156,6 +162,7 @@ class LoadTestSeeder extends Seeder
             [self::SOLD_OUT_PRODUCTS, ProductStatus::Active, 0],
             [self::INACTIVE_PRODUCTS, ProductStatus::Inactive, self::INACTIVE_UNITS],
             [1, ProductStatus::Active, self::DISPUTED_UNITS],
+            [1, ProductStatus::Active, self::TEAM_UNITS],
         ];
 
         $total = array_sum(array_column($groups, 0));
@@ -172,7 +179,11 @@ class LoadTestSeeder extends Seeder
         foreach ($groups as $group => [$count, $status, $units]) {
             for ($i = 0; $i < $count; $i++, $position++) {
                 $attributes = Product::factory()->raw();
-                $name = $group === 3 ? self::DISPUTED_PRODUCT : $attributes['name'];
+                $name = match ($group) {
+                    3 => self::DISPUTED_PRODUCT,
+                    4 => self::TEAM_PRODUCT,
+                    default => $attributes['name'],
+                };
                 $id = $productIds[$position];
 
                 $products[] = [

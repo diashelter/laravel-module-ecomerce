@@ -41,8 +41,8 @@ class OutboxMessageRepository extends BaseRepository implements EventOutbox
         $payload = $event->toPayload();
 
         foreach ($payload as $key => $value) {
-            if ($value !== null && ! is_scalar($value)) {
-                throw new InvalidArgumentException("The payload value [{$key}] of the event ".$event::eventName().' is not a scalar or null.');
+            if (! $this->isPlain($value)) {
+                throw new InvalidArgumentException("The payload value [{$key}] of the event ".$event::eventName().' is not null, a scalar or a flat list of scalars.');
             }
         }
 
@@ -53,6 +53,22 @@ class OutboxMessageRepository extends BaseRepository implements EventOutbox
             'request_id' => Context::get(AssignRequestId::CONTEXT_KEY),
             'occurred_at' => now(),
         ]);
+    }
+
+    /** A payload value is null, a scalar, or a list whose items are all scalars (door 2 of the storefront read model). */
+    private function isPlain(mixed $value): bool
+    {
+        if ($value === null || $this->isFiniteScalar($value)) {
+            return true;
+        }
+
+        return is_array($value) && array_is_list($value) && array_all($value, fn (mixed $item) => $this->isFiniteScalar($item));
+    }
+
+    /** NAN and INF are floats, but JSON cannot hold them: the message would fail later, at the encoding. */
+    private function isFiniteScalar(mixed $value): bool
+    {
+        return is_scalar($value) && (! is_float($value) || is_finite($value));
     }
 
     /**

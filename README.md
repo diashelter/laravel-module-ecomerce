@@ -30,7 +30,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 9. [Usuários de teste e dados disponíveis](#usuários-de-teste-e-dados-disponíveis)
 10. [Fluxo de checkout](#fluxo-de-checkout)
 11. [Transação e concorrência de estoque](#transação-e-concorrência-de-estoque)
-12. [Eventos, outbox, consumidores e filas](#eventos-outbox-consumidores-e-filas)
+12. [O modelo de leitura da vitrine](#o-modelo-de-leitura-da-vitrine) e [Eventos, outbox, consumidores e filas](#eventos-outbox-consumidores-e-filas)
 13. [Regra de disponibilidade do produto](#regra-de-disponibilidade-do-produto)
 14. [API REST](#api-rest)
 15. [Frontend](#frontend)
@@ -47,7 +47,7 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 | Camada | Tecnologias |
 | --- | --- |
 | Backend | PHP 8.5, Laravel 13, Laravel Sanctum 4, PestPHP 4 |
-| Banco / cache / fila | PostgreSQL 18, Redis 8, Laravel Queue (driver `redis`) sob o Laravel Horizon, RabbitMQ 4.3 (php-amqplib) e feature flags com o Laravel Pennant |
+| Banco / cache / fila | PostgreSQL 18 (a escrita), MongoDB 8.2 (o modelo de leitura da vitrine), Redis 8, Laravel Queue (driver `redis`) sob o Laravel Horizon, RabbitMQ 4.3 (php-amqplib) e feature flags com o Laravel Pennant |
 | Frontend | Vue.js 3, Pinia 4, Vue Router 5, Axios, Vite 8, TypeScript, Tailwind CSS 4, Chart.js |
 | Infraestrutura | Docker, Docker Compose, Nginx, Node.js 24 LTS, Makefile |
 
@@ -111,8 +111,8 @@ Aplicação de e-commerce **pequena, mas tecnicamente completa**, criada para es
 ├── backend/                         Laravel 13 (API only)
 │   ├── app/Providers/               AppServiceProvider (a trava de lazy loading) e HorizonServiceProvider (o painel `/horizon`, aberto só à equipe `admin`)
 │   ├── app-modules/                 um pacote Composer por módulo, descoberto pelo `internachi/modular`; cada `src/` tem a fachada (Contracts/, Events/) e as camadas Core/, Persistence/ e Http/, mais Providers/; os testes de um módulo ficam no `tests/` dele; fora do `src/`, as rotas do módulo (`app-modules/<módulo>/routes/api.php`) e `database/` (as migrations e as factories das tabelas dele)
-│   │   ├── catalog/             produtos e categorias (vitrine e cadastro); Queries/ (leituras que servem as rotas e os contratos); publica Contracts/ (ProductCatalog, CatalogMetrics) e define ProductOrderHistory; dono do ProductAvailability; CatalogServiceProvider
-│   │   ├── inventory/           estoque; Queries/ (StockLevels, StockMetrics e a lista de estoque); publica Contracts/ (StockInitializer, StockLevels, StockMetrics, StockReservation) e InventoryServiceProvider
+│   │   ├── catalog/             produtos e categorias (vitrine e cadastro); Queries/ (leituras que servem as rotas e os contratos, a vitrine lê o MongoDB); Console/ (`catalog:read-model-clear` e `catalog:republish`); Core/Consumers (o projetor da vitrine); publica Contracts/ (ProductCatalog, CatalogMetrics) e define ProductOrderHistory; dono do ProductAvailability; CatalogServiceProvider
+│   │   ├── inventory/           estoque; Console/ (`inventory:republish`); Queries/ (StockLevels, StockMetrics e a lista de estoque); publica Contracts/ (StockInitializer, StockLevels, StockMetrics, StockReservation) e InventoryServiceProvider
 │   │   ├── messaging/           eventos: o outbox transacional, o relay, a porta EventTransport (fila do Laravel e RabbitMQ), a flag `event-transport` e os comandos outbox:relay, events:transport, events:consume, events:failed e events:retry; publica Contracts/ (DomainEvent, EventOutbox, EventConsumer, EventSubscriptions); MessagingServiceProvider
 │   │   ├── ordering/            carrinho, checkout, pedidos, Customer (comprador, somente leitura) — núcleo do negócio; define Contracts/ (DeliveryAddressBook, ShippingQuoter), publica PayableOrders, CustomerOrderHistory e OrderMetrics (este por uma consulta), e guarda o vocabulário que eles trocam
 │   │   ├── payment/             lê o pedido do cliente pela própria porta OrdersToPay, cobra pela porta PaymentGateway (gateway fake), grava as tentativas e publica PaymentApproved; isolado: não nomeia outro módulo de negócio
@@ -197,7 +197,7 @@ Existem dois arquivos:
 
 | Arquivo | Para que serve |
 | --- | --- |
-| `.env` (raiz) | Variáveis do Docker Compose: `APP_PORT`, credenciais do PostgreSQL, `DB_FORWARD_PORT`, e as do RabbitMQ (`RABBITMQ_USER`, `RABBITMQ_PASSWORD` e `RABBITMQ_MANAGEMENT_PORT`, a porta do painel de gestão em `http://localhost:15672`). E, opcional, `TEST_DB_DATABASE`, lida só pelo Makefile: o banco dos testes deste checkout (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)). |
+| `.env` (raiz) | Variáveis do Docker Compose: `APP_PORT`, credenciais do PostgreSQL, `DB_FORWARD_PORT`, as do MongoDB (`MONGODB_USERNAME`, `MONGODB_PASSWORD` e `MONGODB_FORWARD_PORT`, a porta de um cliente no host, 27018) e as do RabbitMQ (`RABBITMQ_USER`, `RABBITMQ_PASSWORD` e `RABBITMQ_MANAGEMENT_PORT`, a porta do painel de gestão em `http://localhost:15672`). E, opcional, `TEST_DB_DATABASE`, lida só pelo Makefile: o banco dos testes deste checkout (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)). |
 | `backend/.env` | Configuração do Laravel: banco (`DB_*`), Redis, RabbitMQ (`RABBITMQ_*`), fila, sessão, Sanctum, locale, delay da entrega. |
 
 Variáveis importantes do `backend/.env`:
@@ -207,6 +207,9 @@ Variáveis importantes do `backend/.env`:
 | `APP_URL` | `http://localhost:8080` | URL servida pelo Nginx |
 | `DB_HOST` / `DB_DATABASE` | `db` / `ecommerce` | Devem bater com o `.env` da raiz |
 | `QUEUE_CONNECTION` | `redis` | Fila consumida pelo `queue-worker` (o Horizon) |
+| `MONGODB_HOST` / `MONGODB_PORT` | `mongodb` / `27017` | O MongoDB do modelo de leitura da vitrine |
+| `MONGODB_DATABASE` | `ecommerce` | O banco do modelo de leitura. O `make test` usa um por checkout (o do banco de testes) |
+| `MONGODB_USERNAME` / `MONGODB_PASSWORD` | `ecommerce` / `secret` | Devem bater com o `.env` da raiz. A conexão desiste de um MongoDB que não responde em 2 s (a vitrine responde `503`) |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | `rabbitmq` / `5672` | O broker do transporte `rabbitmq` |
 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | `ecommerce` / `secret` | Devem bater com o `.env` da raiz |
 | `RABBITMQ_VHOST` | `/` | O vhost do ambiente de dev e da pilha de carga. O `make test` usa um vhost por checkout (ver [Um banco de testes por checkout](#um-banco-de-testes-por-checkout)) |
@@ -274,13 +277,19 @@ Num `git worktree`, os alvos que leem o código do checkout (`make test`, `make 
 | `make queue-failed` | Lista os jobs que falharam |
 | `make queue-retry` | Reprocessa todos os jobs falhos (ou um: `make queue-retry ID=<uuid>`) |
 
+### Vitrine (modelo de leitura)
+
+| Comando | Descrição |
+| --- | --- |
+| `make storefront-rebuild` | Reconstrói o modelo de leitura da vitrine: roda `catalog:read-model-clear`, `catalog:republish` e `inventory:republish`, nessa ordem. O relay e os consumidores (`make up`) projetam as mensagens em alguns segundos. O `make fresh` e o `make seed` terminam com ele |
+
 ### Testes
 
 | Comando | Descrição |
 | --- | --- |
-| `make test` | Executa todos os testes (Pest) no banco e no vhost do RabbitMQ de testes deste checkout, criados se ainda não existirem (ver [Testes](#testes)). O `rabbitmq` precisa estar no ar |
+| `make test` | Executa todos os testes (Pest) no banco, no vhost do RabbitMQ e no banco do MongoDB de testes deste checkout, criados se ainda não existirem (ver [Testes](#testes)). O `rabbitmq` e o `mongodb` precisam estar no ar |
 | `make test-filter FILTER="..."` | Executa testes filtrados. Ex.: `make test-filter FILTER=CheckoutTest` |
-| `make test-db-drop` | Apaga o banco e o vhost do RabbitMQ de testes deste checkout (o próximo `make test` os recria). Rode antes de remover um worktree |
+| `make test-db-drop` | Apaga o banco, o banco do MongoDB e o vhost do RabbitMQ de testes deste checkout (o próximo `make test` os recria). Rode antes de remover um worktree |
 | `make pint` | Verifica o estilo do backend com o Pint (`pint --test`, sem corrigir). É o mesmo passo do CI |
 | `make test-frontend` | Executa os testes do frontend (Vitest) no container `frontend` (num worktree, num `frontend` avulso com o `frontend/` dele) |
 
@@ -288,7 +297,7 @@ Num `git worktree`, os alvos que leem o código do checkout (`make test`, `make 
 
 | Comando | Descrição |
 | --- | --- |
-| `make load-test TYPE=<perfil>` | Recria a pilha de carga (`ecommerce-load`, com banco, Redis e RabbitMQ próprios) e roda um perfil do k6: `smoke`, `load`, `stress`, `spike`, `breakpoint`, `soak`, `contention` ou `limits`. A pilha de dev não muda |
+| `make load-test TYPE=<perfil>` | Recria a pilha de carga (`ecommerce-load`, com banco, Redis, RabbitMQ e MongoDB próprios, e o `api-read`), reconstrói o modelo de leitura e espera 202 produtos na vitrine e roda um perfil do k6: `smoke`, `load`, `stress`, `spike`, `breakpoint`, `soak`, `contention` ou `limits`. A pilha de dev não muda |
 | `make load-test TYPE=<perfil> TRANSPORT=rabbitmq` | O mesmo perfil com o relay publicando pelo RabbitMQ (`redis` é o padrão); os relatórios se chamam `<perfil>-rabbitmq-<carimbo>` |
 | `make load-down` | Remove a pilha de carga e os volumes dela |
 
@@ -343,7 +352,7 @@ customer_addresses                               categories
 | `payments` | uma linha por **tentativa** de pagamento: `amount_cents` (cópia do total do pedido), `status` (`approved` / `declined`), `decline_reason`, `card_token`, `gateway`, `gateway_transaction_id`. Índice **único parcial** em `order_id` onde `status = 'approved'` (no máximo um aprovado por pedido) e `CHECK` de motivo só na recusa e de valor `>= 0` |
 | `deliveries` | o registro do Fulfillment de que um pedido pago foi agendado e, depois, entregue (HEL-16): `order_id` **único** (FK `restrict`), `estimated_delivery_on date` (não nula, escrita só na criação: a primeira data vale) e `delivered_at` (nulo até a entrega, preenchido uma só vez; preenchido é o estado entregue). É a chave natural que diz ao Fulfillment se já anunciou o `DeliveryScheduled` e o `OrderDelivered`. Nenhum outro módulo a lê |
 | `order_items` | **snapshot** de `product_name` e `unit_price_cents`; `subtotal_cents bigint` (`unit_price_cents × quantity`), os dois com `CHECK >= 0`. Mudar o produto não altera pedidos antigos |
-| `outbox_messages` | o **outbox transacional**: uma linha por evento, gravada na transação da mudança que ele anuncia. `id uuid` (v7 da aplicação, também o id da mensagem), `name varchar(100)` (`ordering.order_paid`), `version smallint`, `payload jsonb` (só escalares), `request_id varchar(128)` (nulo fora de uma requisição), `occurred_at` e `published_at` (nulo enquanto pendente). Índice parcial `outbox_messages_pending_index (occurred_at, id) WHERE published_at IS NULL` para o relay e índice em `published_at` para a retenção. Sem chave estrangeira: o payload leva os ids como dado, e apagar uma mensagem não toca em nenhum outro registro |
+| `outbox_messages` | o **outbox transacional**: uma linha por evento, gravada na transação da mudança que ele anuncia. `id uuid` (v7 da aplicação, também o id da mensagem), `name varchar(100)` (`ordering.order_paid`), `version smallint`, `payload jsonb` (nulo, escalares ou uma lista plana de escalares), `request_id varchar(128)` (nulo fora de uma requisição), `occurred_at` e `published_at` (nulo enquanto pendente). Índice parcial `outbox_messages_pending_index (occurred_at, id) WHERE published_at IS NULL` para o relay e índice em `published_at` para a retenção. Sem chave estrangeira: o payload leva os ids como dado, e apagar uma mensagem não toca em nenhum outro registro |
 
 **Código do pedido:** toda tela mostra `#K7Q2M9XA` no lugar do id. O código tem 8 símbolos do alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (sem `0`, `O`, `1`, `I` e `L`, cerca de 850 bilhões de combinações), é sorteado pelo `OrderCodeGenerator` (`random_int`), é único e nunca muda. Só a colocação do pedido o grava. Ele vale só para leitura: URLs, contratos e eventos continuam com o id, e nenhum contrato recebe o código como parâmetro. O banco recusa um código nulo, de outro tamanho, com símbolo fora do alfabeto ou repetido.
 
@@ -479,6 +488,41 @@ Para ver a concorrência na prática, com o ambiente rodando, deixe um produto c
 
 ---
 
+## O modelo de leitura da vitrine
+
+A vitrine (`GET /api/products` e `GET /api/products/{product}`) é o lado de leitura de um CQRS com armazenamento e processo próprios (HEL-17, design em [.design/storefront-read-model.md](.design/storefront-read-model.md)). A escrita fica no PostgreSQL, pelos casos de uso de sempre; a leitura vem de um **modelo de leitura do Catalog no MongoDB**, servido por um processo à parte, o `api-read`, e as duas pontas se falam só pelo outbox.
+
+```text
+escrita do admin ou checkout -> api -> Catalog / Inventory / Ordering   (trava a linha, version + 1, grava o evento no outbox)
+   -> relay -> Redis ou RabbitMQ -> EventDelivery -> projetor do Catalog -> MongoDB (catalog_products, catalog_categories)
+navegador / k6 -> Nginx -- GET e HEAD de /api/products e /api/products/{product} --> api-read -> MongoDB
+                        -- todo o resto de /api, /sanctum e /horizon ---------------> api -> PostgreSQL
+```
+
+- **O modelo de leitura.** Duas coleções no MongoDB, sem chave nenhuma para as tabelas (só o id e os eventos):
+  - `catalog_products`: `_id` (o id do produto), `product` (nulo, ou `name`, `price_cents`, `description`, `image_url`, `status`, `category_ids`, `created_at` e `updated_at` em texto ISO 8601, e `version`), `stock` (nulo, ou `id`, `quantity` e `version`) e `deleted_version` (nulo, ou a lápide). Índices em `product.category_ids`, em (`product.name`, `_id`) e em (`product.price_cents`, `_id`);
+  - `catalog_categories`: `_id`, `name`, `slug`, `version` e `deleted_version`, com um índice não único em `slug`.
+  Nenhum documento guarda `is_available`, `status_label` nem `available_quantity`: a disponibilidade é decidida na leitura, só pelo `ProductAvailability` e pelo `ProductStatus`, e a consulta da vitrine não filtra por status nem por quantidade (um produto que não pode ser comprado aparece, esmaecido).
+- **A versão do registro.** `products`, `categories` e `stocks` ganharam a coluna `version` (`bigint`, não nula, padrão 1, só cresce). Toda escrita que muda a vitrine trava a linha (`SELECT ... FOR UPDATE`), soma 1 à versão na transação dela e grava o evento da linha travada; a exclusão publica a versão guardada mais 1. Duas escritas simultâneas na mesma linha ganham versões crescentes na ordem do commit, e a de maior versão carrega o estado final.
+- **Os eventos** (todos na versão 1, em `Modules\Catalog\Events` e `Modules\Inventory\Events`), que levam o **estado inteiro da parte que mudou**, nunca uma diferença:
+
+  | Evento | Payload |
+  | --- | --- |
+  | `catalog.product_created`, `catalog.product_updated`, `catalog.product_status_changed` | `product_id`, `name`, `price_cents`, `description`, `image_url`, `status`, `category_ids` (lista em ordem crescente de id), `created_at`, `updated_at` (ISO 8601 com o fuso) e `version` |
+  | `catalog.product_deleted` | `product_id`, `version` |
+  | `catalog.category_created`, `catalog.category_updated` | `category_id`, `name`, `slug`, `version` |
+  | `catalog.category_deleted` | `category_id`, `version` |
+  | `inventory.stock_changed` | `stock_id`, `product_id`, `quantity` (a quantidade gravada, nunca as unidades movidas), `version` |
+
+  Quem grava: o cadastro e a edição do produto, a troca de status, a exclusão, o cadastro, a renomeação e a exclusão da categoria, o ajuste de estoque, a abertura do estoque de um produto novo e o checkout (um `inventory.stock_changed` por produto do pedido). A exclusão de um produto não publica o estoque que sai pela cascata: a lápide do produto basta.
+- **O projetor.** Oito consumidores do Catalog (`catalog.project_product_created`, `catalog.project_product_updated`, `catalog.project_product_status_changed`, `catalog.project_product_deleted`, `catalog.project_category_created`, `catalog.project_category_updated`, `catalog.project_category_deleted` e `catalog.project_stock_changed`), em [`Core/Consumers`](backend/app-modules/catalog/src/Core/Consumers), são os únicos que gravam nas coleções. O Catalog lê o `inventory.stock_changed` com uma classe própria em `Core/InboundEvents`. **A regra de versão** (a chave natural de idempotência, AD-005): cada gravação é um `updateOne` com `upsert` cujo filtro tem a regra, então o banco decide: uma parte (`product`, `stock` ou a categoria) é substituída inteira só quando a versão do evento é maior que a guardada (e, no produto, que a `deleted_version`); a igual ou menor é uma entrega repetida e é descartada. A exclusão grava `deleted_version`; um evento de produto até essa versão é descartado, e um evento de estoque mais novo muda a parte `stock` sem tirar a lápide. Uma chave duplicada do `upsert` é tentada uma vez de novo (o documento pode ter perdido a corrida de inserção) e, se repetir, é um descarte. O projetor converge para o último estado gravado com entregas repetidas, atrasadas, fora de ordem ou simultâneas.
+- **A reconstrução.** `make storefront-rebuild` esvazia as coleções (`catalog:read-model-clear`, que recria os índices: é o único caminho que os cria, então todo volume novo do MongoDB pede um `make storefront-rebuild` antes de servir carga) e grava pelo outbox o estado atual de cada registro: `catalog:republish` (um `catalog.category_updated` por categoria e um `catalog.product_updated` por produto, com a versão atual, cada produto lido com as suas categorias numa só consulta) e `inventory:republish` (um `inventory.stock_changed` por estoque). Cada registro é uma transação; uma falha no meio sai com código diferente de zero e diz quantos gravou (`Republicados antes da falha: N.`), e rodar de novo converge. Os seeders e as factories não gravam evento, então depois de um `make fresh` ou `make seed` (que terminam com a reconstrução) e depois de baixar o repositório com um banco de dev existente, rode `make storefront-rebuild`. Durante a reconstrução a vitrine responde `200` com o que já foi projetado.
+- **O `api-read` e o gateway.** O `api-read` é o mesmo código e a mesma imagem PHP do `api`, em outro container, sem credencial do PostgreSQL (`DB_HOST`, `DB_USERNAME` e `DB_PASSWORD` vazios e nenhuma dependência do `db`): com o `db` parado, a vitrine continua no ar. O Nginx manda o `GET` e o `HEAD` de `/api/products` e `/api/products/{product}` para ele e o resto para o `api`; um `502` ou `504` do `api-read` (parado ou sem resposta) vira `503` com o corpo padrão de erro (`SERVICE_UNAVAILABLE`, `Este recurso está indisponível no momento.`) e um `X-Request-ID`; o `503` que o próprio `api-read` responde (MongoDB fora do ar) passa como está, com o `request_id` que o log da aplicação registrou. O destino do `api-read` é resolvido a cada requisição (o `resolver` do Docker), então o Nginx sobe mesmo com ele parado. Sem o MongoDB, a vitrine responde o mesmo `503` em até 5 s.
+- **O serviço `mongodb`** (`mongo:8.2`, usuário raiz por `MONGO_INITDB_ROOT_USERNAME` e `MONGO_INITDB_ROOT_PASSWORD`, volume `mongodb_data`, porta `MONGODB_FORWARD_PORT` no host) vem com o pacote `mongodb/laravel-mongodb` e a extensão `mongodb` da imagem PHP; a conexão `mongodb` lê as variáveis `MONGODB_*` ([Configuração do `.env`](#configuração-do-env)). O `api`, o `queue-worker`, o `outbox-relay`, o `event-consumer`, o `scheduler` e o `api-read` esperam por ele.
+- **Consistência eventual.** Entre uma escrita e a vitrine mostrá-la passam o relay, o transporte e o consumidor: o k6 mede esse tempo na métrica `storefront_projection_lag` ([load-tests/README.md](load-tests/README.md)). O carrinho, o checkout e o painel do admin continuam lendo o PostgreSQL.
+
+---
+
 ## Eventos, outbox, consumidores e filas
 
 O ciclo de vida do pedido envolve três partes, que só conversam por eventos:
@@ -537,7 +581,7 @@ A camada de publicar e consumir fica no módulo `Messaging` (`backend/app-module
 | Classe (`Modules\Messaging\...`) | O que faz |
 | --- | --- |
 | `Contracts\DomainEvent` | O contrato de todo evento de módulo: `eventName()`, `eventVersion()`, `toPayload()` e `fromPayload()` |
-| `Contracts\EventOutbox` | Onde o caso de uso grava o evento (`record()`). Implementado pelo `Persistence\Repositories\OutboxMessageRepository`, que recusa a gravação sem transação aberta (`LogicException`) e um valor do payload que não seja escalar nem nulo (`InvalidArgumentException`) |
+| `Contracts\EventOutbox` | Onde o caso de uso grava o evento (`record()`). Implementado pelo `Persistence\Repositories\OutboxMessageRepository`, que recusa a gravação sem transação aberta (`LogicException`) e um valor do payload que não seja nulo, escalar ou uma lista plana de escalares (`InvalidArgumentException`) |
 | `Core\EventEnvelope` | A mensagem como ela viaja: `id`, `name`, `version`, `payload`, `occurredAt` e `requestId`, as mesmas chaves das colunas de `outbox_messages` |
 | `Core\EventTransport` | A porta por onde o relay publica: retornar é aceitar, lançar exceção é recusar. Duas implementações: o `Core\QueueEventTransport` (a fila do Laravel) e o `Core\RabbitMq\RabbitMqEventTransport`. O que o container entrega à porta é o `Core\EventTransportSelector`, que escolhe uma delas pela flag |
 | `Core\EventTransportFlag`, `Core\EventTransportSelector` | A flag `event-transport` (`redis`, o padrão, ou `rabbitmq`), lida e gravada pelo Pennant com o driver `database`, e o seletor que lê a flag a cada publicação e registra uma linha de log quando o transporte muda |
@@ -552,7 +596,7 @@ A camada de publicar e consumir fica no módulo `Messaging` (`backend/app-module
 
 - **O evento é gravado na transação da mudança, e gravar fora de uma é erro.** Antes, cada evento saía depois do commit, numa chamada separada à fila, e uma falha dela travava o pedido para sempre: em `placed` (sem o `OrderPlaced`), em `awaiting_payment` com o cliente já cobrado (sem o `PaymentApproved`) ou, no caso do `OrderPaid`, com a transição já gravada e o retry sem conseguir repeti-la. Agora a mensagem fica pendente até o transporte aceitar, e uma falha da fila só atrasa o pedido. No pagamento, a tentativa aprovada e o `PaymentApproved` entram juntos. Na marcação de pago, a transição e o `OrderPaid` entram juntos, e uma transição que não acontece não grava nada. O agendamento da entrega grava a linha de `deliveries` e a `DeliveryScheduled` juntas, a entrega preenche `delivered_at` e grava a `OrderDelivered` juntas, e o `DeliverOrder` entra na fila depois do commit da `DeliveryScheduled`.
 - **Ninguém dispara evento pelo dispatcher do Laravel.** Nenhum evento de módulo tem listener do Laravel (o `bootstrap/app.php` não registra eventos), e o `DomainEventsTest` exige que toda classe de `Events` implemente `DomainEvent` e recusa, em `Modules`, o despacho de eventos do Laravel: o trait `Dispatchable` de eventos, a interface de despacho depois do commit, a facade `Event` e o helper `event()`.
-- **O formato publicado não depende da classe PHP.** O nome é `<módulo>.<evento em snake_case>`, a versão é um inteiro a partir de 1 e o payload tem só escalares, em chaves snake_case: `order_id` em todos; `delivery_business_days` (inteiro) no `OrderPaid`; `estimated_delivery_on` (o dia de `America/Sao_Paulo`, em `Y-m-d`) no `DeliveryScheduled`. Mudar um payload é subir a versão. O `DeliverEvent` recusa uma versão que a classe inscrita não declara (`UnexpectedValueException`, com o nome e a versão) sem chamar o consumidor, e a entrega vai para o `failed_jobs`.
+- **O formato publicado não depende da classe PHP.** O nome é `<módulo>.<evento em snake_case>`, a versão é um inteiro a partir de 1 e o payload tem, por chave, nulo, um escalar ou uma lista plana de escalares (`category_ids`), em chaves snake_case, e as datas com hora vão como texto ISO 8601 com o fuso (`toIso8601String()`; objetos, arrays associativos e listas aninhadas são recusados na gravação): `order_id` em todos; `delivery_business_days` (inteiro) no `OrderPaid`; `estimated_delivery_on` (o dia de `America/Sao_Paulo`, em `Y-m-d`) no `DeliveryScheduled`. Mudar um payload é subir a versão. O `DeliverEvent` recusa uma versão que a classe inscrita não declara (`UnexpectedValueException`, com o nome e a versão) sem chamar o consumidor, e a entrega vai para o `failed_jobs`.
 - **Cada módulo inscreve os próprios consumidores** no `boot()` do seu service provider, e o produtor nunca lista quem o consome: o `OrderingServiceProvider` inscreve os 4 do Ordering e o `FulfillmentServiceProvider`, o `ScheduleOrderDelivery`.
 - **Uma entrega por consumidor.** Se um consumidor falha, só a entrega dele é repetida (até 3 tentativas) e depois vai para o `failed_jobs`; os outros consumidores da mesma mensagem rodam uma vez. O `make queue-failed` lista a entrega como `<nome do evento> -> <consumidor>`. Como a entrega carrega o envelope inteiro, um `make queue-retry` funciona mesmo depois que a mensagem foi apagada.
 - **A entrega acontece ao menos uma vez, e os consumidores são idempotentes** (HEL-16, design em [.design/event-idempotency.md](.design/event-idempotency.md)). Se o relay cair entre o transporte aceitar e a mensagem ser marcada, ela sai de novo, e um `basic_reject` com requeue ou um `queue:retry` também a entrega outra vez. Não há inbox: cada ponto assíncrono declara a sua **chave natural**, e a segunda entrega não muda o banco nem grava mensagem nova no outbox:
@@ -646,7 +690,7 @@ Um produto só pode ser comprado quando **`status = active` E estoque > 0**. A �
 O value object recebe dados, não models. O `CatalogProduct` (o que o contrato `ProductCatalog` devolve) responde `availability($unitsInStock)`, e cada chamador diz de onde vêm as unidades: o carrinho lê as quantidades pelo `StockLevels`, o checkout pelas linhas bloqueadas (`FOR UPDATE`) do `StockReservation`, a vitrine e o cadastro de produto do admin pelo `ProductStocks` que o `StockLevels` devolve, e a lista de estoque do admin pela própria linha. Um produto sem linha de estoque tem 0 unidades e não pode ser comprado. O catálogo público, o detalhe do produto, a validação do carrinho, o checkout e a tela de estoque do admin leem todos a regra dali, e ela não é copiada em nenhum outro lugar. O Ordering fica só com as mensagens: o `PurchaseAvailabilityService` (nome mantido na HEL-6) devolve `Produto indisponível.` ou `Estoque insuficiente. Disponível: N.` sobre um `ProductAvailability`.
 
 - Na listagem pública (`/products`) todos os produtos aparecem; os indisponíveis ficam esmaecidos, não são clicáveis, não podem ser adicionados ao carrinho e mostram "Sem estoque" ou "Indisponível".
-- `GET /api/products/{product}` responde `404 — Produto indisponível.` para produtos inativos ou sem estoque.
+- `GET /api/products/{product}` responde `404 — Produto indisponível.` para produtos inativos ou sem estoque, e `404 — Recurso não encontrado.` para um id desconhecido. As duas rotas da vitrine leem o MongoDB pelo `api-read` e respondem `503 SERVICE_UNAVAILABLE` (`Este recurso está indisponível no momento.`) quando ele ou o `api-read` não respondem.
 - Quando o estoque chega a zero, o produto deixa de estar disponível automaticamente; quando volta a ser maior que zero, só fica disponível se estiver ativo.
 - O frontend apenas reflete o campo `is_available` calculado pela API; checkout e validação do carrinho sempre revalidam no backend.
 
@@ -677,7 +721,7 @@ As rotas de cada módulo ficam em `backend/app-modules/<módulo>/routes/api.php`
 | POST | `/api/auth/login` | público | Login do cliente (sessão por cookie; guard `customer`) |
 | POST | `/api/auth/logout` | cliente | Logout (encerra a sessão do navegador, as duas áreas) |
 | GET | `/api/auth/me` | cliente | Cliente autenticado: `id`, `name`, `email`, `created_at` (sem `role`) |
-| GET | `/api/products?category=&sort=&page=` | público | Listagem paginada; `sort`: `name`, `price_asc`, `price_desc` |
+| GET | `/api/products?category=&sort=&page=` | público | Listagem paginada; `sort`: `name`, `price_asc`, `price_desc`; `page`: de 1 a 1.000.000 (acima disso, `422`) |
 | GET | `/api/products/{product}` | público | Detalhe (somente disponíveis) |
 | GET | `/api/categories` | público | Categorias |
 | GET | `/api/shipping/quote?state=UF` | público | Frete e prazo de uma UF: `data: { state, price_cents, delivery_business_days }`. A UF é normalizada (`sp` → `SP`); `422` se ausente ou desconhecida; `throttle:60,1,shipping-quote` |
@@ -774,6 +818,8 @@ O Vitest cobre a conversão de dinheiro (`utils/money`), o carrinho, o pagamento
 Os testes usam um banco PostgreSQL separado, no container `db`, porque recursos como `lockForUpdate()` e `to_char()` são específicos do PostgreSQL. A fila roda em modo `sync` nos testes, e nenhum relay roda sozinho (os testes do RabbitMQ, em `app-modules/messaging/tests/Feature/Messaging` e `tests/Feature/Messaging`, usam o broker de verdade, no vhost do checkout, que cada teste esvazia antes de começar; sem o broker, todos falham dizendo `RabbitMQ ...`, e nenhum é pulado): um evento gravado fica pendente até o teste rodar `outbox:relay --once` (`relayOnce()` e `relayUntilIdle()` em `app-modules/messaging/tests/Helpers.php`). Com a fila `sync`, os consumidores rodam dentro do ciclo do relay. O cache é `array` nos testes; só o `RateLimitBurstTest` conta no Redis do container `redis`, com contadores próprios que expiram em um minuto, e dispara as requisições de processos filhos (`pcntl_fork`, presente na imagem PHP do projeto).
 
 ### Um banco de testes por checkout
+
+O MongoDB segue a mesma regra: o `make test` passa `MONGODB_DATABASE=<o banco de testes do checkout>` (`ecommerce_testing`, ou `ecommerce_testing_<worktree>`), cada teste de `Feature` que usou o MongoDB deixa as duas coleções vazias (o `RefreshDatabase` só desfaz o PostgreSQL) e o `make test-db-drop` apaga esse banco também. Os testes que leem a vitrine chamam `rebuildStorefront()` no preparo: as factories não gravam evento, e a reconstrução é o caminho para a escrita sem evento.
 
 Todos os checkouts do repositório (a pasta principal e cada `git worktree`) usam o mesmo projeto Compose (`ecommerce`) e, portanto, o mesmo container `db` e o mesmo `rabbitmq`. Como o `RefreshDatabase` roda `migrate:fresh`, duas suítes no mesmo banco quebram uma à outra (`deadlock detected`, `relation "migrations" does not exist`). Por isso o `make test` e o `make test-filter` escolhem o banco e o container pelo checkout, sem passo manual:
 
@@ -944,14 +990,16 @@ Os relatórios (HTML do painel do k6, JSON e a lista de checks) vão para `load-
 
 | Container | Imagem | Função |
 | --- | --- | --- |
-| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia `/api`, `/sanctum` e `/horizon` para o PHP-FPM, com o IP da conexão em `REMOTE_ADDR`, e o resto para o Vite (inclui WebSocket do HMR) |
+| `nginx` | `nginx:alpine` | Ponto único de entrada (`:8080`). Roteia o `GET` e o `HEAD` da vitrine para o `api-read` e `/api`, `/sanctum` e `/horizon` para o PHP-FPM do `api`, com o IP da conexão em `REMOTE_ADDR`, e o resto para o Vite (inclui WebSocket do HMR) |
 | `api` | `docker/php/Dockerfile` (PHP 8.5-FPM) | Laravel. Instala as dependências do Composer na primeira execução |
+| `api-read` | mesma imagem da `api` | Serve a vitrine (`GET` e `HEAD` de `/api/products` e `/api/products/{product}`) a partir do MongoDB, sem credencial do PostgreSQL e sem esperar o `db` (ver [O modelo de leitura da vitrine](#o-modelo-de-leitura-da-vitrine)) |
 | `queue-worker` | mesma imagem da `api` | `php artisan horizon` — o Horizon, com um supervisor na fila `default` do Redis: processa as entregas aos consumidores (`DeliverEvent`, com a flag em `redis`) e os jobs |
 | `outbox-relay` | mesma imagem da `api` | `php artisan outbox:relay` — publica as mensagens pendentes de `outbox_messages` pelo transporte da flag `event-transport`, em até 1 s, e apaga as publicadas há mais de 7 dias |
 | `event-consumer` | mesma imagem da `api` | `php artisan events:consume` — lê as filas dos consumidores no RabbitMQ (com a flag em `redis` ele fica ocioso, mas continua lendo o que já estava nas filas) |
 | `scheduler` | mesma imagem da `api` | `php artisan schedule:work` — o `horizon:snapshot` a cada 5 minutos |
 | `frontend` | `docker/node/Dockerfile` (Node 24) | Servidor de desenvolvimento do Vite |
 | `db` | `postgres:18-alpine` | Banco principal (`ecommerce`) e de testes (`ecommerce_testing`, mais um `ecommerce_testing_<worktree>` por `git worktree` que rodou `make test`) |
+| `mongodb` | `mongo:8.2` | O modelo de leitura da vitrine (`catalog_products` e `catalog_categories`), com o volume `mongodb_data` e a porta `MONGODB_FORWARD_PORT` (27018) no host. O `make test` usa um banco por checkout |
 | `redis` | `redis:8-alpine` | Fila, sessões, cache e os dados do Horizon |
 | `rabbitmq` | `rabbitmq:4.3.5-management-alpine` | O broker do transporte `rabbitmq`, com o volume `rabbitmq_data` e o painel de gestão em `:15672` (`RABBITMQ_MANAGEMENT_PORT`). Também tem um vhost de testes por checkout |
 

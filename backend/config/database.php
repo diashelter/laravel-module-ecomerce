@@ -84,6 +84,22 @@ return [
             ]) : [],
         ],
 
+        // The read model of the storefront (the catalog_products and catalog_categories collections). The driver gives
+        // up on a MongoDB that does not answer after 2 seconds, so the storefront answers 503 instead of holding PHP-FPM.
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'host' => env('MONGODB_HOST', '127.0.0.1'),
+            'port' => (int) env('MONGODB_PORT', 27017),
+            'database' => env('MONGODB_DATABASE', 'ecommerce'),
+            'username' => env('MONGODB_USERNAME', ''),
+            'password' => env('MONGODB_PASSWORD', ''),
+            'options' => [
+                'authSource' => 'admin',
+                'serverSelectionTimeoutMS' => 2000,
+                'connectTimeoutMS' => 2000,
+            ],
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),

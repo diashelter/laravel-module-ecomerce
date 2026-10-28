@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Catalog\Persistence\Queries;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
 use Modules\Catalog\Core\ValueObjects\ProductCategories;
@@ -18,34 +17,13 @@ use Modules\Catalog\Persistence\Models\Product;
 use Modules\Inventory\Contracts\StockLevels;
 
 /**
- * The reads of the storefront and of the admin product pages. It reads the catalog tables and asks
- * the inventory, by id and once for the whole page, for the stock: the page size never changes the
- * number of queries.
+ * The reads of the admin product pages (the storefront reads the MongoDB read model: StorefrontQuery). It reads the
+ * catalog tables and asks the inventory, by id and once for the whole page, for the stock: the page size never
+ * changes the number of queries.
  */
 class ProductQuery
 {
     public function __construct(private readonly StockLevels $stock) {}
-
-    /**
-     * Public catalog: active AND inactive products, filtered and sorted in the database.
-     *
-     * @return LengthAwarePaginator<int, ProductView>
-     */
-    public function paginateCatalog(?string $categorySlug, string $sort, int $perPage): LengthAwarePaginator
-    {
-        return $this->viewsOf(Product::query()
-            ->with('categories')
-            ->when($categorySlug, fn (Builder $query, string $slug) => $query->whereHas(
-                'categories',
-                fn (Builder $categories) => $categories->where('slug', $slug),
-            ))
-            ->tap(fn (Builder $query) => match ($sort) {
-                'price_asc' => $query->orderBy('price_cents')->orderBy('id'),
-                'price_desc' => $query->orderByDesc('price_cents')->orderBy('id'),
-                default => $query->orderBy('name')->orderBy('id'),
-            })
-            ->paginate($perPage));
-    }
 
     /** @return LengthAwarePaginator<int, ProductView> */
     public function paginateForAdmin(int $perPage): LengthAwarePaginator

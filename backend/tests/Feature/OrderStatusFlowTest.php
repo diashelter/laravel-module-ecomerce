@@ -24,12 +24,15 @@ use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Events\OrderPlaced;
 use Modules\Ordering\Persistence\Models\Order;
 
+// The eight consumers of the storefront projector (Modules\Catalog) are covered by ConsumerNamesTest.
 it('subscribes exactly the five order consumers', function () {
     $pairs = [];
 
     foreach (app(EventSubscriptions::class)->all() as $name => $consumers) {
         foreach ($consumers as $consumer) {
-            $pairs[] = "{$name} -> {$consumer}";
+            if (! str_starts_with($consumer, 'Modules\\Catalog\\')) {
+                $pairs[] = "{$name} -> {$consumer}";
+            }
         }
     }
 

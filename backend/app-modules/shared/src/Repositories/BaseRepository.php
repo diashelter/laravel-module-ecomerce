@@ -63,6 +63,19 @@ abstract class BaseRepository
     }
 
     /**
+     * SELECT ... FOR UPDATE on the row: it reads the stored state and keeps the row until the caller's transaction ends,
+     * so a write computes its new state (and its version) from the row no other write can change. Must run inside one.
+     *
+     * @return TModel
+     *
+     * @throws ModelNotFoundException
+     */
+    public function lockById(string $id): Model
+    {
+        return $this->query()->whereKey($id)->lockForUpdate()->firstOrFail();
+    }
+
+    /**
      * Deletes by id with a single DELETE, without reading the row first.
      *
      * @throws ModelNotFoundException when no row has the id

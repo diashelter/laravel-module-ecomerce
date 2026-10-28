@@ -2,15 +2,25 @@
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Catalog\Core\InboundEvents\StockChanged as InboundStockChanged;
+use Modules\Catalog\Events\CategoryCreated;
+use Modules\Catalog\Events\CategoryDeleted;
+use Modules\Catalog\Events\CategoryUpdated;
+use Modules\Catalog\Events\ProductCreated;
+use Modules\Catalog\Events\ProductDeleted;
+use Modules\Catalog\Events\ProductStatusChanged;
+use Modules\Catalog\Events\ProductUpdated;
 use Modules\Fulfillment\Core\Jobs\DeliverOrder;
 use Modules\Fulfillment\Events\DeliveryScheduled;
 use Modules\Fulfillment\Events\OrderDelivered;
+use Modules\Inventory\Events\StockChanged;
 use Modules\Messaging\Contracts\DomainEvent;
 use Modules\Messaging\Core\EventSubscriptionRegistry;
 use Modules\Ordering\Events\OrderPaid;
 use Modules\Ordering\Events\OrderPlaced;
 use Modules\Payment\Events\PaymentApproved;
 use Tests\Unit\Architecture\Fixtures\DisagreeingReader;
+use Tests\Unit\Architecture\Fixtures\DisagreeingStockReader;
 use Tests\Unit\Architecture\Support\ModuleLayout;
 
 /*
@@ -103,7 +113,7 @@ function producerOf(string $name): ?string
     foreach (ModuleLayout::filesMatching('Events/*.php') as $file) {
         $class = ModuleLayout::classOf($file);
 
-        if (is_subclass_of($class, DomainEvent::class) && $class::eventName() === $name) {
+        if (is_subclass_of($class, DomainEvent::class) && ! (new ReflectionClass($class))->isAbstract() && $class::eventName() === $name) {
             return $class;
         }
     }
@@ -117,6 +127,11 @@ function sampleOf(string $producer): DomainEvent
     return match ($producer) {
         OrderPaid::class => new OrderPaid(PAYLOAD_ORDER_ID, 3),
         DeliveryScheduled::class => new DeliveryScheduled(PAYLOAD_ORDER_ID, CarbonImmutable::parse('2026-10-09 03:00:00', 'UTC')),
+        ProductCreated::class, ProductUpdated::class, ProductStatusChanged::class => productEvent(PAYLOAD_ORDER_ID, 1, $producer),
+        ProductDeleted::class => new ProductDeleted(PAYLOAD_ORDER_ID, 2),
+        CategoryCreated::class, CategoryUpdated::class => categoryEvent(PAYLOAD_ORDER_ID, 1, event: $producer),
+        CategoryDeleted::class => new CategoryDeleted(PAYLOAD_ORDER_ID, 2),
+        StockChanged::class => new StockChanged('0199f0a0-0000-7000-8000-0000000000e1', PAYLOAD_ORDER_ID, 7, 3),
         default => new $producer(PAYLOAD_ORDER_ID),
     };
 }
@@ -156,7 +171,11 @@ it('reads every subscribed event from the payload its producer writes', function
     $subscriptions = app(EventSubscriptionRegistry::class);
     $names = array_keys($subscriptions->all());
 
-    expect($names)->toEqualCanonicalizing(['ordering.order_placed', 'payment.payment_approved', 'ordering.order_paid', 'fulfillment.delivery_scheduled', 'fulfillment.order_delivered']);
+    expect($names)->toEqualCanonicalizing([
+        'ordering.order_placed', 'payment.payment_approved', 'ordering.order_paid', 'fulfillment.delivery_scheduled', 'fulfillment.order_delivered',
+        'catalog.product_created', 'catalog.product_updated', 'catalog.product_status_changed', 'catalog.product_deleted',
+        'catalog.category_created', 'catalog.category_updated', 'catalog.category_deleted', 'inventory.stock_changed',
+    ]);
 
     foreach ($names as $name) {
         $producer = producerOf($name);
@@ -169,4 +188,21 @@ it('reads every subscribed event from the payload its producer writes', function
 
 it('detects a reader that disagrees with its producer', function () {
     expect(disagreements(PaymentApproved::class, DisagreeingReader::class, new PaymentApproved(PAYLOAD_ORDER_ID)))->toBe(['payload']);
+});
+
+it('reads the stock change with the catalog reader into the same values', function () {
+    $producer = new StockChanged('0199f0a0-0000-7000-8000-0000000000e1', PAYLOAD_ORDER_ID, 7, 3);
+    $reader = app(EventSubscriptionRegistry::class)->eventOf('inventory.stock_changed');
+
+    expect($reader)->toBe(InboundStockChanged::class);
+
+    $read = $reader::fromPayload($producer->toPayload());
+
+    expect([$read->stockId, $read->productId, $read->quantity, $read->version])->toBe(['0199f0a0-0000-7000-8000-0000000000e1', PAYLOAD_ORDER_ID, 7, 3])
+        ->and($reader::eventName())->toBe(StockChanged::eventName())
+        ->and($reader::eventVersion())->toBe(StockChanged::eventVersion())
+        ->and(disagreements(StockChanged::class, $reader, $producer))->toBe([]);
+
+    // The check fails with a reader that disagrees with the producer on the payload keys.
+    expect(disagreements(StockChanged::class, DisagreeingStockReader::class, $producer))->toBe(['payload']);
 });

@@ -13,7 +13,7 @@ use Carbon\CarbonImmutable;
  */
 final readonly class EventEnvelope
 {
-    /** @param  array<string, string|int|float|bool|null>  $payload */
+    /** @param  array<string, string|int|float|bool|list<string|int|float|bool>|null>  $payload */
     public function __construct(
         public string $id,
         public string $name,

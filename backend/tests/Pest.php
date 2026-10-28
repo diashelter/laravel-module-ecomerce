@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Modules\Catalog\Persistence\Models\Category;
 use Modules\Catalog\Persistence\Models\Product;
 use Modules\Customers\Persistence\Models\CustomerAddress;
@@ -17,6 +19,23 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature', '../app-modules/*/tests/Feature');
+
+// MongoDB is not rolled back by RefreshDatabase: every feature test starts with both read model collections empty.
+// The first test empties them (what a run that was killed left behind); a test that used the connection empties them
+// again when it ends. Opening a MongoDB client in every test would leak memory: each test boots a new application.
+pest()->beforeEach(function () {
+    static $emptied = false;
+
+    if (! $emptied) {
+        emptyReadModel();
+        $emptied = true;
+    }
+})->in('Feature', '../app-modules/*/tests/Feature');
+pest()->afterEach(function () {
+    if (array_key_exists('mongodb', DB::getConnections())) {
+        emptyReadModel();
+    }
+})->in('Feature', '../app-modules/*/tests/Feature');
 
 // Every test that uses the broker starts on a vhost with nothing declared in it.
 pest()->beforeEach(fn () => resetBroker())->in('Feature/Messaging', '../app-modules/messaging/tests/Feature/Messaging');
@@ -124,4 +143,17 @@ function productPayload(array $overrides = []): array
         'category_ids' => Category::factory()->count(2)->create()->pluck('id')->all(),
         'stock_quantity' => 7,
     ], $overrides);
+}
+
+/**
+ * What `make storefront-rebuild` does, then the delivery of its messages: the storefront shows what the database holds.
+ * The factories and the seeders write no event, so a test that reads the storefront calls this first.
+ */
+function rebuildStorefront(): void
+{
+    expect(Artisan::call('catalog:read-model-clear'))->toBe(0)
+        ->and(Artisan::call('catalog:republish'))->toBe(0)
+        ->and(Artisan::call('inventory:republish'))->toBe(0);
+
+    relayUntilIdle();
 }

@@ -42,6 +42,7 @@ class ProductFactory extends Factory
             'description' => fake()->paragraphs(2, true),
             'image_url' => 'https://picsum.photos/seed/'.Str::slug($name).'/600/600',
             'status' => ProductStatus::Active,
+            'version' => 1,
         ];
     }
 

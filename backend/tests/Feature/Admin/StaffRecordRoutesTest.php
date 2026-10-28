@@ -46,7 +46,12 @@ function validBodyOf(string $method, string $uri, string $kind): array
 function existingIdOf(string $kind): string
 {
     return match ($kind) {
-        'product' => productWithStock(3)->id,
+        'product' => (function () {
+            $id = productWithStock(3)->id;
+            rebuildStorefront();
+
+            return $id;
+        })(),
         'category' => Category::factory()->create()->id,
         'stock' => stockOf(productWithStock(3))->id,
         'customer' => customer()->id,
@@ -140,12 +145,13 @@ it('adjusts the stock reading it once with a lock', function () {
 
     $reads = array_filter($queries, fn (string $sql) => str_starts_with($sql, 'select') && str_contains($sql, 'from "stocks"'));
 
-    expect($queries)->toHaveCount(3)
+    // The lock read, the update, the inventory.stock_changed insert and the product the response shows.
+    expect($queries)->toHaveCount(4)
         ->and($reads)->toHaveCount(1)
         ->and(array_values($reads)[0])->toContain('for update');
 });
 
-it('deletes a product without reading it first', function () {
+it('deletes a product reading only its version, under a lock', function () {
     $product = productWithStock(4);
     $this->actingAs(admin());
 
@@ -156,12 +162,16 @@ it('deletes a product without reading it first', function () {
 
     $response->assertNoContent();
 
-    expect($queries)->toHaveCount(2)
-        ->and(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'select') && str_contains($sql, 'from "products"')))->toBeEmpty()
+    // The order history check, the lock read (the stored version), the delete and the catalog.product_deleted insert.
+    $reads = array_values(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'select') && str_contains($sql, 'from "products"')));
+
+    expect($queries)->toHaveCount(4)
+        ->and($reads)->toHaveCount(1)
+        ->and($reads[0])->toEndWith('for update')
         ->and(Product::query()->whereKey($product->id)->exists())->toBeFalse();
 });
 
-it('deletes a category without reading it first', function () {
+it('deletes a category reading only its version, under a lock', function () {
     $category = Category::factory()->create();
     $this->actingAs(admin());
 
@@ -172,8 +182,12 @@ it('deletes a category without reading it first', function () {
 
     $response->assertNoContent();
 
-    expect($queries)->toHaveCount(2)
-        ->and(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'select * from "categories"')))->toBeEmpty()
+    // The products check, the lock read (the stored version), the delete and the catalog.category_deleted insert.
+    $reads = array_values(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'select * from "categories"')));
+
+    expect($queries)->toHaveCount(4)
+        ->and($reads)->toHaveCount(1)
+        ->and($reads[0])->toEndWith('for update')
         ->and(Category::query()->whereKey($category->id)->exists())->toBeFalse();
 });
 
@@ -230,6 +244,7 @@ it('keeps the query count of the staff and showcase reads and updates', function
         'product' => (function () {
             $product = productWithStock(5);
             $product->categories()->attach(Category::factory()->count(2)->create());
+            rebuildStorefront();
 
             return $product->id;
         })(),
@@ -253,12 +268,13 @@ it('keeps the query count of the staff and showcase reads and updates', function
 
     expect($queries)->toHaveCount($expected, implode("\n", $queries));
 })->with([
-    'show product' => ['GET', 'api/products/{product}', 'product', 3],
+    // The storefront reads MongoDB: no PostgreSQL query at all.
+    'show product' => ['GET', 'api/products/{product}', 'product', 0],
     'show admin product' => ['GET', 'api/admin/products/{product}', 'product', 3],
-    'update product' => ['PUT', 'api/admin/products/{product}', 'product', 10],
-    'update product status' => ['PATCH', 'api/admin/products/{product}/status', 'product', 4],
+    'update product' => ['PUT', 'api/admin/products/{product}', 'product', 12],
+    'update product status' => ['PATCH', 'api/admin/products/{product}/status', 'product', 6],
     'show category' => ['GET', 'api/admin/categories/{category}', 'category', 2],
-    'update category' => ['PUT', 'api/admin/categories/{category}', 'category', 4],
+    'update category' => ['PUT', 'api/admin/categories/{category}', 'category', 5],
     'show customer' => ['GET', 'api/admin/customers/{customer}', 'customer', 3],
     'show admin order' => ['GET', 'api/admin/orders/{order}', 'order', 3],
     'show staff member' => ['GET', 'api/admin/users/{user}', 'user', 1],

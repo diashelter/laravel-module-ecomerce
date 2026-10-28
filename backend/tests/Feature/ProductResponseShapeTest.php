@@ -7,6 +7,7 @@ it('renders every product with exactly the keys of today', function (string $met
     $this->actingAs(admin());
     $product = productWithStock(7);
     $product->categories()->attach(Category::factory()->count(2)->create());
+    rebuildStorefront();
 
     $body = match ($method.' '.$uri) {
         'POST api/admin/products', 'PUT api/admin/products/{product}' => productPayload(),

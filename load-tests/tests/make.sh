@@ -51,6 +51,24 @@ with_fault() {
 }
 
 case "$CASE" in
+    rebuild-before-k6)
+        # The order of the recipe: seed, the workers and api-read, the rebuild, the wait for 202 products, and only then k6.
+        RECIPE=$(make -n load-test TYPE=smoke)
+        position() { printf '%s\n' "$RECIPE" | grep -nF -- "$1" | head -1 | cut -d: -f1; }
+        SEED=$(position "db:seed --class=LoadTestSeeder")
+        WORKERS=$(position "up -d queue-worker outbox-relay event-consumer api-read nginx")
+        REBUILD=$(position "catalog:read-model-clear && php artisan catalog:republish && php artisan inventory:republish")
+        WAIT=$(position "meta")
+        K6=$(position "k6 run main.js")
+        for value in "$SEED" "$WORKERS" "$REBUILD" "$WAIT" "$K6"; do
+            [ -n "$value" ] || fail "a receita do make load-test não tem um dos passos: seed=$SEED workers=$WORKERS rebuild=$REBUILD wait=$WAIT k6=$K6"
+        done
+        [ "$SEED" -lt "$WORKERS" ] && [ "$WORKERS" -lt "$REBUILD" ] && [ "$REBUILD" -lt "$WAIT" ] && [ "$WAIT" -lt "$K6" ] || fail "fora de ordem: seed=$SEED workers=$WORKERS rebuild=$REBUILD wait=$WAIT k6=$K6"
+        ok "seed, workers e api-read, reconstrução, espera e k6, nessa ordem"
+        printf '%s\n' "$RECIPE" | grep -q 'Ctotal\|= "202"' || printf '%s\n' "$RECIPE" | grep -qF '= "202"' || fail "a espera não compara com 202"
+        printf '%s\n' "$RECIPE" | grep -qF '120' || fail "a espera não desiste em 120 s"
+        ok "a espera compara com 202 produtos e desiste em 120 s"
+        ;;
     missing-type)
         refuses
         ;;
@@ -159,6 +177,6 @@ case "$CASE" in
         done
         ;;
     *)
-        unknown_case "missing-type invalid-type recreates fails-on-threshold fails-on-seed down limiter-mapping transport-default transport-rabbitmq invalid-transport"
+        unknown_case "rebuild-before-k6 missing-type invalid-type recreates fails-on-threshold fails-on-seed down limiter-mapping transport-default transport-rabbitmq invalid-transport"
         ;;
 esac

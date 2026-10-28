@@ -14,6 +14,22 @@ has() {
 }
 
 case "$CASE" in
+    read-model)
+        # The storefront read model (HEL-17): the series, the metric, the team product and the 202 products.
+        has "$LOAD_README" 'a vitrine passou a ser servida pelo `api-read`'
+        ok "o README diz que a vitrine passou a ser servida pelo api-read"
+        for table_header in '| Data | Commit | Máquina | Perfil |' '| Data | Commit | Máquina | Transporte |'; do
+            START=$(grep -nF -- "$table_header" "$LOAD_README" | head -1 | cut -d: -f1)
+            [ -n "$START" ] || fail "tabela sem cabeçalho: $table_header"
+            tail -n +"$START" "$LOAD_README" | awk 'NR > 2 && /^\|/ { print } NR > 2 && !/^\|/ { exit }' | grep -qF 'série nova: a vitrine passou a ser servida pelo `api-read`' || fail "a tabela '$table_header' não abre a série nova"
+            ok "a tabela '$table_header' abre a série nova"
+        done
+        has "$LOAD_README" 'storefront_projection_lag'
+        has "$LOAD_README" 'Produto da Equipe'
+        has "$LOAD_README" '202 produtos'
+        grep -q '201 produtos' "$LOAD_README" && fail "o README ainda cita 201 produtos"
+        ok "a métrica, o Produto da Equipe e os 202 produtos, sem 201"
+        ;;
     baseline-rows)
         HEADER='| Data | Commit | Máquina | Perfil | VUs ou taxa | req/s | p95 vitrine (ms) | p95 POST /api/orders (ms) | p95 order_payable_wait (ms) | Erro inesperado | Ponto de ruptura | Mudou desde a série anterior |'
         has "$LOAD_README" "$HEADER"
@@ -84,6 +100,6 @@ case "$CASE" in
         ok "load-tests/README.md explica os perfis, os limites e o aceite"
         ;;
     *)
-        unknown_case "baseline-rows transport-rows readme agents load-readme"
+        unknown_case "read-model baseline-rows transport-rows readme agents load-readme"
         ;;
 esac

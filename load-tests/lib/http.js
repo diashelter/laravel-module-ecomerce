@@ -4,13 +4,17 @@
 import http from 'k6/http';
 import exec from 'k6/execution';
 import { check } from 'k6';
-import { Rate } from 'k6/metrics';
+import { Rate, Trend } from 'k6/metrics';
+import { PROJECTION_LAG_METRIC } from './projection.js';
 
 export const BASE_URL = __ENV.BASE_URL || 'http://nginx';
 export const PROFILE = __ENV.PROFILE || 'smoke';
 
 // A status the request did not expect, a timeout (status 0) or a body check that failed. Expected 4xx are not errors.
 export const unexpectedErrors = new Rate('unexpected_errors');
+
+// The time between a write of the team flow and the storefront showing it (lib/projection.js), in ms.
+export const storefrontProjectionLag = new Trend(PROJECTION_LAG_METRIC, true);
 
 const MUTATING = ['POST', 'PUT', 'PATCH', 'DELETE'];
 let sequence = 0;

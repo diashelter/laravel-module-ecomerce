@@ -14,15 +14,27 @@ last_profile() {
 case "$CASE" in
     connection)
         grep -qx 'name: ecommerce-load' load-tests/docker-compose.yml || fail "o projeto não se chama ecommerce-load"
-        expect_eq "os serviços" "$($LOAD --profile k6 config --services | sort | tr '\n' ' ')" "api db event-consumer k6 nginx outbox-relay queue-worker rabbitmq redis "
+        expect_eq "os serviços" "$($LOAD --profile k6 config --services | sort | tr '\n' ' ')" "api api-read db event-consumer k6 mongodb nginx outbox-relay queue-worker rabbitmq redis "
         expect_eq "DB_HOST" "$(env_of api DB_HOST)" db
         expect_eq "DB_DATABASE" "$(env_of api DB_DATABASE)" ecommerce_load
         expect_eq "REDIS_HOST" "$(env_of api REDIS_HOST)" redis
         expect_eq "RABBITMQ_HOST" "$(env_of api RABBITMQ_HOST)" rabbitmq
+        # The read model of the storefront: the writers of the projection and the reader of the storefront share it.
+        for service in api queue-worker event-consumer api-read; do
+            expect_eq "$service MONGODB_HOST" "$(env_of $service MONGODB_HOST)" mongodb
+        done
+        expect_eq "MONGODB_DATABASE" "$(env_of api MONGODB_DATABASE)" ecommerce_load
         expect_eq "SESSION_DOMAIN" "$(env_of api SESSION_DOMAIN)" null
         expect_eq "SANCTUM_STATEFUL_DOMAINS" "$(env_of api SANCTUM_STATEFUL_DOMAINS)" nginx
         expect_eq "APP_URL" "$(env_of api APP_URL)" http://nginx
         expect_eq "o Postgres de dev não tem ecommerce_load" "$(psql_dev "select count(*) from pg_database where datname = 'ecommerce_load'")" 0
+        ;;
+    gateway)
+        # With the api stopped, the Nginx of the load stack still lists the storefront: api-read serves it.
+        trap '$LOAD start api >/dev/null 2>&1' EXIT
+        $LOAD stop api >/dev/null 2>&1
+        BODY=$($LOAD exec -T nginx wget -qO- http://127.0.0.1/api/products) || fail "a vitrine não respondeu pelo Nginx com o api parado"
+        expect_eq "meta.total pela vitrine do api-read" "$(printf '%s' "$BODY" | sed -n 's/.*"total":\([0-9]*\).*/\1/p')" 202
         ;;
     reports)
         HTML=$(ls -t "$RESULTS"/smoke-*.html 2>/dev/null | head -1)
@@ -100,6 +112,6 @@ case "$CASE" in
         ok "o Compose de dev não mudou entre $HEL14_MERGE^1 e o merge $HEL14_MERGE da HEL-14"
         ;;
     *)
-        unknown_case "connection reports app-settings opcache-and-caches fpm-pool limiter-env bcrypt-and-delivery cache-env k6-image no-host-ports dev-compose-unchanged"
+        unknown_case "connection gateway reports app-settings opcache-and-caches fpm-pool limiter-env bcrypt-and-delivery cache-env k6-image no-host-ports dev-compose-unchanged"
         ;;
 esac

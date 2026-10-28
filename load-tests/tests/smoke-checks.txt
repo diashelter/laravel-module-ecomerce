@@ -1,4 +1,4 @@
-setup: dataset has 201 products
+setup: dataset has 202 products
 storefront: product list is 200
 storefront: invalid sort is 422 VALIDATION_FAILED
 storefront: page after the last is 200 and empty

@@ -13,7 +13,7 @@ beforeEach(fn () => $this->repository = app(StockRepository::class));
 it('creates the stock row of a product', function () {
     $product = Product::factory()->create();
 
-    $this->repository->createForProduct($product->id, 7);
+    DB::transaction(fn () => $this->repository->createForProduct($product->id, 7));
 
     expect(Stock::query()->where('product_id', $product->id)->pluck('quantity')->all())->toBe([7]);
 });
@@ -47,7 +47,7 @@ it('decrements the stock quantity', function () {
     $product = productWithStock(5);
     $other = productWithStock(5);
 
-    $this->repository->decrement($product->id, 2);
+    DB::transaction(fn () => $this->repository->decrement($product->id, 2));
 
     expect(stockOf($product)->quantity)->toBe(3)
         ->and(stockOf($other)->quantity)->toBe(5);

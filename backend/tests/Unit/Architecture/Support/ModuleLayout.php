@@ -81,7 +81,7 @@ final class ModuleLayout
         return match ($module) {
             'Shared' => ['Cache', 'Enums', 'Exceptions', 'Http', 'Providers', 'Repositories', 'Support'],
             'Payment' => [...self::LAYERS, 'Gateways'],
-            'Messaging' => [...self::LAYERS, 'Console'],
+            'Messaging', 'Catalog', 'Inventory' => [...self::LAYERS, 'Console'],
             // One folder per consumer module, with the adapters of its ports, and the provider that binds them.
             'Integration' => ['Providers', ...self::BUSINESS],
             default => self::LAYERS,

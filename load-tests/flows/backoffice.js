@@ -1,7 +1,10 @@
 // The staff on the admin panel (plan S5), while the store buys: the dashboard, the order and stock lists, and
 // now and then a stock adjustment under the same lock the checkout takes.
 import http from 'k6/http';
-import { send, verify } from '../lib/http.js';
+import exec from 'k6/execution';
+import { sleep } from 'k6';
+import { json, send, storefrontProjectionLag, unexpectedErrors, verify } from '../lib/http.js';
+import { claimsTeamWrites, teamPriceStep } from '../lib/projection.js';
 import { loginCustomer, loginStaff } from '../lib/session.js';
 import { SUPPORT_EMAIL, customerForVu, shouldAdjustStock, shouldRunErrorPaths, staffForVu } from '../lib/mix.js';
 import { MODE, pick, position, think } from '../lib/steps.js';
@@ -11,6 +14,9 @@ let supportJar = null;
 let supportLoggedIn = false;
 let customerJar = null;
 let customerLoggedIn = false;
+// Only one VU of the scenario writes the price of the Produto da Equipe (lib/projection.js): decided once, kept.
+let teamWriter = null;
+let lastTeamPrice = null;
 
 function errorPaths(data, vu) {
     // The support member never deletes: the admin middleware answers 403 before the product is read.
@@ -41,6 +47,10 @@ function errorPaths(data, vu) {
 export function backoffice(data) {
     const { vu, iteration } = position();
 
+    if (teamWriter === null) {
+        teamWriter = claimsTeamWrites(exec.scenario.iterationInTest);
+    }
+
     if (!started) {
         const { login } = loginStaff(staffForVu(vu), http.cookieJar());
         verify('backoffice: staff login is 200', login, [200]);
@@ -63,6 +73,14 @@ export function backoffice(data) {
     if (shouldAdjustStock(MODE, vu, iteration)) {
         const adjustment = send('PUT', '/api/admin/stocks/{stock}', { params: { stock: pick(data.availableStocks) }, body: { operation: 'increase', quantity: 1 } });
         verify('backoffice: stock adjustment is 200', adjustment, [200]);
+    }
+
+    if (teamWriter && data.team) {
+        lastTeamPrice = teamPriceStep(
+            { send, json, sleep, now: Date.now, lag: storefrontProjectionLag, unexpectedErrors },
+            data.team,
+            lastTeamPrice === null ? data.team.priceCents : lastTeamPrice,
+        );
     }
 
     if (shouldRunErrorPaths(MODE, vu, iteration)) {

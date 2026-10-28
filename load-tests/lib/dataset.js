@@ -4,14 +4,15 @@ import http from 'k6/http';
 import { json, send, verify } from './http.js';
 import { loginCustomer, loginStaff } from './session.js';
 import { ADMIN_EMAIL } from './mix.js';
+import { TEAM_PRODUCT } from './projection.js';
 
 export const DISPUTED_PRODUCT = 'Produto Disputado';
-export const PRODUCT_COUNT = 201;
+export const PRODUCT_COUNT = 202;
 const OTHER_CUSTOMER = 'load-customer-0@example.com';
 
 function allProducts(jar) {
     const first = send('GET', '/api/products', { query: '?page=1', jar });
-    verify('setup: dataset has 201 products', first, [200], (r) => json(r, 'meta.total') === PRODUCT_COUNT);
+    verify('setup: dataset has 202 products', first, [200], (r) => json(r, 'meta.total') === PRODUCT_COUNT);
 
     const products = json(first, 'data') || [];
     const lastPage = json(first, 'meta.last_page') || 1;
@@ -32,7 +33,8 @@ function firstId(response) {
 export function discover() {
     const products = allProducts(new http.CookieJar());
     const disputed = products.find((p) => p.name === DISPUTED_PRODUCT);
-    const available = products.filter((p) => p.is_available && p.name !== DISPUTED_PRODUCT);
+    const team = products.find((p) => p.name === TEAM_PRODUCT);
+    const available = products.filter((p) => p.is_available && p.name !== DISPUTED_PRODUCT && p.name !== TEAM_PRODUCT);
 
     // The stock list is ordered by quantity: page 1 holds the sold out products and the disputed one,
     // page 2 the first products with 1,000,000 units.
@@ -49,6 +51,8 @@ export function discover() {
         available: available.map((p) => p.id),
         inactive: products.filter((p) => p.status === 'inactive').map((p) => p.id),
         soldOut: products.filter((p) => p.status === 'active' && !p.is_available && p.name !== DISPUTED_PRODUCT).map((p) => p.id),
+        // The product only the team flow writes: its id, its price and the body of the PUT that changes only the price.
+        team: team ? { id: team.id, priceCents: team.price_cents, body: { name: team.name, description: team.description, image_url: team.image_url, status: team.status, category_ids: team.categories.map((c) => c.id) } } : null,
         disputed: disputed ? disputed.id : null,
         disputedStock: (stocks.find((s) => disputed && s.product && s.product.id === disputed.id) || {}).id || null,
         availableStocks: stocks.filter((s) => s.quantity === 1000000).map((s) => s.id),

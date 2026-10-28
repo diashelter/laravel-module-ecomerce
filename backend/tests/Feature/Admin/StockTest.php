@@ -48,13 +48,16 @@ it('makes a product unavailable at zero stock and available again only if active
     $inactive = Product::factory()->inactive()->withStock(0)->create();
     $activeStock = stockOf($active);
     $inactiveStock = stockOf($inactive);
+    rebuildStorefront();
 
     $this->putJson("/api/admin/stocks/{$activeStock->id}", ['operation' => 'decrease', 'quantity' => 1])
         ->assertJsonPath('data.product.is_available', false);
+    relayUntilIdle();
     $this->getJson("/api/products/{$active->id}")->assertNotFound();
 
     $this->putJson("/api/admin/stocks/{$activeStock->id}", ['operation' => 'increase', 'quantity' => 1])
         ->assertJsonPath('data.product.is_available', true);
+    relayUntilIdle();
     $this->getJson("/api/products/{$active->id}")->assertOk();
 
     $this->putJson("/api/admin/stocks/{$inactiveStock->id}", ['operation' => 'increase', 'quantity' => 5])

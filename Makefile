@@ -25,7 +25,7 @@ CHECKOUT_API   = $(CHECKOUT_RUN) api
 
 .PHONY: help up down build rebuild ps logs logs-api logs-worker logs-relay \
 	logs-consumer shell artisan worktree-env migrate migrate-fresh seed fresh optimize clear \
-	db-shell db-reset db-dump db-restore \
+	db-shell db-reset db-dump db-restore storefront-rebuild \
 	queue queue-restart queue-failed queue-retry event-transport events-failed events-retry \
 	test test-filter test-prepare test-db-drop pint test-frontend npm-install frontend-shell setup env-files wait-api \
 	load-test load-down
@@ -85,11 +85,21 @@ migrate: ## Executa as migrations
 migrate-fresh: ## Apaga todas as tabelas e executa as migrations
 	$(ARTISAN) migrate:fresh --force
 
-seed: ## Executa os seeders
+seed: ## Executa os seeders (e reconstrói a vitrine)
 	$(ARTISAN) db:seed --force
+	$(MAKE) storefront-rebuild
 
-fresh: ## Recria o banco de desenvolvimento (migrate:fresh --seed)
+fresh: ## Recria o banco de desenvolvimento (migrate:fresh --seed) e reconstrói a vitrine
 	$(ARTISAN) migrate:fresh --seed --force
+	$(MAKE) storefront-rebuild
+
+# The storefront is served from MongoDB, which the seeders and the factories do not write: this empties the read model
+# and publishes the state of every category, product and stock through the outbox. The relay and the consumers
+# (make up) project the messages, so the storefront fills in a few seconds.
+storefront-rebuild: ## Reconstrói o modelo de leitura da vitrine (MongoDB) a partir do PostgreSQL
+	$(ARTISAN) catalog:read-model-clear
+	$(ARTISAN) catalog:republish
+	$(ARTISAN) inventory:republish
 
 optimize: ## Gera caches de configuração, rotas e eventos
 	$(ARTISAN) optimize
@@ -146,8 +156,9 @@ events-retry: ## Devolve as entregas mortas aos consumidores: make events-retry 
 # so two suites on one database break each other. The main checkout keeps ecommerce_testing; a worktree uses
 # ecommerce_testing_<name>. Any checkout can pick another database: make test TEST_DB_DATABASE=<name>.
 TEST_DB_DATABASE := $(or $(TEST_DB_DATABASE),ecommerce_testing$(if $(WORKTREE),_$(shell printf '%s' '$(WORKTREE)' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '_' | cut -c1-45)))
-# The RabbitMQ vhost of the checkout has the name of its test database, so two suites never see each other's queues.
-TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) -e RABBITMQ_VHOST=$(TEST_DB_DATABASE) api
+# The RabbitMQ vhost and the MongoDB database of the checkout have the name of its test database, so two suites never
+# see each other's queues or read model.
+TEST_API          = $(CHECKOUT_RUN) -e DB_DATABASE=$(TEST_DB_DATABASE) -e RABBITMQ_VHOST=$(TEST_DB_DATABASE) -e MONGODB_DATABASE=$(TEST_DB_DATABASE) api
 PEST              = sh -c 'php artisan config:clear --quiet && exec ./vendor/bin/pest "$$@"' pest
 # The name goes unquoted into SQL, and the suite would wipe the development database. The check reads it
 # from the environment, so no value can break its own quoting.
@@ -170,9 +181,10 @@ test-prepare: worktree-env
 		|| { rabbitmqctl -q add_vhost "$$VHOST" && rabbitmqctl -q set_permissions -p "$$VHOST" "$$RABBITMQ_DEFAULT_USER" ".*" ".*" ".*"; }'
 	@echo "Banco de testes: $(TEST_DB_DATABASE) (vhost do RabbitMQ: $(TEST_DB_DATABASE))"
 
-test-db-drop: ## Apaga o banco e o vhost do RabbitMQ de testes deste checkout (o próximo make test os recria)
+test-db-drop: ## Apaga o banco, o banco do MongoDB e o vhost do RabbitMQ de testes deste checkout (o próximo make test os recria)
 	@$(CHECK_TEST_DB)
 	$(DC) exec -T db psql -U $(DB_USERNAME) -d $(DB_DATABASE) -c 'DROP DATABASE IF EXISTS $(TEST_DB_DATABASE) WITH (FORCE)'
+	$(DC) exec -T -e TEST_DB=$(TEST_DB_DATABASE) mongodb sh -c 'mongosh --quiet -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.getSiblingDB(process.env.TEST_DB).dropDatabase()"'
 	$(DC) exec -T -e VHOST=$(TEST_DB_DATABASE) rabbitmq sh -c 'if rabbitmqctl -q list_vhosts --no-table-headers | grep -qx "$$VHOST"; then rabbitmqctl -q delete_vhost "$$VHOST"; fi'
 
 pint: worktree-env ## Verifica o estilo do backend/ deste checkout (Pint, sem corrigir)
@@ -194,6 +206,8 @@ frontend-shell: ## Abre um shell no container do frontend, com o frontend/ deste
 ## ---------- Testes de carga (k6) ----------
 
 LOAD_PROFILES  = smoke load stress spike breakpoint soak contention limits
+# The products the LoadTestSeeder creates, and the storefront must list before k6 starts.
+LOAD_PRODUCTS  = 202
 # The event-transport flag of the load stack for the run (HEL-13): the transport the relay publishes through.
 LOAD_TRANSPORTS = redis rabbitmq
 TRANSPORT      ?= redis
@@ -219,14 +233,22 @@ load-test: ## Recria a pilha de carga e roda um perfil do k6: make load-test TYP
 	$(LOAD) down --volumes --remove-orphans
 	@# The rabbitmq container sometimes exits at boot with "Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces"
 	@# (seen on a busy host, never twice in a row): one more attempt starts it.
-	$(LOAD) up -d --wait db redis rabbitmq || { echo "Subindo o rabbitmq de novo."; $(LOAD) up -d --wait db redis rabbitmq; }
+	$(LOAD) up -d --wait db redis rabbitmq mongodb || { echo "Subindo o rabbitmq de novo."; $(LOAD) up -d --wait db redis rabbitmq mongodb; }
 	$(LOAD) up -d api
 	@until $(LOAD) exec -T api test -f vendor/autoload.php 2>/dev/null; do sleep 2; done
 	@$(LOAD) exec -T api sh -c 'php artisan migrate:fresh --force && php artisan db:seed --class=LoadTestSeeder --force' \
 		|| { echo "A pilha de carga não subiu. Logs da api de carga:"; $(LOAD) logs --no-color api; exit 1; }
 	$(LOAD) exec -T api sh -c 'mkdir -p /tmp/laravel && php artisan config:cache && php artisan route:cache && php artisan event:cache && php artisan modules:cache'
 	$(LOAD) exec -T api php artisan events:transport $(TRANSPORT) --by=$(USER)
-	$(LOAD) up -d queue-worker outbox-relay event-consumer nginx
+	$(LOAD) up -d queue-worker outbox-relay event-consumer api-read nginx
+	@# The seed writes no event: the storefront reads MongoDB, so the read model is rebuilt (the relay and the consumers
+	@# project the messages) and k6 waits until the gateway lists all the products.
+	$(LOAD) exec -T api sh -c 'php artisan catalog:read-model-clear && php artisan catalog:republish && php artisan inventory:republish'
+	@n=0; until [ "$$($(LOAD) exec -T api php -r 'echo json_decode(file_get_contents("http://nginx/api/products"), true)["meta"]["total"] ?? 0;' 2>/dev/null)" = "$(LOAD_PRODUCTS)" ]; do \
+		n=$$((n + 1)); \
+		if [ $$n -ge 120 ]; then echo "A vitrine da pilha de carga não chegou a $(LOAD_PRODUCTS) produtos em 120 s."; exit 1; fi; \
+		sleep 1; \
+	done
 	@mkdir -p load-tests/results && chmod a+rwx load-tests/results
 	$(LOAD) run --rm \
 		-e PROFILE=$(TYPE) -e RUN_STAMP=$(LOAD_RUN) \
