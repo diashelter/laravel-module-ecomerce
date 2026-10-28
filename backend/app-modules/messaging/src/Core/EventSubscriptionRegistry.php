@@ -14,7 +14,7 @@ use ReflectionNamedType;
 /**
  * Which consumers react to each event name. The module that consumes subscribes in the boot() of
  * its service provider; the producer never lists its consumers. A single instance per application
- * (bound in AppServiceProvider).
+ * (a singleton of MessagingServiceProvider).
  *
  * Every consumer also has a stable name ("ordering.mark_order_as_paid"), given at the subscription:
  * it names the consumer's RabbitMQ queue, so it must outlive any rename or move of the PHP class.
