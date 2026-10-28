@@ -1,6 +1,6 @@
 # storefront-read-model proofs
 
-**HEAD**: bb966ca
+**HEAD**: 8b7430c
 **Tree**: clean
 **Result**: 101 pass, 0 fail; mutations 5 killed, 0 not
 
