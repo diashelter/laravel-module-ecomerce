@@ -111,6 +111,7 @@ it('refuses an invalid sort or page', function (string $query, string $field) {
     'sort random' => ['sort=random', 'sort'],
     'page zero' => ['page=0', 'page'],
     'page text' => ['page=abc', 'page'],
+    'page past the limit' => ['page=9223372036854775807', 'page'],
 ]);
 
 it('answers the product page from the document', function (string $state, int $status, string $message) {

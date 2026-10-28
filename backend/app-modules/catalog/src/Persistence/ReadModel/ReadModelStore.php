@@ -42,7 +42,10 @@ class ReadModelStore
         $this->ensureIndexes();
     }
 
-    /** Idempotent: an index that exists is left as it is. */
+    /**
+     * Idempotent: an index that exists is left as it is. Only clear() calls it, so a MongoDB volume gets its indexes
+     * from `make storefront-rebuild`; the projector alone would create the collections without them.
+     */
     public function ensureIndexes(): void
     {
         $this->products()->createIndex(['product.category_ids' => 1]);

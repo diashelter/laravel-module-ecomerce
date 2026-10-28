@@ -19,6 +19,8 @@ use MongoDB\Driver\Exception\BulkWriteException;
  */
 final class ConditionalUpsert
 {
+    private const DUPLICATE_KEY = 11000;
+
     /**
      * @param  array<string, mixed>  $filter
      * @param  array<string, mixed>  $update
@@ -32,7 +34,7 @@ final class ConditionalUpsert
 
                 return $result->getModifiedCount() > 0 || $result->getUpsertedCount() > 0;
             } catch (BulkWriteException $exception) {
-                if (! str_contains($exception->getMessage(), 'E11000')) {
+                if (! self::isDuplicateKey($exception)) {
                     throw $exception;
                 }
 
@@ -41,5 +43,17 @@ final class ConditionalUpsert
                 }
             }
         }
+    }
+
+    /** Server error code 11000, read from the write errors and not from the message text. */
+    private static function isDuplicateKey(BulkWriteException $exception): bool
+    {
+        foreach ($exception->getWriteResult()->getWriteErrors() as $error) {
+            if ($error->getCode() === self::DUPLICATE_KEY) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
