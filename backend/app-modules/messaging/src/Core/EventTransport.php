@@ -8,7 +8,8 @@ use Throwable;
 
 /**
  * The port the outbox relay publishes through. Use cases, events and consumers never know which
- * transport is behind it (today the Laravel queue, see QueueEventTransport).
+ * transport is behind it: the container hands out the EventTransportSelector, which picks the Laravel queue
+ * (QueueEventTransport) or RabbitMQ (RabbitMqEventTransport) by the event-transport flag.
  */
 interface EventTransport
 {

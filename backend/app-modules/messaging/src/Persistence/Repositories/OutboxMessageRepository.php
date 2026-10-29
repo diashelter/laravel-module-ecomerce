@@ -16,7 +16,7 @@ use Modules\Shared\Http\Middleware\AssignRequestId;
 use Modules\Shared\Repositories\BaseRepository;
 
 /**
- * The outbox table: the use cases record into it (EventOutbox, bound in AppServiceProvider) and the
+ * The outbox table: the use cases record into it (EventOutbox, bound in MessagingServiceProvider) and the
  * outbox relay claims, marks and prunes its rows.
  *
  * @extends BaseRepository<OutboxMessage>
